@@ -20,3 +20,6 @@ test('stored lyrics distinguish timed, plain, absent and transient states',()=>{
 
 import {trackArtworkUrl} from '../src/artwork.mjs';
 test('artwork URLs use stable approved API paths only',()=>{assert.equal(trackArtworkUrl('https://api.example.test','123'),'https://api.example.test/demo/artwork/123');assert.equal(trackArtworkUrl('https://api.example.test','../private'),null);assert.equal(trackArtworkUrl('https://api.example.test/path','123'),null);assert.equal(trackArtworkUrl('http://api.example.test','123'),null)});
+
+test('anonymous session is reused and concurrent auth calls are deduplicated',async()=>{let calls=0;const api=createDemoApi('https://api.example.test',async()=>{calls++;return new Response(JSON.stringify({accessToken:'test',expiresIn:300}),{status:200})});const [a,b]=await Promise.all([api.auth(),api.auth()]);assert.equal(a.accessToken,b.accessToken);await api.auth();assert.equal(calls,1);api.invalidateAuth();await api.auth();assert.equal(calls,2)});
+test('429 honors retry-after and prevents repeat network traffic',async()=>{let calls=0;const api=createDemoApi('https://api.example.test',async()=>{calls++;return new Response('{}',{status:429,headers:{'Retry-After':'30'}})});await assert.rejects(api.auth(),e=>e.status===429&&e.retryAfter===30000);await assert.rejects(api.auth(),e=>e.status===429&&e.retryAfter>0);assert.equal(calls,1)});

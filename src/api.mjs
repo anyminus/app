@@ -1,20 +1,27 @@
 export function apiOrigin(value){if(typeof value!=='string'||!value.trim())return null;const u=new URL(value);if(u.protocol!=='https:'||u.origin!==value||u.username||u.password)throw new Error('Укажите точный HTTPS origin без пути');return u.origin;}
-export class ApiError extends Error{constructor(status){super(status===0?'Сеть или CORS недоступны':'API HTTP '+status);this.status=status}}
+export class ApiError extends Error{constructor(status,retryAfter=0,path=''){super(status===429?'Слишком много запросов (HTTP 429). Повторите через '+Math.max(1,Math.ceil(retryAfter/1000))+' сек.':status===0?'Сеть или CORS недоступны':'API HTTP '+status);this.status=status;this.retryAfter=retryAfter;this.path=path}}
+export function retryAfterMs(value,now=Date.now()){if(value===null||value===undefined||!String(value).trim())return 30000;const raw=String(value).trim();if(/^\d+$/.test(raw)){const n=Number(raw)*1000;return Number.isFinite(n)?Math.max(1000,n):30000}const date=Date.parse(raw);return Number.isFinite(date)?Math.max(1000,date-now):30000}
+function abortable(promise,signal){if(!signal)return promise;if(signal.aborted)return Promise.reject(signal.reason);return new Promise((resolve,reject)=>{const abort=()=>reject(signal.reason);signal.addEventListener('abort',abort,{once:true});promise.then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort))})}
+
 function client(origin,fetcher){
- const base=apiOrigin(origin);if(!base)throw Error('API origin не настроен');
+ const base=apiOrigin(origin);if(!base)throw Error('API origin не настроен');const cooldowns=new Map();
  return async(path,{query,body,token,signal,method='GET',credentials='omit',headers={}}={})=>{
+ if(signal?.aborted)throw signal.reason;const route=method+' '+path;const remaining=(cooldowns.get(route)??0)-Date.now();if(remaining>0)throw new ApiError(429,remaining,path);cooldowns.delete(route);
  const url=new URL(path,base);for(const [key,value] of Object.entries(query??{}))if(value!==null&&value!==undefined)url.searchParams.set(key,String(value));
- let response;try{response=await fetcher(url.toString(),{method,signal,credentials,cache:'no-store',redirect:'error',headers:{...headers,...(token?{Authorization:'Bearer '+token}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})})}catch(e){if(signal?.aborted)throw e;throw new ApiError(0);}
- if(!response.ok)throw new ApiError(response.status);if(response.status===204)return null;return response.json();
+ let response;try{response=await fetcher(url.toString(),{method,signal,credentials,cache:'no-store',redirect:'error',headers:{...headers,...(token?{Authorization:'Bearer '+token}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})})}catch(e){if(signal?.aborted)throw e;throw new ApiError(0,0,path);}
+ if(!response.ok){const wait=response.status===429?retryAfterMs(response.headers.get('retry-after')):0;if(wait)cooldowns.set(route,Date.now()+wait);throw new ApiError(response.status,wait,path)}if(response.status===204)return null;return response.json();
  };
 }
 export function mediaUrl(origin,pairId,role,value){const u=new URL(value,origin);if(!/^[0-9a-f-]{36}$/i.test(pairId)||!['instrumental','vocals','artwork','lyrics'].includes(role)||u.origin!==origin||u.pathname!=='/demo/catalog/media/'+pairId+'/'+role||u.search||u.hash||u.username||u.password)throw Error('Недопустимый адрес медиа');return u.toString()}
 export function createDemoApi(origin,fetcher=fetch){
- const call=client(origin,fetcher);
+ const call=client(origin,fetcher);let session=null,inflight=null;
+ function auth(signal){if(signal?.aborted)return Promise.reject(signal.reason);if(session&&session.expires>Date.now()+30000)return Promise.resolve(session.value);if(!inflight){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);inflight=call('/demo/auth',{method:'POST',body:{},signal:controller.signal}).then(value=>{if(typeof value?.accessToken!=='string'||!Number.isFinite(value.expiresIn)||value.expiresIn<=0)throw Error('Некорректный ответ авторизации');session={value,expires:Date.now()+value.expiresIn*1000};return value}).finally(()=>{clearTimeout(timer);inflight=null})}return abortable(inflight,signal)}
+
  return {
  search:(q,signal,telegramToken=undefined)=>{const text=q.trim();if(text.length<2||text.length>200)throw Error('Поиск: 2–200 символов');return call('/demo/search',{query:{q:text,limit:20},token:telegramToken,signal})},
  catalog:(cursor,signal,seed=undefined)=>call('/demo/catalog',{query:{limit:100,cursor,seed},signal}),
- auth:(signal)=>call('/demo/auth',{method:'POST',body:{},signal}),
+ auth,
+ invalidateAuth:()=>{session=null},
  telegram:(initData,signal)=>call('/v1/auth/telegram',{method:'POST',body:{initData},signal}),
  metadata:(id,token,signal)=>call('/demo/track-metadata/'+encodeURIComponent(id),{token,signal}),
  lyrics:(id,durationMs,signal,telegramToken)=>call('/demo/lyrics',{query:{id,format:'LRC',durationMs},signal,token:telegramToken}),

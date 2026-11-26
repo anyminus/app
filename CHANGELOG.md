@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.10
+- Resolve shared ready tracks from the first public catalog page before requesting anonymous auth or provider metadata. Share a single in-memory anonymous session and deduplicate concurrent auth requests. Respect HTTP 429 Retry-After (30-second fallback) without sending repeated requests during the cooldown. Defer initial link lookup to avoid duplicate StrictMode requests.
+
 ## 0.2.9
 - Retry transient metadata failures when opening shared track links. If metadata remains unavailable, resolve verified ready karaoke via status and recover metadata from the public catalog; allow playback even when provider metadata is temporarily unavailable. Do not create karaoke during link resolution.
 

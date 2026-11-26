@@ -18,19 +18,22 @@ function delay(ms:number,signal:AbortSignal){return new Promise<void>((resolve,r
 async function retryRead<T>(read:()=>Promise<T>,signal:AbortSignal):Promise<T>{try{return await read()}catch(e){if(signal.aborted||!transient(e))throw e;await delay(700,signal);return read()}}
 export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrack>{
  if(!isTrackId(id))throw Error('Песня не найдена');
+ // A shared link to a ready song may be resolved without provider metadata or anonymous login.
+ let catalogUnavailable=false;
+ try{const page=await api.catalog(null,signal);const ready=(normalizeTracks(page,true) as LiveTrack[]).find(t=>t.providerTrackId===id&&t.pairOperationId);if(ready)return ready}catch(e){if(signal.aborted||e instanceof ApiError&&e.status===429)throw e;catalogUnavailable=true}
  const auth=await api.auth(signal);if(typeof auth.accessToken!=='string')throw Error('Не удалось авторизоваться');
  try{
  const meta=await retryRead(()=>api.metadata(id,auth.accessToken,signal),signal);
  const track=normalizeTracks({items:[{...meta,providerTrackId:id}]})[0];if(!track)throw Error('Песня не найдена');return track;
  }catch(e){
- if(signal.aborted||!transient(e))throw e;
+ if(signal.aborted||(!transient(e)&&!(e instanceof ApiError&&e.status===429)))throw e;
  // Ready audio must not depend on the availability of upstream song metadata.
  // Check the authoritative ready status and recover actual metadata from the public catalog when available.
  const raw=await retryRead(()=>api.status(id,auth.accessToken,signal),signal);
  const job=normalizeJob(raw);
  if(job.state!=='ready'||!job.pairOperationId)throw e;
  let fromCatalog:LiveTrack|undefined;
- try{const catalog=await api.catalog(null,signal);fromCatalog=(normalizeTracks(catalog,true) as LiveTrack[]).find(t=>t.providerTrackId===id)}catch(cause){if(signal.aborted)throw cause}
+ if(catalogUnavailable)try{const catalog=await api.catalog(null,signal);fromCatalog=(normalizeTracks(catalog,true) as LiveTrack[]).find(t=>t.providerTrackId===id)}catch(cause){if(signal.aborted)throw cause}
  if(signal.aborted)throw signal.reason;
  const duration=Number(raw.durationSeconds);
  return {providerTrackId:id,title:fromCatalog?.title??'Песня '+id,artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog};
