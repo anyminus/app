@@ -18,3 +18,30 @@ test('search marks previously known ready tracks and opens them without a status
  await page.getByRole('navigation').getByRole('button',{name:'Поиск',exact:true}).click();await page.getByRole('textbox',{name:'Поиск песни'}).fill('Other artist');const row=page.locator('.track-row').filter({has:page.getByRole('button',{name:'Test song three',exact:true})});await expect(row.getByText('Караоке готово')).toBeVisible();
  await row.getByRole('button',{name:'Test song three',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.requests.filter(p=>p==='/demo/karaoke/status')).toHaveLength(0);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
 });
+
+test('fresh search renders confirmed ready badges before selection and plays without auth, status or creation',async({page})=>{
+ const api=await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';let playbackBody:unknown;
+ await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,route=>route.fulfill({json:{items:[
+ {providerTrackId:'101',title:'Ready from search',artist:'Artist',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:pair}},
+ {providerTrackId:'102',title:'Unknown result',artist:'Artist',durationMs:8000,karaokeStatus:{state:'unknown',pairOperationId:pair}},
+ {providerTrackId:'103',title:'Invalid pair',artist:'Artist',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:'invalid'}},
+ {providerTrackId:'104',title:'Legacy result',artist:'Artist',durationMs:8000}
+ ],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/playback$/,async route=>{if(route.request().method()==='POST')playbackBody=route.request().postDataJSON();await route.fallback()});
+ await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Ready');
+ const rows=page.locator('.track-row');await expect(rows).toHaveCount(4);
+ await expect(rows.nth(0).getByText('Караоке готово',{exact:true})).toBeVisible();
+ for(let i=1;i<4;i++)await expect(rows.nth(i).getByText('Караоке готово',{exact:true})).toHaveCount(0);
+ expect(api.requests.filter(p=>p.includes('/karaoke/status')||p==='/demo/auth')).toEqual([]);
+ await rows.nth(0).getByRole('button',{name:'Ready from search',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ expect(playbackBody).toEqual({pairOperationId:pair,providerTrackId:'101'});expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+ expect(api.requests.filter(p=>p.includes('/karaoke/status')||p==='/demo/auth')).toEqual([]);
+});
+test('unknown search readiness retains status check on selection and does not create automatically',async({page})=>{
+ const api=await mockApi(page);
+ await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,route=>route.fulfill({json:{items:[{providerTrackId:'102',title:'Unknown song',artist:'Artist',durationMs:8000,karaokeStatus:{state:'unknown'}}]},headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Unknown');await expect(page.getByRole('button',{name:'Unknown song',exact:true})).toBeVisible();
+ await expect(page.getByText('Караоке готово',{exact:true})).toHaveCount(0);expect(api.enqueued).toBe(0);
+ await page.getByRole('button',{name:'Unknown song',exact:true}).click();await expect(page.getByRole('button',{name:'Создать караоке'})).toBeVisible();expect(api.requests.filter(p=>p==='/demo/karaoke/status')).toHaveLength(1);expect(api.enqueued).toBe(0);
+});

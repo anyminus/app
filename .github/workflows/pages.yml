@@ -28,13 +28,6 @@ jobs:
         run: node scripts/check-public-artwork.mjs
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
-      - name: Diagnose lyrics 130327111 (read-only)
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        continue-on-error: true
-        timeout-minutes: 2
-        run: node scripts/check-lyrics-130327111.mjs
-        env:
-          VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
       - run: npm run build
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}

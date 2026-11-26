@@ -3,7 +3,7 @@ import {apiOrigin,createDemoApi,normalizeTracks,normalizeJob,ApiError} from './a
 import {trackArtworkUrl} from './artwork.mjs';
 export const origin=apiOrigin(import.meta.env.VITE_DEMO_API_ORIGIN||'https://anyminus-demo-search-dev.demo-search.workers.dev')!;
 export const api=createDemoApi(origin);
-export const coverFor=(id:string,provided?:string|null)=>trackArtworkUrl(origin,id,provided??undefined);
+export const coverFor=(id:string,provided?:string|null)=>trackArtworkUrl(origin,id,provided);
 export type LiveTrack={providerTrackId:string;title:string;artist:string;durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
 export function isTrackId(id:unknown):id is string{return typeof id==='string'&&/^\d{1,20}$/.test(id)}
 export function useCatalog(query:string|null){

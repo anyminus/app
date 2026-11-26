@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.16
+- Consume per-result karaokeStatus in search; only valid ready pairs enable immediate playback, preserving the previous fallback for missing or unknown readiness. No batch/status request for a confirmed ready result. Use validated API coverUrl directly, preserve legacy artwork lookup for omitted fields, and show placeholders for explicit missing or failed covers. Do not enqueue lyric generation.
+
 ## 0.2.15
 - Fix artwork helper type inference and add a bounded read-only live artwork diagnostic for the public catalog. External API availability is reported separately from deterministic application tests.
 
