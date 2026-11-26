@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.19
+- Automatically follow all ready catalog pages for an artist, display every matching track as pages arrive, deduplicate IDs and remove manual load-more and five-track preview limits on artist screens. Preserve normal home catalog pagination and abort on navigation.
+
 ## 0.2.18
 - Artist overview combines confirmed ready karaoke from the public catalog and actual artist-matched provider search results. Add overview, karaoke and songs tabs, a direct sing action, sharing and separate loading/error states. The existing provider search is limited to 20 results; do not mislabel them as popularity-ranked or a complete discography.
 

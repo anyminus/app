@@ -62,3 +62,20 @@ test('artist overview combines provider songs with ready catalog and separates t
  await page.getByRole('button',{name:'Песни',exact:true}).click();await expect(page.getByRole('button',{name:'New song',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Ready song',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Спеть',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
 });
+
+test('artist automatically loads every catalog page and displays all songs in overview',async({page})=>{
+ const api=await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';const cursors:string[]=[];
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>{
+  const c=new URL(r.request().url()).searchParams.get('cursor');cursors.push(c??'first');const i=c?Number(c)-1000:0;
+  return r.fulfill({json:{items:[{providerTrackId:String(2000+i),title:'Artist song '+i,artist:'Дельфин',durationSeconds:8,pairOperationId:pair}],nextCursor:i<11?String(1001+i):null},headers:{'Access-Control-Allow-Origin':'*'}});
+ });
+ await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,r=>r.fulfill({json:{items:[],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));
+ await expect(page.locator('.track-row')).toHaveCount(12);
+ await expect(page.getByRole('button',{name:'Artist song 11',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Загрузить ещё',exact:true})).toHaveCount(0);
+ expect(cursors).toHaveLength(12);expect(api.enqueued).toBe(0);expect(api.requests).not.toContain('/demo/karaoke/status');
+ await page.getByRole('button',{name:'Караоке',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(12);
+ await page.getByRole('button',{name:'Песни',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(12);
+ expect(cursors).toHaveLength(12);
+});
