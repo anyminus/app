@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.8
+- Remove redundant play button from track rows; title and artwork retain direct karaoke launch, with more room for track metadata.
+
 ## 0.2.7
 - Compact bottom navigation to 49 CSS pixels plus device safe area; retain at least 44-pixel touch targets and reduce reserved content padding.
 
