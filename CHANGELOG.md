@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.20
+- Distinguish confirmed missing/pending lyrics from generic API failures. Allow local lyrics subscriptions, persist them in the browser, and notify in the app when text becomes available through the protected read endpoint. Foreground-only checks are bounded and never enqueue generation. Show subscriptions in the profile; no background push delivery is claimed.
+
 ## 0.2.19
 - Automatically follow all ready catalog pages for an artist, display every matching track as pages arrive, deduplicate IDs and remove manual load-more and five-track preview limits on artist screens. Preserve normal home catalog pagination and abort on navigation.
 

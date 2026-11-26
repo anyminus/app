@@ -9,7 +9,7 @@ function client(origin,fetcher){
  if(signal?.aborted)throw signal.reason;const route=method+' '+path;const remaining=(cooldowns.get(route)??0)-Date.now();if(remaining>0)throw new ApiError(429,remaining,path);cooldowns.delete(route);
  const url=new URL(path,base);for(const [key,value] of Object.entries(query??{}))if(value!==null&&value!==undefined)url.searchParams.set(key,String(value));
  let response;try{response=await fetcher(url.toString(),{method,signal,credentials,cache:'no-store',redirect:'error',headers:{...headers,...(token?{Authorization:'Bearer '+token}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})})}catch(e){if(signal?.aborted)throw e;throw new ApiError(0,0,path);}
- if(!response.ok){const wait=response.status===429?retryAfterMs(response.headers.get('retry-after')):0;if(wait)cooldowns.set(route,Date.now()+wait);throw new ApiError(response.status,wait,path)}if(response.status===204)return null;return response.json();
+ if(!response.ok){const wait=response.status===429?retryAfterMs(response.headers.get('retry-after')):0;if(wait)cooldowns.set(route,Date.now()+wait);const error=new ApiError(response.status,wait,path);error.lyricsProvenance=response.headers.get('x-anyminus-lyrics-provenance');throw error}if(response.status===204)return null;return response.json();
  };
 }
 export function mediaUrl(origin,pairId,role,value){const u=new URL(value,origin);if(!/^[0-9a-f-]{36}$/i.test(pairId)||!['instrumental','vocals','artwork','lyrics'].includes(role)||u.origin!==origin||u.pathname!=='/demo/catalog/media/'+pairId+'/'+role||u.search||u.hash||u.username||u.password)throw Error('Недопустимый адрес медиа');return u.toString()}
