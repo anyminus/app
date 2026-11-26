@@ -63,3 +63,17 @@ body.karaoke-open .tab-bar{display:none}
  .karaoke-focus{grid-template-columns:minmax(0,1fr) minmax(200px,27%)}
  .karaoke-lyrics .lyric{font-size:clamp(20px,var(--lyric-size,32px),32px)}
 }
+
+/* Explicit shrinkable grid tracks prevent the intrinsic range width and five
+   transport buttons from widening the landscape dock beyond the screen. */
+.karaoke-dock,.karaoke-timeline{grid-template-columns:minmax(0,1fr);min-width:0}
+.karaoke-dock>*{min-width:0;max-width:100%}
+.karaoke-timeline input{min-width:0;max-width:100%}
+.karaoke-sound-warning{font-size:12px;line-height:1.25;color:var(--accent);padding:6px;text-align:center;background:var(--raised);border-radius:8px}
+@media(orientation:landscape) and (max-height:650px){
+ .karaoke-screen{grid-template-columns:minmax(0,1fr) minmax(252px,36%)}
+ .karaoke-focus{grid-template-columns:minmax(0,1fr) minmax(220px,31%)}
+ .karaoke-transport{gap:2px}
+ .karaoke-transport .icon-button{width:38px;height:42px}
+ .karaoke-transport .play-main{width:44px;height:44px}
+}
