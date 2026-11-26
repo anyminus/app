@@ -8,3 +8,5 @@
 .live-track{display:flex;gap:12px;align-items:center;text-align:left;min-height:70px;border-bottom:1px solid var(--border);padding:6px 0}.live-track strong{overflow-wrap:anywhere}.live-error{padding:14px;border:1px solid #bd5873;border-radius:14px;color:var(--text);font-size:14px;line-height:1.5}.live-lyrics{max-height:42vh;overflow:auto;padding:14px 0}.live-lyrics .lyric{font-size:26px}
 
 .collection-card-wrap{position:relative;min-width:0}.collection-card-wrap .collection-card{width:100%;height:100%;padding-right:10px}.collection-card-wrap>.playlist-heart{position:absolute;top:4px;right:4px;width:38px;height:38px;color:white;background:#15101f55}.collection-card-wrap>.playlist-heart.active{color:#ff9ab9}.collection-hero{position:relative}.collection-hero>.playlist-heart{position:absolute;top:12px;right:12px;background:#15101f55;color:white}.collection-hero>.playlist-heart.active{color:#ff9ab9}.favorites-tabs{flex-wrap:wrap}.favorites-tabs>button{flex:1;white-space:nowrap}
+
+.plain-lyrics{white-space:pre-wrap;overflow-wrap:anywhere;font-size:24px;line-height:1.6;margin-top:12px}.live-lyrics>.text-button{margin-top:10px}

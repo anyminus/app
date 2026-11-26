@@ -14,3 +14,6 @@ test('API routes and origin separation',async()=>{const calls=[];const fake=asyn
 
 import {toggleFavoritePlaylist,pruneFavoritePlaylists} from '../src/playlists.mjs';
 test('playlist favorites are independent, unique and pruned after deletion',()=>{const a=toggleFavoritePlaylist([],'top');assert.deepEqual(a,['top']);const b=toggleFavoritePlaylist(a,'Рок');assert.deepEqual(b,['Рок','top']);assert.deepEqual(toggleFavoritePlaylist(b,'top'),['Рок']);assert.deepEqual(pruneFavoritePlaylists(b,[{id:'top'}]),['top']);assert.equal(pruneFavoritePlaylists(a,[{id:'top'}]),a);});
+
+import {normalizeStoredLyrics,retryLyricsStatus} from '../src/lyrics.mjs';
+test('stored lyrics distinguish timed, plain, absent and transient states',()=>{const line={text:'test line',startMs:100,endMs:null,startOrigin:'source'};assert.deepEqual(normalizeStoredLyrics({state:'available',format:'LRC',timing:'line',lines:[{...line,startMs:200},line,{...line,startMs:300,startOrigin:'inferred'}]},1000).lines.map(l=>l.startMs),[100,200]);assert.equal(normalizeStoredLyrics({state:'available',format:'TEXT',timing:'none',text:'one\ntwo',lines:[]},1000).text,'one\ntwo');assert.equal(normalizeStoredLyrics({state:'absent',format:'LRC',lines:[]},1000).state,'absent');assert.equal(retryLyricsStatus(503),true);assert.equal(retryLyricsStatus(401),false);assert.throws(()=>normalizeStoredLyrics({},1000));});
