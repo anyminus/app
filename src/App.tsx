@@ -26,7 +26,7 @@ export function App(){
  function like(id:string){setFavorites(old=>old.includes(id)?old.filter(x=>x!==id):[id,...old]);}
  function sing(t:Track){if(!ready.includes(t.id)){navigate('prepare',t.id);return;}setHistory(old=>[t.id,...old.filter(id=>id!==t.id)]);navigate('player',t.id);}
  async function toggle(){const a=audio.current;if(!a)return;try{if(playing){a.pause();setPlaying(false);}else{a.setVolumes(music,vocals);await a.play();setPlaying(true);setAudioError('');}}catch{setAudioError('Не удалось запустить тестовый звук. Попробуйте ещё раз.');}}
- async function seek(v:number){try{await audio.current?.seek(v);setTime(v);if(v>=track.durationSeconds)setPlaying(false);}catch{setAudioError('Не удалось перемотать звук.');}}
+ async function seek(v:number){try{v=Math.max(0,Math.min(track.durationSeconds,v));await audio.current?.seek(v);setTime(v);if(v>=track.durationSeconds)setPlaying(false);}catch{setAudioError('Не удалось перемотать звук.');}}
  function shareTrack(t:Track){setShare({type:'track',id:t.id,title:t.title,subtitle:t.artist,color:t.color})}
  function shareArtist(a:typeof artists[number]){setShare({type:'artist',id:a.id,title:a.name,subtitle:'Артист',color:a.color})}
  function linkFor(e:Entity){const url=new URL(location.href);url.hash='/'+e.type+'/'+e.id;return url.toString()}
