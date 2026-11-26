@@ -77,3 +77,5 @@ body.karaoke-open .tab-bar{display:none}
  .karaoke-transport .icon-button{width:38px;height:42px}
  .karaoke-transport .play-main{width:44px;height:44px}
 }
+
+.track-ready{font-size:10px;line-height:1.1;color:var(--accent);font-weight:650}.karaoke-checking{display:flex;min-height:52px;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:14px}.karaoke-spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:karaoke-spin .8s linear infinite}@keyframes karaoke-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.karaoke-spinner{animation:none}}
