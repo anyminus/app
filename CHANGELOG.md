@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.1
+- Remove the redundant track-count label from the mixer.
+
 ## 0.3.0
 - Add Telegram Mini App authentication using signed initData verified by the API; keep bearer tokens in memory, handle expiry and logout. Guests retain ready playback and read-only discovery; creation requires a verified Telegram session in the UI and request handler. Configure the public Mini App launch URL with VITE_TELEGRAM_MINI_APP_URL. Server-side guest enqueue rejection and external browser login require API support.
 
