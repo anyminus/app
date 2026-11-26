@@ -49,9 +49,10 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
  // Session creation is safe to retry once for a transient gateway failure,
  // but never retry a rate limit or enqueue a karaoke job here.
  const auth=await retryRead(()=>api.auth(signal),signal);
- if(typeof auth.accessToken!=='string')throw Error('Не удалось авторизоваться');
+ if(!auth||typeof auth!=='object'||!('accessToken' in auth)||typeof auth.accessToken!=='string')throw Error('Не удалось авторизоваться');
+ const accessToken=auth.accessToken;
  try{
-  const meta=await retryRead(()=>api.metadata(id,auth.accessToken,signal),signal);
+  const meta=await retryRead(()=>api.metadata(id,accessToken,signal),signal);
   const track=normalizeTracks({items:[{...meta,providerTrackId:id}]})[0] as LiveTrack|undefined;
   if(track&&track.title.trim()&&track.artist.trim())return track;
   throw Error('Метаданные песни недоступны');
@@ -59,7 +60,7 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
   if(signal.aborted)throw e;
   if(e instanceof ApiError&&![0,404,408,429,500,502,503,504].includes(e.status))throw e;
   // A verified ready pair can be played even if metadata is missing.
-  const raw=await retryRead(()=>api.status(id,auth.accessToken,signal),signal);
+  const raw=await retryRead(()=>api.status(id,accessToken,signal),signal);
   const job=normalizeJob(raw);
   if(job.state!=='ready'||!job.pairOperationId)throw e;
   let fromCatalog:LiveTrack|undefined;
