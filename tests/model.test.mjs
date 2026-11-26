@@ -2,3 +2,6 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import {d
 import {initialPlaylists,registerProfileTap,addPlaylist,renamePlaylist,deletePlaylist,addTrack,removeTrack} from '../src/playlists.mjs';
 test('five profile taps within four seconds, expired sequence resets',()=>{let p={count:0,startedAt:0};for(let i=0;i<5;i++)p=registerProfileTap(p,1000+i*300);assert.equal(p.count,5);assert.equal(registerProfileTap(p,6000).count,1);});
 test('playlist CRUD and no duplicate tracks',()=>{let p=addPlaylist(initialPlaylists,'new','  Вечер  ');assert.equal(p.at(-1).name,'Вечер');p=renamePlaylist(p,'new','Хиты');p=addTrack(p,'new','city');p=addTrack(p,'new','city');p=addTrack(p,'new','bad');assert.deepEqual(p.at(-1),{id:'new',name:'Хиты',trackIds:['city']});p=removeTrack(p,'new','city');assert.deepEqual(p.at(-1).trackIds,[]);p=deletePlaylist(p,'new');assert.deepEqual(p,initialPlaylists);});
+
+import {effectiveVolume} from '../src/mixer.mjs';
+test('mute masks stored levels without changing them',()=>{const levels={music:73,vocals:28};assert.equal(effectiveVolume(levels.music,true),0);assert.equal(effectiveVolume(levels.vocals,false),28);assert.equal(effectiveVolume(levels.music,false),73);assert.equal(effectiveVolume(levels.vocals,true),0);assert.equal(effectiveVolume(0,false),0);});

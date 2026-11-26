@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+- Independent mute by tapping music or vocal icons; disabled sliders while muted, restore previous volume on unmute.
+- Persist mute preferences across player and settings; fix ambiguous playlist test locator.
+
 ## 0.1.1
 - Hidden playlist editor, enabled by five profile taps within four seconds and hidden again on demand.
 - Create, rename and delete playlists; search, add and remove tracks without duplicates.
