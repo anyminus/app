@@ -36,3 +36,6 @@ test('search readiness is accepted only for explicit ready with a valid pair UUI
  assert.equal(normalizeTracks({items:[{...track,coverUrl:null}]})[0].coverUrl,null);
  assert.equal(normalizeTracks({items:[track]})[0].coverUrl,undefined);
 });
+
+import {matchesArtist} from '../src/model.mjs';
+test('artist credit matching is exact, case and whitespace normalized, and includes collaborations',()=>{assert.equal(matchesArtist(' ДЕЛЬФИН ','Дельфин'),true);assert.equal(matchesArtist('Другой, Дельфин','Дельфин'),true);assert.equal(matchesArtist('Дельфинчик','Дельфин'),false);assert.equal(matchesArtist('Артист Ё','артист е'),true);assert.equal(matchesArtist('Дельфин',''),false)});

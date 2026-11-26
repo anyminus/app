@@ -28,6 +28,13 @@ jobs:
         run: node scripts/check-public-artwork.mjs
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
+      - name: Diagnose artist catalog (read-only)
+        if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'Artist catalog')
+        continue-on-error: true
+        timeout-minutes: 3
+        run: node scripts/check-artist-catalog.mjs
+        env:
+          VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
       - run: npm run build
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}

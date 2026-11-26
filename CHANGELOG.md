@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.17
+- Artist pages list verified ready songs from the paginated public catalog, including exact individual credits in collaborations, rather than relying on the provider's first 20 search results. Bound each catalog scan to eight pages and expose continuation; allow searching for other songs separately.
+
 ## 0.2.16
 - Consume per-result karaokeStatus in search; only valid ready pairs enable immediate playback, preserving the previous fallback for missing or unknown readiness. No batch/status request for a confirmed ready result. Use validated API coverUrl directly, preserve legacy artwork lookup for omitted fields, and show placeholders for explicit missing or failed covers. Do not enqueue lyric generation.
 

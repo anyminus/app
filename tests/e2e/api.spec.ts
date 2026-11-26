@@ -45,3 +45,10 @@ test('unknown search readiness retains status check on selection and does not cr
  await expect(page.getByText('Караоке готово',{exact:true})).toHaveCount(0);expect(api.enqueued).toBe(0);
  await page.getByRole('button',{name:'Unknown song',exact:true}).click();await expect(page.getByRole('button',{name:'Создать караоке'})).toBeVisible();expect(api.requests.filter(p=>p==='/demo/karaoke/status')).toHaveLength(1);expect(api.enqueued).toBe(0);
 });
+
+test('artist pages find ready songs beyond the first catalog page and include collaborations',async({page})=>{
+ const api=await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';const cursors:string[]=[];
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>{const c=new URL(r.request().url()).searchParams.get('cursor');cursors.push(c??'first');return r.fulfill({json:{items:c?[{providerTrackId:'102',title:'Solo',artist:'ДЕЛЬФИН',durationSeconds:8,pairOperationId:pair},{providerTrackId:'103',title:'Collaboration',artist:'Другой, Дельфин',durationSeconds:8,pairOperationId:pair},{providerTrackId:'104',title:'Wrong artist',artist:'Дельфинчик',durationSeconds:8,pairOperationId:pair}]:[{providerTrackId:'101',title:'Unrelated',artist:'Other artist',durationSeconds:8,pairOperationId:pair}],nextCursor:c?null:'101'},headers:{'Access-Control-Allow-Origin':'*'}})});
+ await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await expect(page.locator('.track-row')).toHaveCount(2);await expect(page.getByRole('button',{name:'Solo',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Collaboration',exact:true})).toBeVisible();await expect(page.getByText('Караоке готово',{exact:true})).toHaveCount(2);expect(cursors).toEqual(['first','101']);expect(api.requests).not.toContain('/demo/search');
+ await page.getByRole('button',{name:'Collaboration',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);expect(api.requests).not.toContain('/demo/karaoke/status');
+});

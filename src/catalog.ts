@@ -1,16 +1,32 @@
 import {useEffect,useRef,useState} from 'react';
 import {apiOrigin,createDemoApi,normalizeTracks,normalizeJob,ApiError} from './api.mjs';
 import {trackArtworkUrl} from './artwork.mjs';
+import {matchesArtist} from './model.mjs';
 export const origin=apiOrigin(import.meta.env.VITE_DEMO_API_ORIGIN||'https://anyminus-demo-search-dev.demo-search.workers.dev')!;
 export const api=createDemoApi(origin);
 export const coverFor=(id:string,provided?:string|null)=>trackArtworkUrl(origin,id,provided);
 export type LiveTrack={providerTrackId:string;title:string;artist:string;durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
 export function isTrackId(id:unknown):id is string{return typeof id==='string'&&/^\d{1,20}$/.test(id)}
-export function useCatalog(query:string|null){
+export function useCatalog(query:string|null,artist:string|null=null){
  const [items,setItems]=useState<LiveTrack[]>([]),[cursor,setCursor]=useState<string|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[retry,setRetry]=useState(0);
  const ctrl=useRef<AbortController|null>(null);
- useEffect(()=>{const c=new AbortController();ctrl.current=c;setItems([]);setCursor(null);setError('');if(query!==null&&query.trim().length<2){setLoading(false);return()=>{c.abort();ctrl.current?.abort()}}setLoading(true);const t=window.setTimeout(async()=>{try{const r=query===null?await api.catalog(null,c.signal):await api.search(query,c.signal);if(!c.signal.aborted){setItems(normalizeTracks(r,query===null));setCursor(query===null&&typeof r.nextCursor==='string'?r.nextCursor:null);}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}},query===null?0:650);return()=>{clearTimeout(t);c.abort();ctrl.current?.abort()}},[query,retry]);
- async function more(){if(query!==null||!cursor||loading)return;const c=new AbortController();ctrl.current=c;setLoading(true);setError('');try{const r=await api.catalog(cursor,c.signal);if(!c.signal.aborted){setItems(old=>{const seen=new Set(old.map(t=>t.providerTrackId));return [...old,...(normalizeTracks(r,true) as LiveTrack[]).filter(t=>!seen.has(t.providerTrackId))]});setCursor(typeof r.nextCursor==='string'?r.nextCursor:null)}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}}
+ // The public catalog is the authoritative source of ready songs. Scan in bounded
+ // batches so artist pages never depend on the provider's first 20 search hits.
+ async function artistPage(start:string|null,signal:AbortSignal){
+  const matches:LiveTrack[]=[];let next=start;const seen=new Set<string>();if(next)seen.add(next);
+  for(let i=0;i<8;i++){
+   const page=await api.catalog(next,signal);
+   if(signal.aborted)throw signal.reason;
+   matches.push(...(normalizeTracks(page,true) as LiveTrack[]).filter(t=>t.pairOperationId&&matchesArtist(t.artist,artist)));
+   const candidate=page.nextCursor;
+   if(candidate===null||candidate===undefined){next=null;break}
+   if(typeof candidate!=='string'||!isTrackId(candidate)||seen.has(candidate))throw Error('Некорректная пагинация каталога');
+   seen.add(candidate);next=candidate;
+  }
+  return {items:matches,next};
+ }
+ useEffect(()=>{const c=new AbortController();ctrl.current=c;setItems([]);setCursor(null);setError('');if(artist===null&&query!==null&&query.trim().length<2){setLoading(false);return()=>{c.abort();ctrl.current?.abort()}}setLoading(true);const t=window.setTimeout(async()=>{try{if(artist!==null){const r=await artistPage(null,c.signal);if(!c.signal.aborted){setItems(r.items);setCursor(r.next)}return}const r=query===null?await api.catalog(null,c.signal):await api.search(query,c.signal);if(!c.signal.aborted){setItems(normalizeTracks(r,query===null));setCursor(query===null&&typeof r.nextCursor==='string'?r.nextCursor:null);}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}},artist!==null||query===null?0:650);return()=>{clearTimeout(t);c.abort();ctrl.current?.abort()}},[query,artist,retry]);
+ async function more(){if((query!==null&&artist===null)||!cursor||loading)return;const c=new AbortController();ctrl.current=c;setLoading(true);setError('');try{if(artist!==null){const r=await artistPage(cursor,c.signal);if(!c.signal.aborted){setItems(old=>{const seen=new Set(old.map(t=>t.providerTrackId));return [...old,...r.items.filter(t=>!seen.has(t.providerTrackId))]});setCursor(r.next)}return}const r=await api.catalog(cursor,c.signal);if(!c.signal.aborted){setItems(old=>{const seen=new Set(old.map(t=>t.providerTrackId));return [...old,...(normalizeTracks(r,true) as LiveTrack[]).filter(t=>!seen.has(t.providerTrackId))]});setCursor(typeof r.nextCursor==='string'?r.nextCursor:null)}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}}
  return {items,cursor,error,loading,retry:()=>setRetry(v=>v+1),more};
 }
 function transient(e:unknown){return e instanceof ApiError&&(e.status===0||e.status===408||[500,502,503,504].includes(e.status))}
