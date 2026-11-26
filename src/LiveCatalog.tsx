@@ -73,7 +73,7 @@ export function LiveCatalog({onBack,track:selected,takeLaunch,onReady,liked,onLi
  if(playerVisible)return <section className={'karaoke-screen'+(focus?' karaoke-focus':'')} aria-label="Плеер караоке">
  <header className="karaoke-header">
  <IconButton label="Назад" onClick={onBack}><ArrowLeft/></IconButton>
- <div className="karaoke-heading"><h1 title={selected.title}>{selected.title}</h1><button className="artist-link" onClick={onArtist} title={selected.artist}>{selected.artist}</button></div>
+ <div className="karaoke-heading"><h1 title={selected.title}>{selected.title}</h1>{selected.metadataUnavailable?<span className="metadata">Уточняем название и исполнителя…</span>:<button className="artist-link" onClick={onArtist} title={selected.artist}>{selected.artist}</button>}</div>
  <IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart size={21} fill={liked?'currentColor':'none'}/></IconButton>
  <button className="icon-button karaoke-focus-toggle" type="button" aria-label={focus?'Показать плеер':'Только текст'} aria-pressed={focus} title={focus?'Обычный режим':'Полноэкранный текст'} onClick={()=>setFocus(v=>!v)}>{focus?<Minimize2 size={21}/>:<Maximize2 size={21}/>}</button>
  </header>

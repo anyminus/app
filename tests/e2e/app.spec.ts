@@ -24,3 +24,16 @@ test('rate limited cold link does not issue repeated auth requests before cooldo
  await page.route(/^https:\/\/[^/]+\/demo\/auth$/,async route=>{if(route.request().method()==='OPTIONS'){await route.fallback();return}auth++;await route.fulfill({status:429,json:{},headers:{'Access-Control-Allow-Origin':'*','Access-Control-Expose-Headers':'Retry-After','Retry-After':'30'}})});
  await page.goto('/#/track/24442527');await expect(page.getByRole('alert')).toContainText('HTTP 429');await page.getByRole('button',{name:'Повторить',exact:true}).click();await expect(page.getByRole('alert')).toContainText('HTTP 429');expect(auth).toBe(1);
 });
+
+test('shared track beyond first catalog page uses real title and artist without auth or metadata',async({page})=>{
+ const api=await mockApi(page);let pages=0,auth=0;
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,async route=>{pages++;const cursor=new URL(route.request().url()).searchParams.get('cursor');await route.fulfill({json:cursor?{items:[{providerTrackId:'330786',title:'Real title from second page',artist:'Real artist',durationSeconds:8,pairOperationId:'00000000-0000-4000-8000-000000000001'}],nextCursor:null}:{items:[],nextCursor:'101'},headers:{'Access-Control-Allow-Origin':'*'}})});
+ await page.route(/^https:\/\/[^/]+\/demo\/auth$/,async route=>{auth++;await route.fulfill({status:502,json:{},headers:{'Access-Control-Allow-Origin':'*'}})});
+ await page.goto('/#/track/330786');await expect(page.getByRole('heading',{name:'Real title from second page'})).toBeVisible();await expect(page.getByRole('button',{name:'Real artist',exact:true})).toBeVisible();await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:15000});expect(pages).toBe(2);expect(auth).toBe(0);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});
+test('shared link recovers from a transient auth gateway error',async({page})=>{
+ const api=await mockApi(page);let attempts=0;
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,route=>route.fulfill({json:{items:[],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.route(/^https:\/\/[^/]+\/demo\/auth$/,async route=>{if(route.request().method()==='OPTIONS'){await route.fallback();return}attempts++;if(attempts===1)await route.fulfill({status:502,json:{},headers:{'Access-Control-Allow-Origin':'*'}});else await route.fallback()});
+ await page.goto('/#/track/101');await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:15000});expect(attempts).toBe(2);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});

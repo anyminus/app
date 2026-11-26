@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.11
+- Resolve shared ready tracks across up to eight catalog pages before calling auth or provider metadata; retry transient auth gateway failures once, and restore missing display metadata while audio continues. Show a neutral temporary header rather than a raw track ID and identify the failing API route on lookup errors.
+
 ## 0.2.10
 - Resolve shared ready tracks from the first public catalog page before requesting anonymous auth or provider metadata. Share a single in-memory anonymous session and deduplicate concurrent auth requests. Respect HTTP 429 Retry-After (30-second fallback) without sending repeated requests during the cooldown. Defer initial link lookup to avoid duplicate StrictMode requests.
 

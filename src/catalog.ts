@@ -16,26 +16,56 @@ export function useCatalog(query:string|null){
 function transient(e:unknown){return e instanceof ApiError&&(e.status===0||e.status===408||[500,502,503,504].includes(e.status))}
 function delay(ms:number,signal:AbortSignal){return new Promise<void>((resolve,reject)=>{if(signal.aborted){reject(signal.reason);return}const abort=()=>{clearTimeout(timer);reject(signal.reason)};const timer=window.setTimeout(()=>{signal.removeEventListener('abort',abort);resolve()},ms);signal.addEventListener('abort',abort,{once:true})})}
 async function retryRead<T>(read:()=>Promise<T>,signal:AbortSignal):Promise<T>{try{return await read()}catch(e){if(signal.aborted||!transient(e))throw e;await delay(700,signal);return read()}}
+// Bounded public catalog lookup: never request every page without a limit.
+async function findCatalogTrack(id:string,signal:AbortSignal,maxPages=8):Promise<LiveTrack|undefined>{
+ let cursor:string|null=null;const seen=new Set<string>();
+ for(let i=0;i<maxPages;i++){
+  if(signal.aborted)throw signal.reason;
+  const page=await api.catalog(cursor,signal);
+  const match=(normalizeTracks(page,true) as LiveTrack[]).find(t=>t.providerTrackId===id&&t.pairOperationId);
+  if(match)return match;
+  const next=page.nextCursor;
+  if(typeof next!=='string'||!/^\d{1,20}$/.test(next)||seen.has(next))break;
+  seen.add(next);cursor=next;
+ }
+}
+async function providerMetadata(id:string,signal:AbortSignal):Promise<LiveTrack>{
+ const auth=await api.auth(signal);
+ const raw=await api.metadata(id,auth.accessToken,signal);
+ const match=normalizeTracks({items:[{...raw,providerTrackId:id}]})[0] as LiveTrack|undefined;
+ if(!match||!match.title.trim()||!match.artist.trim())throw Error('Метаданные песни недоступны');
+ return match;
+}
+export async function recoverTrackMetadata(id:string,signal:AbortSignal):Promise<LiveTrack>{
+ if(!isTrackId(id))throw Error('Песня не найдена');
+ // Prefer the stored catalog; the provider is a fallback.
+ try{const track=await findCatalogTrack(id,signal);if(track)return track}catch(e){if(signal.aborted||e instanceof ApiError&&e.status===429)throw e}
+ return providerMetadata(id,signal);
+}
 export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrack>{
  if(!isTrackId(id))throw Error('Песня не найдена');
- // A shared link to a ready song may be resolved without provider metadata or anonymous login.
  let catalogUnavailable=false;
- try{const page=await api.catalog(null,signal);const ready=(normalizeTracks(page,true) as LiveTrack[]).find(t=>t.providerTrackId===id&&t.pairOperationId);if(ready)return ready}catch(e){if(signal.aborted||e instanceof ApiError&&e.status===429)throw e;catalogUnavailable=true}
- const auth=await api.auth(signal);if(typeof auth.accessToken!=='string')throw Error('Не удалось авторизоваться');
+ try{const ready=await findCatalogTrack(id,signal);if(ready)return ready}catch(e){if(signal.aborted||e instanceof ApiError&&e.status===429)throw e;catalogUnavailable=true}
+ // Session creation is safe to retry once for a transient gateway failure,
+ // but never retry a rate limit or enqueue a karaoke job here.
+ const auth=await retryRead(()=>api.auth(signal),signal);
+ if(typeof auth.accessToken!=='string')throw Error('Не удалось авторизоваться');
  try{
- const meta=await retryRead(()=>api.metadata(id,auth.accessToken,signal),signal);
- const track=normalizeTracks({items:[{...meta,providerTrackId:id}]})[0];if(!track)throw Error('Песня не найдена');return track;
+  const meta=await retryRead(()=>api.metadata(id,auth.accessToken,signal),signal);
+  const track=normalizeTracks({items:[{...meta,providerTrackId:id}]})[0] as LiveTrack|undefined;
+  if(track&&track.title.trim()&&track.artist.trim())return track;
+  throw Error('Метаданные песни недоступны');
  }catch(e){
- if(signal.aborted||(!transient(e)&&!(e instanceof ApiError&&e.status===429)))throw e;
- // Ready audio must not depend on the availability of upstream song metadata.
- // Check the authoritative ready status and recover actual metadata from the public catalog when available.
- const raw=await retryRead(()=>api.status(id,auth.accessToken,signal),signal);
- const job=normalizeJob(raw);
- if(job.state!=='ready'||!job.pairOperationId)throw e;
- let fromCatalog:LiveTrack|undefined;
- if(catalogUnavailable)try{const catalog=await api.catalog(null,signal);fromCatalog=(normalizeTracks(catalog,true) as LiveTrack[]).find(t=>t.providerTrackId===id)}catch(cause){if(signal.aborted)throw cause}
- if(signal.aborted)throw signal.reason;
- const duration=Number(raw.durationSeconds);
- return {providerTrackId:id,title:fromCatalog?.title??'Песня '+id,artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog};
+  if(signal.aborted)throw e;
+  if(e instanceof ApiError&&![0,404,408,429,500,502,503,504].includes(e.status))throw e;
+  // A verified ready pair can be played even if metadata is missing.
+  const raw=await retryRead(()=>api.status(id,auth.accessToken,signal),signal);
+  const job=normalizeJob(raw);
+  if(job.state!=='ready'||!job.pairOperationId)throw e;
+  let fromCatalog:LiveTrack|undefined;
+  if(catalogUnavailable)try{fromCatalog=await findCatalogTrack(id,signal)}catch(cause){if(signal.aborted)throw cause}
+  if(signal.aborted)throw signal.reason;
+  const duration=Number(raw.durationSeconds);
+  return {providerTrackId:id,title:fromCatalog?.title??'Караоке',artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog};
  }
 }
