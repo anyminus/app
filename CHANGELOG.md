@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0
+- Add Telegram browser OIDC authorization-code/PKCE login, retaining signed Mini App authentication. Restore the selected song/profile after redirect, reject mismatched state, keep access tokens in memory. Server configuration and live deployment required.
+
 ## 0.3.2
 - Replace artist overview with two distinct tabs: ready karaoke strictly from the public catalog and popular songs from a dedicated SDK-backed API contract (`GET /demo/artists/popular?name=...`, pending server support). Preserve provider ordering and never substitute general search results. Fix mobile artist header overflow.
 

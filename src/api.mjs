@@ -24,6 +24,8 @@ export function createDemoApi(origin,fetcher=fetch){
  auth,
  invalidateAuth:()=>{session=null},
  telegram:(initData,signal)=>call('/v1/auth/telegram',{method:'POST',body:{initData},signal}),
+ telegramStart:(challenge,signal)=>call('/v1/auth/telegram/start',{method:'POST',body:{challenge},signal}),
+ telegramExchange:(code,state,verifier,signal)=>call('/v1/auth/telegram/exchange',{method:'POST',body:{code,state,verifier},signal}),
  metadata:(id,token,signal)=>call('/demo/track-metadata/'+encodeURIComponent(id),{token,signal}),
  lyrics:(id,durationMs,signal,telegramToken)=>call('/demo/lyrics',{query:{id,format:'LRC',durationMs},signal,token:telegramToken}),
  status:(providerTrackId,token,signal)=>call('/demo/karaoke/status',{query:{providerTrackId},token,signal}),

@@ -114,3 +114,19 @@ test('rejected Telegram initData never unlocks creation',async({page})=>{
 test('verified Telegram session displays profile and logout restores guest gate',async({page})=>{
  const api=await mockApi(page,'accepted');await page.goto('/#/profile');await expect(page.getByRole('heading',{name:'Test Telegram'})).toBeVisible();await expect(page.getByText('Telegram · вход подтверждён')).toBeVisible();await page.getByRole('button',{name:'Выйти из аккаунта'}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();await page.getByRole('navigation').getByRole('button',{name:'Поиск'}).click();await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song two');await page.getByRole('button',{name:'Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();expect(api.enqueued).toBe(0);
 });
+
+test('browser OIDC callback validates stored state and restores profile',async({page})=>{
+ const api=await mockApi(page);let exchanged=0;
+ await page.addInitScript(()=>{if(location.search.includes('code=fixture'))sessionStorage.setItem('anyminus:telegram-oidc-pending',JSON.stringify({state:'fixture-state',verifier:'v'.repeat(43),returnHash:'#/profile',expires:Date.now()+60000}))});
+ await page.route(/^https:\/\/[^/]+\/v1\/auth\/telegram\/exchange$/,async r=>{
+  const headers={'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Headers':'content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
+  if(r.request().method()==='OPTIONS'){await r.fulfill({status:204,headers});return}
+  exchanged++;expect(r.request().postDataJSON()).toEqual({code:'fixture',state:'fixture-state',verifier:'v'.repeat(43)});
+  await r.fulfill({json:{accessToken:'test-telegram-only',tokenType:'Bearer',expiresIn:1800,name:'Browser Telegram'},headers});
+ });
+ await page.goto('/?code=fixture&state=fixture-state');await expect(page.getByRole('heading',{name:'Browser Telegram'})).toBeVisible();expect(exchanged).toBe(1);expect(new URL(page.url()).search).toBe('');expect(await page.evaluate(()=>sessionStorage.getItem('anyminus:telegram-oidc-pending'))).toBeNull();expect(api.enqueued).toBe(0);
+});
+test('browser OIDC callback without matching pending state never exchanges',async({page})=>{
+ await mockApi(page);let calls=0;await page.route(/^https:\/\/[^/]+\/v1\/auth\/telegram\/exchange$/,r=>{calls++;return r.abort()});
+ await page.goto('/?code=fixture&state=untrusted');await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();await expect(page.getByText('Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.')).toBeVisible();expect(calls).toBe(0);
+});
