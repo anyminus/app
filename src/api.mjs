@@ -12,8 +12,8 @@ export function mediaUrl(origin,pairId,role,value){const u=new URL(value,origin)
 export function createDemoApi(origin,fetcher=fetch){
  const call=client(origin,fetcher);
  return {
- search:(q,signal,telegramToken)=>{const text=q.trim();if(text.length<2||text.length>200)throw Error('Поиск: 2–200 символов');return call('/demo/search',{query:{q:text,limit:20},token:telegramToken,signal})},
- catalog:(cursor,signal,seed)=>call('/demo/catalog',{query:{limit:100,cursor,seed},signal}),
+ search:(q,signal,telegramToken=undefined)=>{const text=q.trim();if(text.length<2||text.length>200)throw Error('Поиск: 2–200 символов');return call('/demo/search',{query:{q:text,limit:20},token:telegramToken,signal})},
+ catalog:(cursor,signal,seed=undefined)=>call('/demo/catalog',{query:{limit:100,cursor,seed},signal}),
  auth:(signal)=>call('/demo/auth',{method:'POST',body:{},signal}),
  telegram:(initData,signal)=>call('/v1/auth/telegram',{method:'POST',body:{initData},signal}),
  metadata:(id,token,signal)=>call('/demo/track-metadata/'+encodeURIComponent(id),{token,signal}),

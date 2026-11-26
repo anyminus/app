@@ -3,11 +3,10 @@ import {SortableContext,useSortable,verticalListSortingStrategy} from '@dnd-kit/
 import {CSS} from '@dnd-kit/utilities';
 import {GripVertical} from 'lucide-react';
 import type {ReactNode} from 'react';
-import {tracks} from './model.mjs';
 type Props={ids:string[];renderItem:(id:string)=>ReactNode;onMove:(from:string,to:string)=>void;itemLabel?:(id:string)=>string;label?:string};
 function SortableRow({id,children,onArrow,itemLabel}:{id:string;children:ReactNode;onArrow:(direction:number)=>void;itemLabel?:(id:string)=>string}){
  const {attributes,listeners,setNodeRef,setActivatorNodeRef,transform,transition,isDragging}=useSortable({id});
- const title=itemLabel?.(id)??tracks.find(t=>t.id===id)?.title??id;
+ const title=itemLabel?.(id)??id;
  return <div ref={setNodeRef} data-sortable-id={id} className={'sortable-track'+(isDragging?' dragging':'')} style={{transform:CSS.Transform.toString(transform),transition}}>
  <button type="button" ref={setActivatorNodeRef} className="drag-handle" {...attributes} {...listeners} onKeyDown={e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();onArrow(e.key==='ArrowUp'?-1:1)}}} aria-label={'Переместить '+title} title="Перетащите или используйте стрелки вверх и вниз"><GripVertical size={22}/></button>
  <div className="sortable-content">{children}</div></div>;

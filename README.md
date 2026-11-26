@@ -1,8 +1,8 @@
 # ANYMINUS · App
 
-Интерактивное мобильное приложение ANYMINUS и дизайн-система.
+Мобильное караоке-приложение. Каталог, поиск, статус, дорожки и текст загружаются через API. Адрес задаётся при сборке через `VITE_DEMO_API_ORIGIN` (GitHub Actions: `DEMO_API_ORIGIN`); предусмотрен публичный адрес по умолчанию. Нет переключения на тестовый каталог.
 
-## Запуск
+Настройки, избранное, история и пользовательские подборки хранятся на устройстве; записи используют реальные ID песен. Серверная синхронизация этих списков пока не подключена.
 
 ```sh
 npm install
@@ -14,12 +14,4 @@ npm run test:e2e
 npm run storybook
 ```
 
-GitHub Pages: в Settings → Pages → Build and deployment выбрать GitHub Actions. Workflow собирает app и Storybook, проверяет тесты и публикует dist. Ссылки после успешного deploy: https://anyminus.github.io/app/ и https://anyminus.github.io/app/storybook/.
-
-Демо: 8 вымышленных песен, оригинальные тестовые строки, две синтетические звуковые дорожки с общей временной шкалой, отдельные регуляторы. Синтетическая голосовая подсказка не является записью голоса артиста.
-
-
-## API integration
-Use **Реальный каталог · API** on the home page. Configure an exact HTTPS origin (no path). Optional build variable `VITE_DEMO_API_ORIGIN`; GitHub Actions repository variable `DEMO_API_ORIGIN` populates it. No live origin assumed. See `docs/api-integration.md`. Never enter provider tokens or credentials. Demo and real catalogs remain separate.
-
-Main Search tab now defaults to the real API. Without an approved origin, it displays connection settings. Explicit demo search remains available. A saved session origin or `VITE_DEMO_API_ORIGIN` connects automatically.
+https://anyminus.github.io/app/ · https://anyminus.github.io/app/storybook/
