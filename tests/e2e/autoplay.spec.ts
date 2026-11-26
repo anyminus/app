@@ -1,0 +1,11 @@
+import {test,expect} from '@playwright/test';import {mockApi} from './fixture';
+test('one tap opens the loading player, then plays exactly two stems',async({page})=>{
+ const api=await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Петь Test song one',exact:true}).click();await expect(page.getByRole('region',{name:'Плеер караоке'})).toBeVisible();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Открыть караоке'})).toHaveCount(0);
+ expect(api.requests.filter(p=>p==='/demo/catalog/playback')).toHaveLength(1);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('navigation')).toBeVisible();
+ await page.getByRole('button',{name:'Петь Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(4);
+});
+test('if automatic start fails, loaded audio can be started by a manual tap without refetching',async({page})=>{
+ await page.addInitScript(()=>{const original=AudioBufferSourceNode.prototype.start;let first=true;AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){if(first){first=false;throw new DOMException('Автовоспроизведение заблокировано','NotAllowedError')}return original.apply(this,args)}});
+ const api=await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Автовоспроизведение заблокировано');await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);
+});

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.4
+- Start ready karaoke directly from track selection, warming the audio context during the original click. Open the player while loading both stems, then play automatically; retain a manual play fallback if the browser blocks playback. Unknown search results are checked for readiness without creating jobs.
+
 ## 0.2.3
 - Prepare Web Audio in the initial user gesture, request media playback audio session on supported Safari versions, use hardware-native sample rate, detect interrupted audio contexts, and warn when both stems are muted. Fix intrinsic grid overflow in landscape karaoke layout.
 
