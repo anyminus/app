@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.3
+- Reorder playlist and favorite tracks by dragging the dedicated handle in edit mode (mouse, touch and keyboard); persist the new order.
+
 ## 0.1.2
 - Independent mute by tapping music or vocal icons; disabled sliders while muted, restore previous volume on unmute.
 - Persist mute preferences across player and settings; fix ambiguous playlist test locator.

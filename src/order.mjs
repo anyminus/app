@@ -1,0 +1,1 @@
+export function moveItem(ids,fromId,toId){const from=ids.indexOf(fromId),to=ids.indexOf(toId);if(from<0||to<0||from===to)return ids;const next=[...ids];next.splice(to,0,next.splice(from,1)[0]);return next;}

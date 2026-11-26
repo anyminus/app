@@ -5,3 +5,6 @@ test('playlist CRUD and no duplicate tracks',()=>{let p=addPlaylist(initialPlayl
 
 import {effectiveVolume} from '../src/mixer.mjs';
 test('mute masks stored levels without changing them',()=>{const levels={music:73,vocals:28};assert.equal(effectiveVolume(levels.music,true),0);assert.equal(effectiveVolume(levels.vocals,false),28);assert.equal(effectiveVolume(levels.music,false),73);assert.equal(effectiveVolume(levels.vocals,true),0);assert.equal(effectiveVolume(0,false),0);});
+
+import {moveItem} from '../src/order.mjs';import {movePlaylistTrack} from '../src/playlists.mjs';
+test('reordering moves items without mutation, duplication or unknown IDs',()=>{const ids=['city','fly','more'];assert.deepEqual(moveItem(ids,'city','more'),['fly','more','city']);assert.deepEqual(moveItem(ids,'more','city'),['more','city','fly']);assert.deepEqual(ids,['city','fly','more']);assert.equal(moveItem(ids,'unknown','city'),ids);assert.equal(moveItem(ids,'city','city'),ids);const list=[{id:'p',name:'P',trackIds:ids},{id:'q',name:'Q',trackIds:['city']}];const next=movePlaylistTrack(list,'p','city','more');assert.deepEqual(next[0].trackIds,['fly','more','city']);assert.equal(next[1],list[1]);});
