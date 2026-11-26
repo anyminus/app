@@ -29,7 +29,7 @@ jobs:
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
       - name: Diagnose artist catalog (read-only)
-        if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'Artist catalog')
+        if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'Artist')
         continue-on-error: true
         timeout-minutes: 3
         run: node scripts/check-artist-catalog.mjs

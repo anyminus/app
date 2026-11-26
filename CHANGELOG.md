@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.18
+- Artist overview combines confirmed ready karaoke from the public catalog and actual artist-matched provider search results. Add overview, karaoke and songs tabs, a direct sing action, sharing and separate loading/error states. The existing provider search is limited to 20 results; do not mislabel them as popularity-ranked or a complete discography.
+
 ## 0.2.17
 - Artist pages list verified ready songs from the paginated public catalog, including exact individual credits in collaborations, rather than relying on the provider's first 20 search results. Bound each catalog scan to eight pages and expose continuation; allow searching for other songs separately.
 
