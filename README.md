@@ -23,3 +23,5 @@ GitHub Pages: в Settings → Pages → Build and deployment выбрать GitH
 
 ## API integration
 Use **Реальный каталог · API** on the home page. Configure an exact HTTPS origin (no path). Optional build variable `VITE_DEMO_API_ORIGIN`; GitHub Actions repository variable `DEMO_API_ORIGIN` populates it. No live origin assumed. See `docs/api-integration.md`. Never enter provider tokens or credentials. Demo and real catalogs remain separate.
+
+Main Search tab now defaults to the real API. Without an approved origin, it displays connection settings. Explicit demo search remains available. A saved session origin or `VITE_DEMO_API_ORIGIN` connects automatically.

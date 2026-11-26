@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.5
+- Main Search tab uses real `/demo/search` by default; configured origin automatically reused. Explicit demo toggle, request debounce, retry, and rate-limit message.
+
 ## 0.1.4
 - Add opt-in real API catalog/search, anonymous session, enqueue/status, protected playback and timed lyrics UI; explicit origin configuration, no silent demo fallback.
 - Separate product API adapter; no production cookie/auth assumptions.

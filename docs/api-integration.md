@@ -7,3 +7,5 @@ The real catalog UI uses GET /demo/catalog (limit=100, cursor), GET /demo/search
 Product control adapter is separate: Telegram bootstrap, refresh/logout, search, library CRUD, jobs and media-ticket routes; not enabled in UI because runtime, cookies and CORS are unverified. Favorites/playlists from prototype remain local and currently separate from live catalog.
 
 BLOCKER: handoff reports demo OPTIONS/preflight missing and no credentialed CORS; Strict media cookies cannot work cross-site as-is. Control API needs exact origin, DELETE, Idempotency-Key preflight and compatible cookie policy. A supported same-origin deployment or separately approved CORS/media/auth changes are required. No backend modifications made. Tests use synthetic intercepted responses, never enqueue live jobs.
+
+Main Search tab defaults to GET /demo/search with query length 2–200, limit 20, 650ms debounce, abort of obsolete requests, and explicit retry; no anonymous bearer on search. When no approved origin is configured the user sees a connection form, not a fabricated API result. Demo search is an explicit alternate mode.
