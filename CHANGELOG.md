@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.15
+- Fix artwork helper type inference and add a bounded read-only live artwork diagnostic for the public catalog. External API availability is reported separately from deterministic application tests.
+
 ## 0.2.14
 - Preserve API artwork metadata, use stable public track artwork URLs and standard lazy image embedding with browser caching. Add a compact cover in the karaoke header; retain placeholders for unavailable images. Cover search, favorites, sharing and playback with browser tests. Correct the system-media duration test to allow sub-millisecond decoded sample rounding.
 

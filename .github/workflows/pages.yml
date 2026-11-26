@@ -21,6 +21,13 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm test
+      - name: Probe public artwork (non-blocking)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/check-public-artwork.mjs
+        env:
+          VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
       - run: npm run build
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
