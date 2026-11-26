@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+- Add opt-in real API catalog/search, anonymous session, enqueue/status, protected playback and timed lyrics UI; explicit origin configuration, no silent demo fallback.
+- Separate product API adapter; no production cookie/auth assumptions.
+- Fix keyboard reordering with direct arrow-key movement.
+
 ## 0.1.3
 - Reorder playlist and favorite tracks by dragging the dedicated handle in edit mode (mouse, touch and keyboard); persist the new order.
 

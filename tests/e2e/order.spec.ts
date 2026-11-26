@@ -1,5 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-async function moveDown(page:Page,title:string){const handle=page.getByRole('button',{name:'Переместить '+title,exact:true});await handle.focus();await page.keyboard.press('Space');await page.keyboard.press('ArrowDown');await page.keyboard.press('Space');}
+async function moveDown(page:Page,title:string){const handle=page.getByRole('button',{name:'Переместить '+title,exact:true});await handle.focus();await page.keyboard.press('ArrowDown');}
 async function order(page:Page){return page.locator('[data-sortable-id]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('data-sortable-id')));}
 test('playlist reorder persists and public collection follows',async({page})=>{
  await page.goto('/');const nav=page.getByRole('navigation',{name:'Навигация'});for(let i=0;i<5;i++)await nav.getByRole('button',{name:'Профиль'}).click();await nav.getByRole('button',{name:'Плейлисты'}).click();await page.getByRole('button',{name:'Топ караоке 8 треков',exact:true}).click();await page.getByRole('button',{name:'Редактировать',exact:true}).click();
