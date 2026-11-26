@@ -15,3 +15,51 @@
 
 .cover-slot{position:absolute;inset:0;z-index:2;pointer-events:none}.cover-image{width:100%;height:100%;display:block;object-fit:cover;opacity:0;transition:opacity .16s ease}.cover-image.loaded{opacity:1}.artwork.large:has(.cover-image.loaded){aspect-ratio:1}
 @media(prefers-reduced-motion:reduce){.cover-image{transition:none}}
+
+/* Active karaoke: the document never scrolls; lyrics alone own their scrollport. */
+body.karaoke-open{overflow:hidden;overscroll-behavior:none}
+body.karaoke-open #root{height:100vh;height:100dvh;overflow:hidden}
+body.karaoke-open .app{height:100vh;height:100dvh;min-height:0;max-width:none;overflow:hidden}
+body.karaoke-open .content{height:100%;padding:0;gap:0}
+body.karaoke-open .tab-bar{display:none}
+.karaoke-screen{position:fixed;top:0;left:50%;transform:translateX(-50%);width:min(540px,100%);height:100vh;height:100dvh;z-index:10;background:var(--base);display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:0;overflow:hidden;padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.karaoke-header{min-width:0;display:flex;align-items:center;gap:2px;padding:4px 0 8px;border-bottom:1px solid var(--border)}
+.karaoke-header .icon-button{width:40px;height:44px}
+.karaoke-heading{min-width:0;flex:1;display:grid;gap:3px}
+.karaoke-heading h1{font-size:16px;line-height:1.22;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.karaoke-heading .artist-link{display:block;color:var(--muted);font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.karaoke-focus-toggle[aria-pressed=true]{color:var(--accent);background:var(--raised)}
+.karaoke-lyrics{min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:12px 0}
+.karaoke-lyrics::-webkit-scrollbar{display:none}
+.karaoke-lyrics.timed:before,.karaoke-lyrics.timed:after{content:"";display:block;height:42%;pointer-events:none}
+.karaoke-lyrics .lyric{font-size:clamp(22px,var(--lyric-size,32px),40px);overflow-wrap:anywhere;line-height:1.25;padding:10px 0;letter-spacing:-.65px}
+.karaoke-lyrics-empty{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.karaoke-dock{min-width:0;background:var(--base);border-top:1px solid var(--border);display:grid;gap:5px;padding-top:8px;align-self:end}
+.karaoke-timeline{display:grid;gap:0}
+.karaoke-timeline input{height:24px;touch-action:none}
+.karaoke-transport{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.karaoke-transport .icon-button{width:44px;height:44px}
+.karaoke-transport .play-main{width:50px;height:50px;flex:none}
+.karaoke-dock .mixer{padding:6px 10px;gap:2px;border-radius:15px}
+.karaoke-dock .mixer-title{font-size:9px}
+.karaoke-dock .gain-toggle{width:36px;height:36px}
+.karaoke-dock .gain-label{font-size:12px;line-height:1.1}
+.karaoke-dock .gain input{height:20px}
+.karaoke-error{font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.karaoke-focus .karaoke-lyrics .lyric{font-size:clamp(24px,calc(var(--lyric-size,32px) + 3px),44px)}
+@media(max-height:520px) and (orientation:portrait){
+ .karaoke-screen{padding-bottom:max(4px,env(safe-area-inset-bottom,0px))}
+ .karaoke-header{padding:0}
+ .karaoke-dock{padding-top:4px;gap:2px}
+ .karaoke-transport .play-main{height:44px;width:44px}
+ .karaoke-dock .mixer-title{display:none}
+ .karaoke-lyrics .lyric{padding:6px 0}
+}
+@media(orientation:landscape) and (max-height:650px){
+ .karaoke-screen{width:100%;grid-template-columns:minmax(0,1fr) minmax(220px,32%);grid-template-rows:auto minmax(0,1fr);column-gap:16px}
+ .karaoke-header{grid-column:1/-1;grid-row:1}
+ .karaoke-lyrics{grid-column:1;grid-row:2}
+ .karaoke-dock{grid-column:2;grid-row:2;border-top:0;border-left:1px solid var(--border);padding:6px 0 0 12px;align-self:end}
+ .karaoke-focus{grid-template-columns:minmax(0,1fr) minmax(200px,27%)}
+ .karaoke-lyrics .lyric{font-size:clamp(20px,var(--lyric-size,32px),32px)}
+}

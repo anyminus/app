@@ -1,5 +1,5 @@
-import {useEffect,useRef,useState,useMemo} from 'react';
-import {ArrowLeft,Heart,Share2,Maximize2,Minimize2,MicVocal,Pause,Play,RefreshCw} from 'lucide-react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {ArrowLeft,Heart,Share2,Maximize2,Minimize2,MicVocal,Pause,Play,RefreshCw,SkipBack,SkipForward} from 'lucide-react';
 import {normalizeJob,mediaUrl} from './api.mjs';
 import {api,origin,coverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
@@ -40,13 +40,44 @@ export function LiveCatalog({onBack,track:selected,liked,onLike,onShare,onArtist
  useEffect(()=>{audio.current?.setVolumes(effectiveVolume(mixer.music,mixer.musicMuted),effectiveVolume(mixer.vocals,mixer.vocalsMuted))},[mixer.music,mixer.vocals,mixer.musicMuted,mixer.vocalsMuted]);
  useEffect(()=>{if(!playing)return;const t=setInterval(()=>{const a=audio.current;if(!a)return;setPosition(a.position);if(a.position>=a.length){a.pause();setPlaying(false)}},80);return()=>clearInterval(t)},[playing]);
  let active=-1;for(let i=0;i<lyrics.length;i++)if(lyrics[i].startMs<=position*1000)active=i;
- const lyricRef=useRef<HTMLDivElement>(null);const [focus,setFocus]=useState(false);useEffect(()=>{if(autoScroll)lyricRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({block:'center',behavior:'smooth'})},[active,lyrics,autoScroll]);
+
+ const lyricRef=useRef<HTMLDivElement>(null);const [focus,setFocus]=useState(false);
+ // Lock the page itself. Only the independent lyrics viewport may scroll.
+ useLayoutEffect(()=>{if(!playerReady)return;document.body.classList.add('karaoke-open');window.scrollTo(0,0);return()=>document.body.classList.remove('karaoke-open')},[playerReady]);
+ function centerLine(smooth:boolean){
+   const viewport=lyricRef.current, line=viewport?.querySelector<HTMLElement>('[data-active="true"]');
+   if(!viewport||!line)return;
+   const delta=line.getBoundingClientRect().top-viewport.getBoundingClientRect().top+(line.offsetHeight-viewport.clientHeight)/2;
+   viewport.scrollTo({top:Math.max(0,viewport.scrollTop+delta),behavior:smooth&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches?'smooth':'instant'});
+ }
+ useLayoutEffect(()=>{if(playerReady&&autoScroll)centerLine(false)},[playerReady,focus,lyrics,autoScroll,font]);
+ useEffect(()=>{if(playerReady&&autoScroll)centerLine(true)},[active]);
+ useEffect(()=>{const el=lyricRef.current;if(!playerReady||!autoScroll||!el||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>centerLine(false));observer.observe(el);return()=>observer.disconnect()},[playerReady,autoScroll]);
+
  async function toggle(){const a=audio.current;if(!a)return;try{if(playing){a.pause();setPlaying(false)}else{await a.play();setPlaying(true);onPlayed()}}catch(e){showError(e)}}
- async function seek(n:number){try{await audio.current?.seek(n);setPosition(n);if(n>=length)setPlaying(false)}catch(e){showError(e)}}
+ async function seek(n:number){try{const target=Math.max(0,Math.min(length,n));await audio.current?.seek(target);setPosition(target);if(target>=length)setPlaying(false)}catch(e){showError(e)}}
+ if(playerReady)return <section className={'karaoke-screen'+(focus?' karaoke-focus':'')} aria-label="Плеер караоке">
+ <header className="karaoke-header">
+ <IconButton label="Назад" onClick={onBack}><ArrowLeft/></IconButton>
+ <div className="karaoke-heading"><h1 title={selected.title}>{selected.title}</h1><button className="artist-link" onClick={onArtist} title={selected.artist}>{selected.artist}</button></div>
+ <IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart size={21} fill={liked?'currentColor':'none'}/></IconButton>
+ <button className="icon-button karaoke-focus-toggle" type="button" aria-label={focus?'Показать плеер':'Только текст'} aria-pressed={focus} title={focus?'Обычный режим':'Полноэкранный текст'} onClick={()=>setFocus(v=>!v)}>{focus?<Minimize2 size={21}/>:<Maximize2 size={21}/>}</button>
+ </header>
+ <div className={'karaoke-lyrics'+(lyrics.length?' timed':'')} ref={lyricRef} aria-label="Текст песни" style={{'--lyric-size':font+'px'} as React.CSSProperties}>
+ {lyrics.length?lyrics.map((l,i)=><button type="button" className={'lyric '+(i===active?'current':i<active?'past':'future')} data-active={i===active} aria-current={i===active?'true':undefined} key={i} onClick={()=>void seek(l.startMs/1000)}>{l.text}</button>):plainLyrics?<><p className="metadata">Текст без синхронизации</p><p className="plain-lyrics">{plainLyrics}</p></>:<div className="karaoke-lyrics-empty"><p className="metadata" role="status">{lyricState||'Загрузка текста…'}</p>{lyricState&&<button className="text-button" disabled={lyricLoading} onClick={()=>setLyricRetry(n=>n+1)}>Повторить загрузку текста</button>}</div>}
+ </div>
+ <div className="karaoke-dock">
+ <div className="karaoke-timeline"><div className="time-label"><span>{formatTime(position)}</span><span>{formatTime(length)}</span></div><input type="range" min="0" max={length} step=".1" value={position} aria-label="Позиция песни" style={{'--progress':(length?position/length*100:0)+'%'} as React.CSSProperties} onChange={e=>void seek(+e.target.value)}/></div>
+ <div className="karaoke-transport"><IconButton label="Поделиться песней" onClick={onShare}><Share2 size={19}/></IconButton><IconButton label="Назад 10 секунд" onClick={()=>void seek(position-10)}><SkipBack size={22}/></IconButton><button type="button" className="play-main" aria-label={playing?'Пауза':'Воспроизвести'} onClick={()=>void toggle()}>{playing?<Pause fill="currentColor"/>:<Play fill="currentColor"/>}</button><IconButton label="Вперёд 10 секунд" onClick={()=>void seek(position+10)}><SkipForward size={22}/></IconButton><button type="button" className="icon-button" aria-label={focus?'Показать микшер':'Свернуть микшер'} title={focus?'Показать микшер':'Свернуть микшер'} onClick={()=>setFocus(v=>!v)}><MicVocal size={21}/></button></div>
+ {!focus&&<Mixer {...mixer}/>}
+ {error&&<p role="alert" className="karaoke-error">{error}</p>}
+ </div>
+ </section>;
  return <>
- <header className="screen-header"><IconButton label="Назад" onClick={onBack}><ArrowLeft/></IconButton><strong>{playerReady?'Караоке':'Песня'}</strong><IconButton label="Поделиться песней" onClick={onShare}><Share2/></IconButton></header>
- {!playerReady&&<Artwork title={selected.title} color="#7961bd" large src={coverFor(selected.providerTrackId)}/>}<div className="detail-title"><div><h1>{selected.title}</h1><button className="artist-link accent" onClick={onArtist}>{selected.artist}</button></div><IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart fill={liked?'currentColor':'none'}/></IconButton></div><p className="metadata">{selected.durationMs?formatTime(selected.durationMs/1000):'—'}</p>{job&&<p className="metadata" role="status">{statusText[job.state]}</p>}{playerReady&&<button className="secondary" onClick={()=>setFocus(v=>!v)}>{focus?<Minimize2/>:<Maximize2/>}{focus?'Показать плеер':'Только текст'}</button>}
-  {playerReady?<><div className={'live-lyrics'+(focus?' live-focus':'')} ref={lyricRef} style={{'--live-lyric-size':font+'px'} as React.CSSProperties}>{lyrics.length?lyrics.map((l,i)=><button className={'lyric '+(i===active?'current':'')} data-active={i===active} key={i} onClick={()=>void seek(l.startMs/1000)}>{l.text}</button>):plainLyrics?<><p className="metadata">Текст без синхронизации</p><p className="plain-lyrics">{plainLyrics}</p></>:<><p className="metadata" role="status">{lyricState||'Загрузка текста…'}</p>{lyricState&&<button className="text-button" disabled={lyricLoading} onClick={()=>setLyricRetry(n=>n+1)}>Повторить загрузку текста</button>}</>}</div>{!focus&&<><div className="time-label"><span>{formatTime(position)}</span><span>{formatTime(length)}</span></div><input type="range" min="0" max={length} step=".1" value={position} aria-label="Позиция песни" onChange={e=>void seek(+e.target.value)}/><button className="primary" onClick={()=>void toggle()}>{playing?<Pause/>:<Play/>}{playing?'Пауза':'Воспроизвести'}</button><Mixer {...mixer}/></>}</>:job?.state==='ready'?<button className="primary" disabled={loadingAudio} onClick={()=>void openPlayer()}><Play/>{loadingAudio?'Загружаем дорожки…':'Открыть караоке'}</button>:<><button className="primary" disabled={busy||job?.state==='queued'||job?.state==='running'||(job?.state==='failed'&&!job.retryable)} onClick={()=>void enqueue()}><MicVocal/>{busy?'Запрос…':job?.state==='failed'?'Повторить':job?.state==='queued'||job?.state==='running'?'Обработка…':'Создать караоке'}</button><button className="secondary" disabled={busy} onClick={()=>void getStatus()}><RefreshCw size={18}/>Проверить статус</button></>}
+ <header className="screen-header"><IconButton label="Назад" onClick={onBack}><ArrowLeft/></IconButton><strong>Песня</strong><IconButton label="Поделиться песней" onClick={onShare}><Share2/></IconButton></header>
+ <Artwork title={selected.title} color="#7961bd" large src={coverFor(selected.providerTrackId)}/><div className="detail-title"><div><h1>{selected.title}</h1><button className="artist-link accent" onClick={onArtist}>{selected.artist}</button></div><IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart fill={liked?'currentColor':'none'}/></IconButton></div><p className="metadata">{selected.durationMs?formatTime(selected.durationMs/1000):'—'}</p>{job&&<p className="metadata" role="status">{statusText[job.state]}</p>}
+ {job?.state==='ready'?<button className="primary" disabled={loadingAudio} onClick={()=>void openPlayer()}><Play/>{loadingAudio?'Загружаем дорожки…':'Открыть караоке'}</button>:<><button className="primary" disabled={busy||job?.state==='queued'||job?.state==='running'||(job?.state==='failed'&&!job.retryable)} onClick={()=>void enqueue()}><MicVocal/>{busy?'Запрос…':job?.state==='failed'?'Повторить':job?.state==='queued'||job?.state==='running'?'Обработка…':'Создать караоке'}</button><button className="secondary" disabled={busy} onClick={()=>void getStatus()}><RefreshCw size={18}/>Проверить статус</button></>}
  {error&&<p role="alert" className="live-error">{error}</p>}
+
  </>;
 }

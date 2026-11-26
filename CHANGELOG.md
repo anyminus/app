@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.2
+- Dedicated viewport-sized karaoke player with a fixed transport dock, independent lyric scrolling, safe-area padding, compact focus mode and landscape layout. Keep play/pause and seek visible in both modes.
+
 ## 0.2.1
 - Load artwork through the existing public track artwork endpoint. Request only visible covers via IntersectionObserver and native lazy loading; reuse stable URLs and HTTP cache. Preserve the placeholder if a cover is unavailable.
 
