@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.6
+- Automatically open and load the player whenever karaoke is ready, including after queued creation and on direct track links. Keep the audio context prepared while a job is processing; never require an intermediate open-karaoke button. Offer a retry only after a real loading failure.
+
 ## 0.2.5
 - Resolve readiness automatically on track selection and direct links; show a loading state before the API confirms whether creation is needed. Remove the manual status step. Mark known ready results in lists and offer retry only on errors.
 

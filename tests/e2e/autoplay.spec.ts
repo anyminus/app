@@ -9,3 +9,9 @@ test('if automatic start fails, loaded audio can be started by a manual tap with
  await page.addInitScript(()=>{const original=AudioBufferSourceNode.prototype.start;let first=true;AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){if(first){first=false;throw new DOMException('Автовоспроизведение заблокировано','NotAllowedError')}return original.apply(this,args)}});
  const api=await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Автовоспроизведение заблокировано');await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);
 });
+
+test('media loading error offers retry rather than a redundant open button',async({page})=>{
+ const api=await mockApi(page);let fails=true;
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/playback$/,async r=>{if(fails){fails=false;await r.fulfill({status:503,json:{},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}})}else await r.fallback()});
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Повторить загрузку дорожек'})).toBeVisible();await expect(page.getByRole('button',{name:'Открыть караоке'})).toHaveCount(0);await page.getByRole('button',{name:'Повторить загрузку дорожек'}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});
