@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.2
+- Replace artist overview with two distinct tabs: ready karaoke strictly from the public catalog and popular songs from a dedicated SDK-backed API contract (`GET /demo/artists/popular?name=...`, pending server support). Preserve provider ordering and never substitute general search results. Fix mobile artist header overflow.
+
 ## 0.3.1
 - Remove the redundant track-count label from the mixer.
 

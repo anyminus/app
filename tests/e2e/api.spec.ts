@@ -53,14 +53,23 @@ test('artist pages find ready songs beyond the first catalog page and include co
  await page.getByRole('button',{name:'Collaboration',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);expect(api.requests).not.toContain('/demo/karaoke/status');
 });
 
-test('artist overview combines provider songs with ready catalog and separates tabs',async({page})=>{
- const api=await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';
+test('artist tabs separate ready database tracks and SDK popularity order',async({page})=>{
+ const api=await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';let popularCalls=0;
  await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'101',title:'Ready song',artist:'Дельфин',durationSeconds:8,pairOperationId:pair}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
- await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'101',title:'Ready song',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:pair}},{providerTrackId:'102',title:'New song',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'unknown'}},{providerTrackId:'103',title:'Unrelated artist',artist:'Дельфинчик',durationMs:8000}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
- await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await expect(page.getByRole('button',{name:'Ready song',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'New song',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Unrelated artist',exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'Караоке',exact:true}).click();await expect(page.getByRole('button',{name:'Ready song',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'New song',exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'Песни',exact:true}).click();await expect(page.getByRole('button',{name:'New song',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Ready song',exact:true})).toBeVisible();
+ await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>{popularCalls++;expect(new URL(r.request().url()).searchParams.get('name')).toBe('Дельфин');return r.fulfill({json:{items:[{providerTrackId:'102',title:'Most popular',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'unknown'}},{providerTrackId:'101',title:'Ready song',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:pair}},{providerTrackId:'103',title:'Popular only',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:pair}}]},headers:{'Access-Control-Allow-Origin':'*'}})});
+ await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await expect(page.getByRole('button',{name:'Ready song',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Популярные песни',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Обзор',exact:true})).toHaveCount(0);expect(popularCalls).toBe(0);
+ await page.getByRole('button',{name:'Популярные песни',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(3);
+ await expect(page.locator('.track-row').nth(0).getByRole('button',{name:'Most popular',exact:true})).toBeVisible();await expect(page.locator('.track-row').nth(1).getByRole('button',{name:'Ready song',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Готовые караоке',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(1);await expect(page.getByRole('button',{name:'Popular only',exact:true})).toHaveCount(0);
+ expect(api.requests).not.toContain('/demo/search');expect(popularCalls).toBe(1);
  await page.getByRole('button',{name:'Спеть',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});
+
+test('unreleased popularity API shows a clear error, not search results',async({page})=>{
+ const api=await mockApi(page);await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>r.fulfill({status:404,json:{},headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.goto('/#/artist/'+encodeURIComponent('Test artist'));await expect(page.getByRole('button',{name:'Test song one',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Популярные песни',exact:true}).click();await expect(page.getByRole('alert')).toContainText('требуется обновление API');await expect(page.locator('.track-row')).toHaveCount(0);expect(api.requests).not.toContain('/demo/search');
 });
 
 test('artist automatically loads every catalog page and displays all songs in overview',async({page})=>{
@@ -75,8 +84,7 @@ test('artist automatically loads every catalog page and displays all songs in ov
  await expect(page.getByRole('button',{name:'Artist song 11',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Загрузить ещё',exact:true})).toHaveCount(0);
  expect(cursors).toHaveLength(12);expect(api.enqueued).toBe(0);expect(api.requests).not.toContain('/demo/karaoke/status');
- await page.getByRole('button',{name:'Караоке',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(12);
- await page.getByRole('button',{name:'Песни',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(12);
+ await expect(page.getByRole('button',{name:'Готовые караоке',exact:true})).toHaveAttribute('aria-pressed','true');
  expect(cursors).toHaveLength(12);
 });
 

@@ -90,3 +90,27 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
   return {providerTrackId:id,title:fromCatalog?.title??'Караоке',artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog,coverUrl:fromCatalog?.coverUrl??null};
  }
 }
+
+ // Separate SDK-backed list. Never infer popularity from general search or ready catalog.
+ export function useArtistPopular(name:string|null){
+  const [result,setResult]=useState<{name:string|null;items:LiveTrack[];error:string;loading:boolean}>({name:null,items:[],error:'',loading:false});
+  const [retry,setRetry]=useState(0);
+  useEffect(()=>{
+   if(name===null)return;
+   const c=new AbortController();
+   setResult({name,items:[],error:'',loading:true});
+   const timer=window.setTimeout(async()=>{
+    const deadline=window.setTimeout(()=>{setResult({name,items:[],error:'Время ожидания популярных песен истекло',loading:false});c.abort()},20000);
+    try{
+     const payload=await api.artistPopular(name,c.signal);
+     const seen=new Set<string>();const items=(normalizeTracks(payload) as LiveTrack[]).filter(t=>{if(seen.has(t.providerTrackId))return false;seen.add(t.providerTrackId);return true});
+     if(!c.signal.aborted)setResult({name,items,error:'',loading:false});
+    }catch(e){
+     if(!c.signal.aborted)setResult({name,items:[],error:e instanceof ApiError&&[404,501].includes(e.status)?'Популярные песни пока недоступны: требуется обновление API.':e instanceof Error?e.message:'Не удалось загрузить популярные песни',loading:false});
+    }finally{clearTimeout(deadline)}
+   },0);
+   return()=>{clearTimeout(timer);c.abort()};
+  },[name,retry]);
+  const current=result.name===name?result:{name,items:[],error:'',loading:name!==null};
+  return {...current,retry:()=>setRetry(v=>v+1)};
+ }
