@@ -38,6 +38,7 @@ jobs:
       - run: npm run build
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
+          VITE_TELEGRAM_MINI_APP_URL: ${{ vars.TELEGRAM_MINI_APP_URL }}
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - run: npm run build-storybook

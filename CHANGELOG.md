@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.0
+- Add Telegram Mini App authentication using signed initData verified by the API; keep bearer tokens in memory, handle expiry and logout. Guests retain ready playback and read-only discovery; creation requires a verified Telegram session in the UI and request handler. Configure the public Mini App launch URL with VITE_TELEGRAM_MINI_APP_URL. Server-side guest enqueue rejection and external browser login require API support.
+
 ## 0.2.20
 - Distinguish confirmed missing/pending lyrics from generic API failures. Allow local lyrics subscriptions, persist them in the browser, and notify in the app when text becomes available through the protected read endpoint. Foreground-only checks are bounded and never enqueue generation. Show subscriptions in the profile; no background push delivery is claimed.
 
