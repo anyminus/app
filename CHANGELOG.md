@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.13
+- Publish real track title, artist, artwork, playback state and timeline to the system Media Session. Wire play, pause, stop, relative skip and absolute seeking to the synchronized two-stem player; release system handlers when leaving playback. Support optional browser features without requiring them.
+
 ## 0.2.12
 - Use one viewport observer for artwork; once visible, load immediately with an explicit anonymous CORS request and ordinary HTTP caching. Recognize already-decoded cached images and test actual image decoding, visibility and unavailable-image fallback. The existing artwork API must supply valid image bytes.
 

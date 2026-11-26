@@ -3,6 +3,7 @@ import {ArrowLeft,Heart,Share2,Maximize2,Minimize2,MicVocal,Pause,Play,RefreshCw
 import {normalizeJob,mediaUrl} from './api.mjs';
 import {api,origin,coverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
+import {useSystemMedia} from './useSystemMedia';
 import {normalizeStoredLyrics,retryLyricsStatus} from './lyrics.mjs';
 import {Mixer,Artwork,IconButton} from './components';
 import {effectiveVolume} from './mixer.mjs';
@@ -68,8 +69,13 @@ export function LiveCatalog({onBack,track:selected,takeLaunch,onReady,liked,onLi
  useEffect(()=>{if(playerReady&&autoScroll)centerLine(true)},[active]);
  useEffect(()=>{const el=lyricRef.current;if(!playerReady||!autoScroll||!el||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>centerLine(false));observer.observe(el);return()=>observer.disconnect()},[playerReady,autoScroll]);
 
- async function toggle(){const a=audio.current;if(!a)return;try{if(playing){a.pause();setPlaying(false)}else{a.setVolumes(effectiveVolume(mixer.music,mixer.musicMuted),effectiveVolume(mixer.vocals,mixer.vocalsMuted));await a.play();setError('');setPlaying(true);onPlayed()}}catch(e){showError(e)}}
- async function seek(n:number){try{const target=Math.max(0,Math.min(length,n));await audio.current?.seek(target);setPosition(target);if(target>=length)setPlaying(false)}catch(e){showError(e)}}
+ // Use the same two-stem clock for the screen and operating-system controls.
+ async function startPlayback(){const a=audio.current;if(!a||!playerReady||loadingAudio)return;try{if(a.playing)return;const version=selectionVersion.current;const m=mixerRef.current;a.setVolumes(effectiveVolume(m.music,m.musicMuted),effectiveVolume(m.vocals,m.vocalsMuted));await a.play();if(audio.current!==a||version!==selectionVersion.current)return;setError('');setPlaying(a.playing);setPosition(a.position);onPlayed()}catch(e){showError(e)}}
+ function pausePlayback(){const a=audio.current;if(!a)return;a.pause();setPosition(a.position);setPlaying(false)}
+ async function toggle(){if(playing)pausePlayback();else await startPlayback()}
+ const seekQueue=useRef<Promise<void>>(Promise.resolve());
+ function seek(n:number){const a=audio.current;if(!a||!playerReady||!Number.isFinite(n))return Promise.resolve();const version=selectionVersion.current;const target=Math.max(0,Math.min(a.length,n));const task=async()=>{if(audio.current!==a||version!==selectionVersion.current)return;try{await a.seek(target);if(audio.current!==a||version!==selectionVersion.current)return;setPosition(target);setPlaying(a.playing);if('mediaSession' in navigator)try{navigator.mediaSession.setPositionState({duration:a.length,playbackRate:1,position:target})}catch{}}catch(e){showError(e)}};seekQueue.current=seekQueue.current.then(task,task);return seekQueue.current}
+ useSystemMedia({ready:playerReady&&!loadingAudio,title:selected.title,artist:selected.artist,artwork:coverFor(selected.providerTrackId),playing,length,position,play:()=>void startPlayback(),pause:pausePlayback,seek:n=>void seek(n),currentTime:()=>audio.current?.position??0});
  if(playerVisible)return <section className={'karaoke-screen'+(focus?' karaoke-focus':'')} aria-label="Плеер караоке">
  <header className="karaoke-header">
  <IconButton label="Назад" onClick={onBack}><ArrowLeft/></IconButton>
