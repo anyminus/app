@@ -8,7 +8,7 @@ test('system media controls publish metadata, seek both stems, pause, resume and
  });
  const api=await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
  const state=()=>page.evaluate(()=>{const {session,handlers}=(window as any).__systemMedia;return {title:session.metadata?.title,artist:session.metadata?.artist,artwork:session.metadata?.artwork[0]?.src,playback:session.playbackState,position:session.position,actions:Object.keys(handlers).filter(k=>handlers[k])}});
- await expect.poll(async()=> (await state()).title).toBe('Test song one');expect((await state()).artist).toBe('Test artist');expect((await state()).artwork).toMatch(/\/demo\/artwork\/101$/);expect((await state()).position.duration).toBe(8);
+ await expect.poll(async()=> (await state()).title).toBe('Test song one');expect((await state()).artist).toBe('Test artist');expect((await state()).artwork).toMatch(/\/demo\/artwork\/101$/);expect((await state()).position.duration).toBeCloseTo(8,3);
  const action=async(name:string,details:Record<string,unknown>={})=>page.evaluate(({name,details})=>(window as any).__systemMedia.handlers[name](details),{name,details});
  await action('pause');await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeVisible();await expect.poll(async()=>(await state()).playback).toBe('paused');
  await action('seekto',{seekTime:4});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('4');await expect.poll(async()=>(await state()).position.position).toBe(4);

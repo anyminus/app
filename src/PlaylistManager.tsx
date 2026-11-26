@@ -9,7 +9,7 @@ export type Playlist={id:string;name:string;trackIds:string[]};
 type Props={tracks:Track[];remember:(items:LiveTrack[])=>void;playlists:Playlist[];setPlaylists:Dispatch<SetStateAction<Playlist[]>>;playlistId:string|null;navigate:(page:string,id?:string)=>void;onHide:()=>void;notify:(message:string)=>void};
 export function PlaylistManager({tracks,remember,playlists,setPlaylists,playlistId,navigate,onHide,notify}:Props){
  const playlist=playlists.find(p=>p.id===playlistId);
- const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);const result=useCatalog(searching?query:'');useEffect(()=>{if(result.items.length)remember(result.items)},[result.items,remember]);const found=result.items.map(t=>({id:t.providerTrackId,title:t.title,artist:t.artist,artistId:t.artist,durationSeconds:(t.durationMs??0)/1000,ready:!!t.pairOperationId,genre:'',color:'#7961bd',artworkUrl:coverFor(t.providerTrackId)}));
+ const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);const result=useCatalog(searching?query:'');useEffect(()=>{if(result.items.length)remember(result.items)},[result.items,remember]);const found=result.items.map(t=>({id:t.providerTrackId,title:t.title,artist:t.artist,artistId:t.artist,durationSeconds:(t.durationMs??0)/1000,ready:!!t.pairOperationId,genre:'',color:'#7961bd',artworkUrl:coverFor(t.providerTrackId,t.coverUrl)}));
  const [editing,setEditing]=useState<'create'|'rename'|null>(null);const [name,setName]=useState('');
  const [deleting,setDeleting]=useState<Playlist|null>(null);
  const [removing,setRemoving]=useState(false);

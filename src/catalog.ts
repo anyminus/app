@@ -3,8 +3,8 @@ import {apiOrigin,createDemoApi,normalizeTracks,normalizeJob,ApiError} from './a
 import {trackArtworkUrl} from './artwork.mjs';
 export const origin=apiOrigin(import.meta.env.VITE_DEMO_API_ORIGIN||'https://anyminus-demo-search-dev.demo-search.workers.dev')!;
 export const api=createDemoApi(origin);
-export const coverFor=(id:string)=>trackArtworkUrl(origin,id);
-export type LiveTrack={providerTrackId:string;title:string;artist:string;durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean};
+export const coverFor=(id:string,provided?:string|null)=>trackArtworkUrl(origin,id,provided??undefined);
+export type LiveTrack={providerTrackId:string;title:string;artist:string;durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
 export function isTrackId(id:unknown):id is string{return typeof id==='string'&&/^\d{1,20}$/.test(id)}
 export function useCatalog(query:string|null){
  const [items,setItems]=useState<LiveTrack[]>([]),[cursor,setCursor]=useState<string|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[retry,setRetry]=useState(0);
@@ -67,6 +67,6 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
   if(catalogUnavailable)try{fromCatalog=await findCatalogTrack(id,signal)}catch(cause){if(signal.aborted)throw cause}
   if(signal.aborted)throw signal.reason;
   const duration=Number(raw.durationSeconds);
-  return {providerTrackId:id,title:fromCatalog?.title??'Караоке',artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog};
+  return {providerTrackId:id,title:fromCatalog?.title??'Караоке',artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog,coverUrl:fromCatalog?.coverUrl??null};
  }
 }

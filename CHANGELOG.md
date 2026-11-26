@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.14
+- Preserve API artwork metadata, use stable public track artwork URLs and standard lazy image embedding with browser caching. Add a compact cover in the karaoke header; retain placeholders for unavailable images. Cover search, favorites, sharing and playback with browser tests. Correct the system-media duration test to allow sub-millisecond decoded sample rounding.
+
 ## 0.2.13
 - Publish real track title, artist, artwork, playback state and timeline to the system Media Session. Wire play, pause, stop, relative skip and absolute seeking to the synchronized two-stem player; release system handlers when leaving playback. Support optional browser features without requiring them.
 

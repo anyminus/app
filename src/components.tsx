@@ -2,12 +2,12 @@ import { Music2,MicVocal,Share2,Heart,Play,Pause,ChevronRight } from 'lucide-rea
 import {useEffect,useRef,useState} from 'react';
 import type { CSSProperties } from 'react';
 export type Track={id:string;title:string;artist:string;artistId:string;durationSeconds:number;ready:boolean;genre:string;color:string;artworkUrl?:string|null};
-// Observe each tile, not the entire result page. Let the browser reuse its HTTP cache.
+// Public artwork is embedded as an ordinary image (no canvas/pixel access needed). Observe each tile; reuse the browser HTTP cache.
 function LazyCover({src,title}:{src:string;title:string}){
  const host=useRef<HTMLSpanElement>(null);
  const [visible,setVisible]=useState(false),[loaded,setLoaded]=useState(false),[failed,setFailed]=useState(false);
  useEffect(()=>{const el=host.current;if(!el)return;if(typeof IntersectionObserver==='undefined'){setVisible(true);return}const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){setVisible(true);observer.disconnect()}},{root:null,rootMargin:'0px',threshold:0});observer.observe(el);return()=>observer.disconnect()},[]);
- return <span ref={host} className="cover-slot" data-cover-state={failed?'unavailable':loaded?'loaded':visible?'loading':'deferred'}>{visible&&!failed&&<img crossOrigin="anonymous" src={src} alt="" aria-hidden="true" loading="eager" decoding="async" draggable={false} referrerPolicy="no-referrer" className={'cover-image'+(loaded?' loaded':'')} ref={img=>{if(img?.complete&&img.naturalWidth>0)setLoaded(true)}} onLoad={()=>setLoaded(true)} onError={()=>setFailed(true)}/>}</span>;
+ return <span ref={host} className="cover-slot" data-cover-state={failed?'unavailable':loaded?'loaded':visible?'loading':'deferred'}>{visible&&!failed&&<img src={src} alt="" aria-hidden="true" loading="eager" decoding="async" draggable={false} referrerPolicy="no-referrer" className={'cover-image'+(loaded?' loaded':'')} ref={img=>{if(img?.complete&&img.naturalWidth>0)setLoaded(true)}} onLoad={()=>setLoaded(true)} onError={()=>setFailed(true)}/>}</span>;
 }
 export function Artwork({color,title,large=false,round=false,src}:{color:string;title:string;large?:boolean;round?:boolean;src?:string|null}){return <div className={'artwork '+(large?'large ':'')+(round?'round':'')} style={{'--art':color} as CSSProperties} aria-label={title}><span className="art-ring"/><Music2 size={large?64:22} strokeWidth={1.4}/>{large&&<small>ANYMINUS / SESSION</small>}{src&&<LazyCover key={src} src={src} title={title}/>}</div>}
 
