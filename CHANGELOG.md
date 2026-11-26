@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.9
+- Retry transient metadata failures when opening shared track links. If metadata remains unavailable, resolve verified ready karaoke via status and recover metadata from the public catalog; allow playback even when provider metadata is temporarily unavailable. Do not create karaoke during link resolution.
+
 ## 0.2.8
 - Remove redundant play button from track rows; title and artwork retain direct karaoke launch, with more room for track metadata.
 
