@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.12
+- Use one viewport observer for artwork; once visible, load immediately with an explicit anonymous CORS request and ordinary HTTP caching. Recognize already-decoded cached images and test actual image decoding, visibility and unavailable-image fallback. The existing artwork API must supply valid image bytes.
+
 ## 0.2.11
 - Resolve shared ready tracks across up to eight catalog pages before calling auth or provider metadata; retry transient auth gateway failures once, and restore missing display metadata while audio continues. Show a neutral temporary header rather than a raw track ID and identify the failing API route on lookup errors.
 

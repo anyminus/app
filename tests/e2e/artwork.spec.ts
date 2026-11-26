@@ -7,5 +7,7 @@ test('only visible artwork is requested, with a stable API URL',async({page})=>{
  expect(api.covers.length).toBeLessThan(60);expect(api.covers).not.toContain('/demo/artwork/1059');
  await page.locator('.track-row').last().scrollIntoViewIfNeeded();
  await expect.poll(()=>api.covers.includes('/demo/artwork/1059')).toBe(true);
- await expect(page.locator('.track-row').last().locator('img')).toHaveAttribute('src',/\/demo\/artwork\/1059$/);
+ const image=page.locator('.track-row').last().locator('img');await expect(image).toHaveAttribute('src',/\/demo\/artwork\/1059$/);await expect(image).toHaveAttribute('crossorigin','anonymous');await expect.poll(()=>image.evaluate((el:HTMLImageElement)=>el.naturalWidth)).toBe(8);await expect(image).toHaveClass(/loaded/);await expect(image).toHaveCSS('opacity','1');
 });
+
+test('unavailable artwork retains placeholder and valid covers really render',async({page})=>{await mockApi(page);await page.route(/^https:\/\/[^/]+\/demo\/artwork\/101$/,route=>route.fulfill({status:404,headers:{'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}}));await page.goto('/');const first=page.locator('.track-row').first(),second=page.locator('.track-row').nth(1);await expect(first.locator('.cover-slot')).toHaveAttribute('data-cover-state','unavailable');await expect(first.locator('.artwork svg')).toBeVisible();await expect(second.locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');await expect(second.locator('img')).toHaveCSS('opacity','1');await expect.poll(()=>second.locator('img').evaluate((el:HTMLImageElement)=>el.naturalWidth)).toBe(8)});
