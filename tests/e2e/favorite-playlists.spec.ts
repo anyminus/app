@@ -1,0 +1,9 @@
+import {test,expect} from '@playwright/test';
+test('save whole playlists, reorder, reload and unsave without changing song favorites',async({page})=>{
+ await page.goto('/');const nav=page.getByRole('navigation',{name:'Навигация'});
+ await page.getByRole('button',{name:'Добавить плейлист в любимое: Поп',exact:true}).click();await page.getByRole('button',{name:'Добавить плейлист в любимое: Рок',exact:true}).click();
+ await page.locator('.track-row').first().getByRole('button',{name:'В любимое',exact:true}).click();
+ await nav.getByRole('button',{name:'Любимое',exact:true}).click();await expect(page.getByRole('button',{name:'Песни · 1',exact:true})).toBeVisible();await page.getByRole('button',{name:'Плейлисты · 2',exact:true}).click();
+ await page.getByRole('button',{name:'Редактировать',exact:true}).click();const handles=page.locator('[data-sortable-id]');await expect(handles).toHaveCount(2);await page.getByRole('button',{name:'Переместить Рок',exact:true}).focus();await page.keyboard.press('ArrowDown');await expect(handles.first()).toHaveAttribute('data-sortable-id','Поп');
+ await page.reload();await page.getByRole('button',{name:'Плейлисты · 2',exact:true}).click();await expect(page.locator('.playlist-open').first()).toContainText('Поп');await page.locator('.playlist-open').first().click();await expect(page.getByRole('heading',{name:'Поп',exact:true})).toBeVisible();await page.getByRole('button',{name:'Убрать плейлист из любимого: Поп',exact:true}).click();await nav.getByRole('button',{name:'Любимое',exact:true}).click();await page.getByRole('button',{name:'Плейлисты · 1',exact:true}).click();await expect(page.locator('.playlist-open')).toHaveCount(1);await expect(page.locator('.playlist-open').first()).toContainText('Рок');await expect(page.getByRole('button',{name:'Песни · 1',exact:true})).toBeVisible();
+});

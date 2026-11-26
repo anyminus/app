@@ -10,3 +10,6 @@ export function addTrack(list,id,trackId){if(!tracks.some(t=>t.id===trackId))ret
 export function removeTrack(list,id,trackId){return list.map(p=>p.id===id?{...p,trackIds:p.trackIds.filter(t=>t!==trackId)}:p)}
 
 export function movePlaylistTrack(list,id,from,to){return list.map(p=>p.id===id?{...p,trackIds:moveItem(p.trackIds,from,to)}:p)}
+
+export function toggleFavoritePlaylist(ids,id){return ids.includes(id)?ids.filter(v=>v!==id):[id,...ids]}
+export function pruneFavoritePlaylists(ids,list){const valid=new Set(list.map(p=>p.id));const next=ids.filter(id=>valid.has(id));return next.length===ids.length?ids:next}
