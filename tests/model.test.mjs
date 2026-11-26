@@ -17,3 +17,6 @@ test('playlist favorites are independent, unique and pruned after deletion',()=>
 
 import {normalizeStoredLyrics,retryLyricsStatus} from '../src/lyrics.mjs';
 test('stored lyrics distinguish timed, plain, absent and transient states',()=>{const line={text:'test line',startMs:100,endMs:null,startOrigin:'source'};assert.deepEqual(normalizeStoredLyrics({state:'available',format:'LRC',timing:'line',lines:[{...line,startMs:200},line,{...line,startMs:300,startOrigin:'inferred'}]},1000).lines.map(l=>l.startMs),[100,200]);assert.equal(normalizeStoredLyrics({state:'available',format:'TEXT',timing:'none',text:'one\ntwo',lines:[]},1000).text,'one\ntwo');assert.equal(normalizeStoredLyrics({state:'absent',format:'LRC',lines:[]},1000).state,'absent');assert.equal(retryLyricsStatus(503),true);assert.equal(retryLyricsStatus(401),false);assert.throws(()=>normalizeStoredLyrics({},1000));});
+
+import {trackArtworkUrl} from '../src/artwork.mjs';
+test('artwork URLs use stable approved API paths only',()=>{assert.equal(trackArtworkUrl('https://api.example.test','123'),'https://api.example.test/demo/artwork/123');assert.equal(trackArtworkUrl('https://api.example.test','../private'),null);assert.equal(trackArtworkUrl('https://api.example.test/path','123'),null);assert.equal(trackArtworkUrl('http://api.example.test','123'),null)});

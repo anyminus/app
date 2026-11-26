@@ -1,7 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
 import {apiOrigin,createDemoApi,normalizeTracks} from './api.mjs';
+import {trackArtworkUrl} from './artwork.mjs';
 export const origin=apiOrigin(import.meta.env.VITE_DEMO_API_ORIGIN||'https://anyminus-demo-search-dev.demo-search.workers.dev')!;
 export const api=createDemoApi(origin);
+export const coverFor=(id:string)=>trackArtworkUrl(origin,id);
 export type LiveTrack={providerTrackId:string;title:string;artist:string;durationMs:number|null;pairOperationId:string|null};
 export function isTrackId(id:unknown):id is string{return typeof id==='string'&&/^\d{1,20}$/.test(id)}
 export function useCatalog(query:string|null){

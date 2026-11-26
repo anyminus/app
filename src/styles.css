@@ -12,3 +12,6 @@
 .plain-lyrics{white-space:pre-wrap;overflow-wrap:anywhere;font-size:24px;line-height:1.6;margin-top:12px}.live-lyrics>.text-button{margin-top:10px}
 
 .live-lyrics .lyric{font-size:var(--live-lyric-size,26px)}.live-lyrics.live-focus{max-height:68dvh;min-height:50dvh}.catalog-message{padding:14px 0;color:var(--muted)}
+
+.cover-slot{position:absolute;inset:0;z-index:2;pointer-events:none}.cover-image{width:100%;height:100%;display:block;object-fit:cover;opacity:0;transition:opacity .16s ease}.cover-image.loaded{opacity:1}.artwork.large:has(.cover-image.loaded){aspect-ratio:1}
+@media(prefers-reduced-motion:reduce){.cover-image{transition:none}}

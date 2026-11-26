@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.1
+- Load artwork through the existing public track artwork endpoint. Request only visible covers via IntersectionObserver and native lazy loading; reuse stable URLs and HTTP cache. Preserve the placeholder if a cover is unavailable.
+
 ## 0.2.0
 - Always-on API catalog and search; remove fictional songs, sample lyrics and synthesized audio from the application. Real IDs for favorites, playlists, history and shared links; preserve local user preferences.
 
