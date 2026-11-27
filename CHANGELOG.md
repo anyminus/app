@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.74
+- Simplify home ready rows: hide redundant database and lyrics status labels except confirmed plain lyrics. Filter out rows without an actual ready pair; other screens retain full statuses.
+
 ## 0.5.73
 - Keep artwork visible in both mixer modes. Match square artwork to the two-line title/artist block and remove lyric-format label from player header only.
 

@@ -315,3 +315,7 @@ Search uses optional independent SDK artists array plus current track credits, v
 
 ## Compact karaoke player header (0.5.73)
 Owner requested the same visible artwork in normal and lyrics-focus modes, square image sized to the title plus artist lines (19.52 + 3 + 14.4 CSS px, rounded to 37 px), no lyrics-format caption in this header. Catalog/detail statuses and lyric error/empty-state behavior unchanged. Tests cover loaded artwork and matching bounds before/after mixer toggling and viewport changes; obsolete player-header label assertions removed, catalog label assertions retained. No backend or storage changes. CI pending.
+
+
+## Home ready-only presentation (0.5.74)
+Owner requested no status captions on the home ready catalog except «Текст без таймкодов». Home and legacy live alias render compact ready rows and filter out items without a validated pair ID. Full queue/database/lyrics labels remain on search, artist and other screens. No new backend filtering or media mutation. Tests cover home LRC/TEXT/NONE/unknown, unready exclusion, and search readiness labels. CI pending.
