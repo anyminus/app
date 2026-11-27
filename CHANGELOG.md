@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.81
+- Restore the localized visible Record video label in the player header alongside the camera icon and beta marker. Responsive button width and wrapping preserve the header layout; recording behavior is unchanged. Extend header regression assertions.
+
 ## 0.5.80
 - In artwork-background mode, use the play/pause accent and on-accent colors for all four pitch and tempo adjustment buttons. Preserve regular-mode styling, disabled state and pressed feedback. Add player layout palette regression.
 

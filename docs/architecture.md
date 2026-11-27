@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Recording trigger label (0.5.81)
+The idle recording trigger remains in the existing player-header portal. It displays the camera icon, localized Record video text and beta glyph. The button uses a responsive 100–140px width, a wrapping label and nonshrinking icons; the track heading keeps its existing ellipsis. Recording phases and handlers are unchanged. Header tests verify label and beta at existing viewport sizes.
+
 ## Artwork background control palette (0.5.80)
 When `.karaoke-cover-background-on` is active, both pitch and speed +/- buttons use `--accent` and `--on`, matching the main play/pause control in either theme. Pressed brightness feedback and disabled opacity remain; toggling the artwork off restores the regular palette. Covered in `tests/e2e/player-layout.spec.ts`.
 
