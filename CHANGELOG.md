@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.24
+- Require MP4 recording on native iPhone/iPad; prefer H.264/AAC and prohibit WebM or unspecified-format fallback. Disable unsupported recording while preserving normal karaoke and explicit raw-camera MP4 retry.
+
 ## 0.5.23
 - Prefer MP4 on native iPhone/iPad for composited and raw capture; normalize the actual recorded MIME type, simplify native file sharing, prevent duplicate share attempts and preserve manual download fallback.
 

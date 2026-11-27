@@ -159,10 +159,24 @@ test('native Apple recording prefers MP4 and shares only the actual file with ma
  await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
  await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();const overlay=page.getByRole('checkbox',{name:'Текст на видео'});if(await overlay.isEnabled())await overlay.uncheck();
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
- expect((await page.evaluate(()=>Reflect.get(window,'__codecAttempts') as string[]))[0]).toBe('video/mp4');
+ expect((await page.evaluate(()=>Reflect.get(window,'__codecAttempts') as string[])).every(type=>type.startsWith('video/mp4'))).toBe(true);
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();const save=page.getByRole('link',{name:'Сохранить видео'});await expect(save).toBeVisible();
  await page.getByRole('button',{name:'Поделиться',exact:true}).click();await expect(page.getByRole('button',{name:'Открыто меню отправки…'})).toBeDisabled();await expect(save).toBeVisible();
  const payload=await page.evaluate(()=>Reflect.get(window,'__shareData') as {keys:string[];name:string;type:string;size:number});
- expect(payload.keys).toEqual(['files']);expect(payload.type).toMatch(/^video\/(mp4|webm)$/);expect(payload.name).toMatch(/^AnyMinus-\d+\.(mp4|webm)$/);expect(payload.name.endsWith(payload.type.split('/')[1])).toBe(true);expect(payload.size).toBeGreaterThan(1000);
+ expect(payload.keys).toEqual(['files']);expect(payload.type).toBe('video/mp4');expect(payload.name).toMatch(/^AnyMinus-\d+\.mp4$/);expect(payload.name.endsWith(payload.type.split('/')[1])).toBe(true);expect(payload.size).toBeGreaterThan(1000);
  await page.evaluate(()=>Reflect.get(window,'__rejectShare')());await expect(page.getByText('Не удалось передать файл. Сохраните видео и прикрепите его в мессенджере.')).toBeVisible();await expect(save).toBeVisible();await expect(page.getByRole('button',{name:'Поделиться',exact:true})).toBeEnabled();
+});
+
+test('iPhone without MP4 support never opens camera or falls back to WebM',async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(navigator,'platform',{configurable:true,value:'iPhone'});MediaRecorder.isTypeSupported=(type:string)=>type.startsWith('video/webm');Reflect.set(window,'__cameraCalls',0);Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async()=>{Reflect.set(window,'__cameraCalls',1);throw Error('unexpected camera request')}})});
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();
+ await expect(page.getByRole('button',{name:/Записать видео/})).toBeDisabled();await expect(page.getByText(/недоступна запись MP4/)).toBeVisible();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeEnabled();
+ expect(await page.evaluate(()=>Reflect.get(window,'__cameraCalls'))).toBe(0);
+});
+test('iPhone failed MP4 encoder never tries WebM or default encoding',async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(navigator,'platform',{configurable:true,value:'iPhone'});const Native=MediaRecorder;Reflect.set(window,'__attemptedFormats',[]);class RejectMP4 extends Native{static isTypeSupported(){return true;}constructor(stream:MediaStream,options?:MediaRecorderOptions){(Reflect.get(window,'__attemptedFormats') as string[]).push(options?.mimeType??'default');throw new DOMException('Test encoder unavailable','NotSupportedError');}}Object.defineProperty(window,'MediaRecorder',{configurable:true,value:RejectMP4});});
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();const overlay=page.getByRole('checkbox',{name:'Текст на видео'});if(await overlay.isEnabled())await overlay.uncheck();
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText(/не удалось запустить запись MP4/)).toBeVisible();await expect(page.getByRole('button',{name:/Записать видео/})).toBeDisabled();await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeEnabled();
+ const attempts=await page.evaluate(()=>Reflect.get(window,'__attemptedFormats') as string[]);expect(attempts.length).toBeGreaterThan(0);expect(attempts.every(type=>type.startsWith('video/mp4'))).toBe(true);
 });

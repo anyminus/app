@@ -5,8 +5,9 @@ import {drawKaraokeFrame,overlaySupported,type TimedLine} from './videoOverlay';
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
 export type VideoTransport={toggle:()=>void};
 type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];playing:boolean;title:string;artist:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
-const mp4=['video/mp4','video/mp4;codecs=avc1.42E01E,mp4a.40.2'];
+const mp4=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
 function appleMobile(){return /iPhone|iPad|iPod/i.test(navigator.platform)||(/Mac/i.test(navigator.platform)&&navigator.maxTouchPoints>1)||(/Apple/i.test(navigator.vendor)&&/iPhone|iPad|iPod/i.test(navigator.userAgent));}
+function mp4Available(){try{return typeof MediaRecorder==='function'&&(typeof MediaRecorder.isTypeSupported!=='function'||mp4.some(type=>MediaRecorder.isTypeSupported(type)));}catch{return false;}}
 function canShareFile(file:File){try{return typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[file]});}catch{return false;}}
 const webm=['video/webm;codecs=vp8,opus','video/webm'];
 // Feature detection, not a phone model or OS allowlist.
@@ -17,19 +18,19 @@ function basicSupport(){
 // isTypeSupported does not guarantee available hardware/resources at start().
 function startRecorder(stream:MediaStream,overlay:boolean){
  let last:unknown;
- for(const mimeType of [...(!appleMobile()&&(overlay||/Android/i.test(navigator.userAgent))?[...webm,...mp4]:[...mp4,...webm]),'']){
+ for(const mimeType of (appleMobile()?mp4:[...(overlay||/Android/i.test(navigator.userAgent)?[...webm,...mp4]:[...mp4,...webm]),''])){
   try{
    if(mimeType&&typeof MediaRecorder.isTypeSupported==='function'&&!MediaRecorder.isTypeSupported(mimeType))continue;
    const recorder=new MediaRecorder(stream,{...(mimeType?{mimeType}:{}),videoBitsPerSecond:2000000,audioBitsPerSecond:128000});
-   recorder.start(1000);return recorder;
+   recorder.start(1000);if(recorder.state!=='recording')throw Error('Кодировщик не запустился');return recorder;
   }catch(e){last=e;}
  }
- throw Error('Не удалось запустить кодирование видео: '+(last instanceof Error?last.message:'нет доступного формата'));
+ throw Error((appleMobile()?'Не удалось запустить MP4 на iPhone/iPad: ':'Не удалось запустить кодирование видео: ')+(last instanceof Error?last.message:'нет доступного формата'));
 }
 export function VideoKaraoke(props:Props){
  const [phase,setPhase]=useState<Phase>('idle'),[error,setError]=useState(''),[result,setResult]=useState<{url:string;file:File}|null>(null);
  const [sharing,setSharing]=useState(false),[shareHint,setShareHint]=useState('');const shareBusy=useRef(false),shareAttempt=useRef(0);
- const [includeLyrics,setIncludeLyrics]=useState(true),[recordOverlay,setRecordOverlay]=useState(false);const [overlayFailed,setOverlayFailed]=useState(false),[unsupported,setUnsupported]=useState(false);const supported=basicSupport()&&!unsupported;
+ const [includeLyrics,setIncludeLyrics]=useState(true),[recordOverlay,setRecordOverlay]=useState(false);const [overlayFailed,setOverlayFailed]=useState(false),[unsupported,setUnsupported]=useState(false);const apple=appleMobile(),missingMP4=apple&&!mp4Available();const supported=basicSupport()&&!unsupported&&!missingMP4;
  const canvas=useRef<HTMLCanvasElement|null>(null),canvasStream=useRef<MediaStream|null>(null);
  const canOverlay=overlaySupported()&&!overlayFailed&&props.lyrics.length>0;
  const showOverlay=phase==='preview'?includeLyrics&&canOverlay:recordOverlay;
@@ -89,7 +90,7 @@ export function VideoKaraoke(props:Props){
     for(const track of videoTracks)track.addEventListener('ended',()=>{if(mounted.current&&recorder.current?.state==='recording')finish('Видеопоток с текстом прерван.');},{once:true});
    }
    const stream=new MediaStream([...videoTracks,...prepared.stream.getAudioTracks()]);
-   let r:MediaRecorder;try{r=startRecorder(stream,withText);}catch(e){if(withText){setOverlayFailed(true);setIncludeLyrics(false);throw Error('Не удалось запустить запись с текстом. Попробуйте обычную видеозапись.');}throw e;}recorder.current=r;
+   let r:MediaRecorder;try{r=startRecorder(stream,withText);}catch(e){if(withText){setOverlayFailed(true);setIncludeLyrics(false);throw Error(apple?'Запись MP4 с текстом недоступна. Попробуйте обычную видеозапись без текста.':'Не удалось запустить запись с текстом. Попробуйте обычную видеозапись.');}if(apple){cancel();setUnsupported(true);setError('На этом iPhone/iPad не удалось запустить запись MP4. Видеокараоке недоступно в текущем браузере.');return;}throw e;}recorder.current=r;
    r.ondataavailable=e=>{if(e.data.size){chunks.current.push(e.data);bytes.current+=e.data.size;if(bytes.current>=180*1024*1024&&r.state==='recording')finish('Достигнут предел размера записи.');}};
    r.onerror=e=>{const detail=(e as Event&{error?:DOMException}).error;stopReason.current='Ошибка записи видео'+(detail?': '+detail.name+' — '+detail.message:'.');if(r.state!=='inactive')finish(stopReason.current);};
    r.onstop=()=>{
@@ -97,6 +98,7 @@ export function VideoKaraoke(props:Props){
     latest.current.onStop();latest.current.onMode(false);setError(stopReason.current);
     if(!parts.length){setPhase('idle');setError(stopReason.current||'Видео не записалось. Попробуйте снова.');return;}
     if(type!=='video/mp4'&&type!=='video/webm'){setPhase('idle');setError('Не удалось определить формат записанного видео.');return;}
+    if(apple&&type!=='video/mp4')setError('Браузер неожиданно вернул WebM вместо MP4. Этот файл можно сохранить для конвертации, но он может не открываться на iPhone.');
     const name='AnyMinus-'+Date.now()+(type==='video/mp4'?'.mp4':'.webm');const file=new File(parts,name,{type});url.current=URL.createObjectURL(file);setResult({url:url.current,file});setPhase('result');
    };
    const ok=await props.onStart();if(!mounted.current||recorder.current!==r||r.state!=='recording')return;if(!ok){finish('Не удалось запустить музыку. Закройте результат и повторите запись.');return;}setPhase('recording');
@@ -104,7 +106,7 @@ export function VideoKaraoke(props:Props){
  }
  async function share(){
   if(!result||shareBusy.current)return;
-  if(!canShareFile(result.file)){setShareHint('Отправка этого формата недоступна. Сохраните видео и прикрепите его в мессенджере.');return;}
+  if((apple&&result.file.type!=='video/mp4')||!canShareFile(result.file)){setShareHint('Отправка этого формата недоступна. Сохраните видео и прикрепите его в мессенджере.');return;}
   shareBusy.current=true;setSharing(true);setShareHint('Если отправка зависнет, закройте системное окно и прикрепите сохранённый файл в Telegram.');
   const attempt=++shareAttempt.current;
   try{await navigator.share({files:[result.file]});}
@@ -113,12 +115,12 @@ export function VideoKaraoke(props:Props){
  }
  const active=phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing';
  return <div className="video-karaoke" aria-label="Видеокараоке">
-  {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||!supported} onClick={()=>void enable()}><Video size={16}/>Записать видео <span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.</p>}</>}
+  {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||!supported} onClick={()=>void enable()}><Video size={16}/>Записать видео <span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">{missingMP4?'В этом браузере iPhone/iPad недоступна запись MP4. Видеокараоке отключено.':'Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.'}</p>}</>}
   {phase==='permission'&&<div className="video-karaoke-actions"><span role="status">Разрешите камеру и микрофон…</span><button type="button" onClick={cancel}>Отмена</button></div>}
   {active&&<div className="video-karaoke-panel"><div className="video-karaoke-preview"><video ref={preview} autoPlay muted playsInline aria-label="Предпросмотр камеры"/><canvas ref={canvas} className={showOverlay?'video-overlay visible':'video-overlay'} aria-label="Текст в видео" aria-hidden={!showOverlay}/>{phase==='recording'&&<span className="video-karaoke-rec">● REC</span>}</div><div className="video-karaoke-actions">
    {phase==='preview'?<><button type="button" className="video-karaoke-start" onClick={()=>void start()}><Video size={16}/>Начать запись</button><label className="video-overlay-option"><input type="checkbox" checked={includeLyrics&&canOverlay} disabled={!canOverlay} onChange={e=>setIncludeLyrics(e.target.checked)}/>Текст на видео</label><span>{!canOverlay?(overlayFailed||!overlaySupported()?'Наложение не поддерживается':'Нужен синхронный текст'):'Лучше в наушниках'}</span><button type="button" onClick={cancel}><X size={14}/>Отмена</button></>:phase==='finishing'?<span role="status">Сохраняем видео…</span>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>Остановить</button><span role="status">{phase==='starting'?'Запуск…':'Идёт запись · локально'}</span></>}
   </div></div>}
-  {phase==='result'&&result&&<div className="video-karaoke-panel"><video className="video-karaoke-result" src={result.url} controls playsInline preload="metadata" aria-label="Записанное видео"/><div className="video-karaoke-actions"><a href={result.url} download={result.file.name}><Download size={16}/>Сохранить видео</a>{canShareFile(result.file)&&<button type="button" disabled={sharing} onClick={()=>void share()}><Share2 size={15}/>{sharing?'Открыто меню отправки…':'Поделиться'}</button>}<button type="button" disabled={sharing} onClick={()=>{clearResult();setPhase('idle');setError('')}}><X size={14}/>Закрыть</button><span>{result.file.type==='video/mp4'?'MP4':'WebM'} · {(result.file.size/1048576).toFixed(1)} МБ</span><span>Видео не отправляется на сервер</span><span role="status">{shareHint||(!canShareFile(result.file)?'Сохраните файл и прикрепите его в мессенджере.':appleMobile()&&result.file.type==='video/webm'?'WebM: для Telegram надёжнее сохранить и прикрепить файл вручную.':'Если Telegram зависнет, сохраните файл и прикрепите его из чата.')}</span></div></div>}
+  {phase==='result'&&result&&<div className="video-karaoke-panel"><video className="video-karaoke-result" src={result.url} controls playsInline preload="metadata" aria-label="Записанное видео"/><div className="video-karaoke-actions"><a href={result.url} download={result.file.name}><Download size={16}/>Сохранить видео</a>{(!apple||result.file.type==='video/mp4')&&canShareFile(result.file)&&<button type="button" disabled={sharing} onClick={()=>void share()}><Share2 size={15}/>{sharing?'Открыто меню отправки…':'Поделиться'}</button>}<button type="button" disabled={sharing} onClick={()=>{clearResult();setPhase('idle');setError('')}}><X size={14}/>Закрыть</button><span>{result.file.type==='video/mp4'?'MP4':'WebM'} · {(result.file.size/1048576).toFixed(1)} МБ</span><span>Видео не отправляется на сервер</span><span role="status">{shareHint||(!canShareFile(result.file)?'Сохраните файл и прикрепите его в мессенджере.':appleMobile()&&result.file.type==='video/webm'?'WebM: для Telegram надёжнее сохранить и прикрепить файл вручную.':'Если Telegram зависнет, сохраните файл и прикрепите его из чата.')}</span></div></div>}
   {error&&<p className="video-karaoke-error" role="alert">{error}</p>}
  </div>;
 }
