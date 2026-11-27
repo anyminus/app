@@ -23,3 +23,6 @@ Telegram login remains optional while real-browser acceptance is pending. Explic
 
 ### Artist popularity and artwork (0.4.2)
 Provider-ranked artist songs use explicit 20-track continuation where available. Missing track cover metadata retries the stable public API image route; unavailable images retain a placeholder. Backend and frontend live acceptance must be verified separately.
+
+### Анимация караоке (0.4.4)
+Согласованный режим: активная строка 100%, остальные 75%; плавное масштабирование и прокрутка 480 мс, цвет и прозрачность 420 мс. Анимация не изменяет тайминги LRC, аудиочасы или ручную перемотку. Подробности: [архитектура](docs/architecture.md#karaoke-line-motion-044), [спецификация и критерии приёмки](docs/acceptance-0.4.4.md). Реальная проверка на устройстве выполняется отдельно от CI.
