@@ -269,3 +269,7 @@ Owner screenshot on iPhone shows the Russian heading wrapping its final letter d
 
 ## Equal pitch and speed widths (0.5.62)
 Owner approved title fit but requests equal panel widths. Use the existing wider pitch width for both columns (90px mobile, 106px wider docks), so the mixer loses only the previous width difference; retain equal fractional columns in narrow portrait and short landscape. Extend layout regression to compare panel bounding widths while preserving full heading and button containment checks. No media or backend changes. CI/device acceptance pending.
+
+
+## Single mixer/focus control (0.5.63)
+Owner requests removal of the upper-right focus toggle because the bottom microphone button duplicates its function in ordinary playback. Remove header button, icons and obsolete CSS; retain bottom toggle, existing focus state, aria-expanded, lyric recentering and independent video-mode mixer behavior. Update viewport/focus regression to use the bottom control and assert the header toggle is absent. CI/device acceptance pending.

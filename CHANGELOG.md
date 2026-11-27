@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.63
+- Remove redundant header focus toggle. Keep the existing microphone button as the single mixer/focus control, including video mode behavior. Update focus regression to use the remaining button and verify expanded state.
+
 ## 0.5.62
 - Equalize pitch and speed panel widths at 90px on mobile and 106px on wider screens, preserving the full title and narrow-screen two-row layout. Assert equal widths across seven viewports.
 

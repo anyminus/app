@@ -31,7 +31,7 @@ body.karaoke-open .tab-bar{display:none}
 .karaoke-heading .artist-credits{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}
 .karaoke-heading .artist-credits>span{display:inline;white-space:nowrap}
 .karaoke-heading>.artist-link{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.karaoke-focus-toggle[aria-pressed=true]{color:var(--accent);background:var(--raised)}
+
 .karaoke-lyrics{min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:12px 0}
 .karaoke-lyrics::-webkit-scrollbar{display:none}
 .karaoke-lyrics.timed:before,.karaoke-lyrics.timed:after{content:"";display:block;height:42%;pointer-events:none}

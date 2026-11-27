@@ -1,6 +1,6 @@
 import {t as trUi} from './i18n.mjs';
 import {Fragment,useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {ArrowLeft,Bell,MousePointer2,Heart,Send,Share2,Maximize2,Minimize2,MicVocal,Pause,Play,RefreshCw,Search,SkipBack,SkipForward} from 'lucide-react';
+import {ArrowLeft,Bell,MousePointer2,Heart,Send,Share2,MicVocal,Pause,Play,RefreshCw,Search,SkipBack,SkipForward} from 'lucide-react';
 import {normalizeJob,mediaUrl,providerLyricsHint} from './api.mjs';
 import {api,origin,coverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
@@ -148,7 +148,6 @@ export function LiveCatalog({onOriginal,originalPlaying,originalActive,onKaraoke
  <IconButton label={trUi("Назад")} onClick={onBack}><ArrowLeft/></IconButton>
  <div className="karaoke-cover"><Artwork title={selected.title} color="#7961bd" src={coverFor(selected.providerTrackId,selected.coverUrl)} trackId={selected.providerTrackId}/></div>
  <div className="karaoke-heading"><h1 title={selected.title}>{selected.title}</h1>{selected.metadataUnavailable?<span className="metadata">{trUi("Уточняем название и исполнителя…")}</span>:<ArtistLinks artist={selected.artist} credits={selected.artistCredits} onArtist={onArtist}/>}<KaraokeReadyStatus format={resolvedFormat} className="song-lyrics-status" announce/></div>
- <button className="icon-button karaoke-focus-toggle" type="button" aria-label={focus?trUi('Показать плеер'):trUi('Только текст')} aria-pressed={focus} title={focus?trUi('Обычный режим'):trUi('Полноэкранный текст')} onClick={()=>setFocus(v=>!v)}>{focus?<Minimize2 size={21}/>:<Maximize2 size={21}/>}</button>
  </header>
  {playerReady&&<VideoKaraoke ref={videoTransport} onTransportReady={v=>{videoSeekReady.current=v;setVideoTransportReady(v)}} audio={audio} lyrics={lyrics} seekRevision={videoSeekRevision} playing={playing} title={selected.title} artist={selected.artist} disabled={pitchBusy||loadingAudio} onMode={v=>{videoLock.current=v;setVideoMode(v);setVideoMixerOpen(false);if(!v){videoSeekReady.current=false;seekEpoch.current++;setVideoTransportReady(false)}}} onPrepare={async()=>{const a=audio.current;if(!a)throw Error(trUi("Аудио не готово"));const at=a.position,version=selectionVersion.current;pausePlayback();await seekQueue.current;if(audio.current!==a||version!==selectionVersion.current||!videoLock.current)return;await a.seek(at);if(audio.current!==a||version!==selectionVersion.current||!videoLock.current)return;setPosition(a.position);setError('')}} onStart={startPlayback} onStop={pausePlayback}/>}
  {!songEnded&&lyrics.length>0&&(!videoMode||videoTransportReady)&&<p id="lyric-seek-hint" className="lyric-seek-hint"><MousePointer2 size={13} aria-hidden="true"/>{trUi("Нажмите на любую строку, чтобы перейти к ней")}</p>}</div>
