@@ -104,12 +104,19 @@ test('song ending opens global search without restarting playback',async({page})
 
 test('inactive lyrics use their real smaller size to fit more words on a line',async({page})=>{
  await mockApi(page);await page.emulateMedia({reducedMotion:'reduce'});await page.setViewportSize({width:390,height:844});
- await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Intro',startMs:0,endMs:3000,startOrigin:'source'},{text:'Karaoke melody in the night',startMs:3000,endMs:6000,startOrigin:'source'},{text:'End',startMs:6000,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Intro',startMs:0,endMs:3000,startOrigin:'source'},{text:'Karaoke melody night',startMs:3000,endMs:6000,startOrigin:'source'},{text:'End',startMs:6000,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
- await page.addStyleTag({content:'.karaoke-lyrics{--lyric-size:32px!important}'});
- const slider=page.getByRole('slider',{name:'Позиция песни'});await slider.fill('0');const line=page.getByRole('button',{name:'Karaoke melody in the night',exact:true});await expect(line).toBeVisible();
+ // Deterministic fixture typography: twenty monospaced characters fit at
+ // 24px but not 32px within the real 390px mobile player. Keep production
+ // font-size, width, and wrapping rules under test.
+ await page.addStyleTag({content:'.karaoke-lyrics{--lyric-size:32px!important}.karaoke-lyrics .lyric-text{font-family:monospace;letter-spacing:0}'});
+ const slider=page.getByRole('slider',{name:'Позиция песни'});await slider.fill('0');const line=page.getByRole('button',{name:'Karaoke melody night',exact:true});await expect(line).toBeVisible();
  const span=line.locator('.lyric-text');
+ await expect(span).toHaveCSS('font-size','24px');
+ const widths=await span.evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);const previous=el.style.whiteSpace;el.style.whiteSpace='nowrap';const actual=range.getBoundingClientRect().width;el.style.whiteSpace=previous;return {actual,available:el.clientWidth};});
+ expect(widths.actual).toBeLessThan(widths.available);
+ expect(widths.actual/0.75).toBeGreaterThan(widths.available);
  const rows=()=>span.evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);return new Set(Array.from(range.getClientRects(),rect=>Math.round(rect.top))).size;});
- await expect.poll(rows).toBe(1);await line.click();await expect(line).toHaveAttribute('aria-current','true');await expect.poll(rows).toBeGreaterThan(1);
+ await expect.poll(rows).toBe(1);await line.click();await expect(line).toHaveAttribute('aria-current','true');await expect(span).toHaveCSS('font-size','32px');await expect.poll(rows).toBeGreaterThan(1);
  await slider.fill('0');await expect.poll(rows).toBe(1);
 });

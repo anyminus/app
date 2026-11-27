@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.28
+- Make the lyric wrapping regression deterministic across CI fonts; assert actual 75% and 100% font sizes and real line wrapping. Retain all 0.5.27 video and mixer features unchanged.
+
 ## 0.5.27
 - Increase all composited video text sizes by 20% except the watermark; animate sequential lyric changes with upward movement, size and color interpolation and fading. Explicit seeks snap immediately.
 - Avoid the unrelated Microsoft apt repository during Playwright dependency installation after runner HTTP 403.
