@@ -180,3 +180,29 @@ test('iPhone failed MP4 encoder never tries WebM or default encoding',async({pag
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText(/не удалось запустить запись MP4/)).toBeVisible();await expect(page.getByRole('button',{name:/Записать видео/})).toBeDisabled();await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeEnabled();
  const attempts=await page.evaluate(()=>Reflect.get(window,'__attemptedFormats') as string[]);expect(attempts.length).toBeGreaterThan(0);expect(attempts.every(type=>type.startsWith('video/mp4'))).toBe(true);
 });
+
+test('video mixer changes live stem gain without restarting the recording',async({page})=>{
+ await page.addInitScript(()=>{
+  const start=MediaRecorder.prototype.start,stop=MediaRecorder.prototype.stop,target=AudioParam.prototype.setTargetAtTime;
+  Reflect.set(window,'__mixerRecorderStarts',0);Reflect.set(window,'__mixerRecorderStops',0);Reflect.set(window,'__mixerGainChanges',[]);
+  MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__mixerRecorderStarts',Number(Reflect.get(window,'__mixerRecorderStarts'))+1);return start.apply(this,args)};
+  MediaRecorder.prototype.stop=function(){Reflect.set(window,'__mixerRecorderStops',Number(Reflect.get(window,'__mixerRecorderStops'))+1);return stop.call(this)};
+  AudioParam.prototype.setTargetAtTime=function(...args:Parameters<AudioParam['setTargetAtTime']>){(Reflect.get(window,'__mixerGainChanges') as number[]).push(args[0]);return target.apply(this,args)};
+ });
+ const api=await mockApi(page);await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
+ const mixer=page.getByRole('region',{name:'Микшер',exact:true}),open=page.getByRole('button',{name:'Показать микшер',exact:true}),close=page.getByRole('button',{name:'Свернуть микшер',exact:true});
+ await expect(mixer).toHaveCount(0);await open.click();await expect(mixer).toBeVisible();await expect(close).toHaveAttribute('aria-expanded','true');
+ const music=mixer.getByRole('slider',{name:'Музыка',exact:true}),vocals=mixer.getByRole('slider',{name:'Голос артиста',exact:true});
+ await music.fill('65');await expect(music).toHaveValue('65');await close.click();await expect(mixer).toHaveCount(0);
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();const rec=page.getByText('● REC',{exact:true});await expect(rec).toBeVisible();
+ await open.click();await expect(mixer).toBeVisible();await expect(music).toHaveValue('65');
+ await page.evaluate(()=>{(Reflect.get(window,'__mixerGainChanges') as number[]).length=0;});
+ await music.fill('37');await expect(music).toHaveValue('37');await vocals.fill('42');await expect(vocals).toHaveValue('42');
+ await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__mixerGainChanges') as number[])).toEqual(expect.arrayContaining([.37,.42]));
+ await mixer.getByRole('button',{name:'Приглушить: Голос артиста'}).click();await expect(vocals).toBeDisabled();await expect(vocals).toHaveValue('0');
+ await close.click();await expect(mixer).toHaveCount(0);await expect(rec).toBeVisible();await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled();
+ expect(await page.evaluate(()=>[Reflect.get(window,'__mixerRecorderStarts'),Reflect.get(window,'__mixerRecorderStops')])).toEqual([1,0]);
+ await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+ expect(await page.evaluate(()=>[Reflect.get(window,'__mixerRecorderStarts'),Reflect.get(window,'__mixerRecorderStops')])).toEqual([1,1]);expect(api.media).toBe(2);
+});

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.26
+- Restore the mixer button in video mode. Adjust or mute both accompaniment stems during preview and active recording without restarting capture.
+
 ## 0.5.25
 - Fix premature line wrapping: inactive karaoke lyrics use actual 75% font size instead of transform scaling; active lyrics stay at 100% with smooth recentering as row heights change.
 
