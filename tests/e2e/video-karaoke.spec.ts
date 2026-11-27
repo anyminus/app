@@ -13,7 +13,7 @@ test('local video capture stays above lyrics and exports a file',async({page})=>
  const top=await camera.boundingBox(),lyrics=await page.getByLabel('Текст песни',{exact:true}).boundingBox();
  expect(top).not.toBeNull();expect(lyrics).not.toBeNull();
  expect(top!.height).toBeLessThanOrEqual(100);expect(top!.y+top!.height).toBeLessThanOrEqual(lyrics!.y);
- await page.getByRole('button',{name:'Начать запись',exact:true}).click();
+ const play=page.getByRole('button',{name:'Воспроизвести',exact:true});await expect(play).toBeEnabled();await play.click();
  await expect(page.getByText('● REC',{exact:true})).toBeVisible();
  await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeDisabled();
  await page.waitForTimeout(1300);
@@ -34,4 +34,20 @@ test('camera denial restores ordinary playback',async({page})=>{
  await expect(page.getByText('Разрешите доступ к камере и микрофону.')).toBeVisible();
  await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();
  await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+});
+
+test('video recording recovers after initial audio start fails',async({page})=>{
+ await page.addInitScript(()=>{const original=AudioBufferSourceNode.prototype.start;let first=true;AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){if(first){first=false;throw new DOMException('Автовоспроизведение заблокировано','NotAllowedError')}return original.apply(this,args)}});
+ const api=await mockApi(page);await page.goto('/');
+ await page.getByRole('button',{name:'Test song one',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('Автовоспроизведение заблокировано');
+ await page.getByRole('button',{name:/Записать видео/}).click();
+ await expect(page.getByLabel('Предпросмотр камеры')).toBeVisible();
+ await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();
+ await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ await page.waitForTimeout(1200);
+ await page.getByRole('button',{name:'Пауза',exact:true}).click();
+ await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+ expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
 });

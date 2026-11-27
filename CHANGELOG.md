@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.16
+- Restore the main Play/Pause action in camera mode; recover an interrupted or previously failed Web Audio context before connecting the microphone, retaining loaded stems and playback settings.
+
 ## 0.5.15
 - Experimental local video karaoke: compact camera preview above lyrics, microphone and live player mix, save/share recording on device.
 

@@ -1,6 +1,6 @@
 import type {StretchNode} from 'signalsmith-stretch';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
-export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
+export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session&&session.type!==type)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
 export class RemoteAudio {
  private context:AudioContext|null=null;private capturing=false;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
  get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start)*this.rate:this.offset));}
@@ -12,7 +12,7 @@ export class RemoteAudio {
  get pitchSupported(){return !!this.context?.audioWorklet&&typeof AudioWorkletNode!=='undefined';}
  get playing(){return this.running&&this.context?.state==='running';}
  get interrupted(){return this.running&&this.context?.state!=='running';}
- prepare(){if(this.context)return;playbackSession();const ctx=new AudioContext({latencyHint:'playback'});this.context=ctx;void ctx.resume().catch(()=>{});}
+ prepare(sessionType='playback'){if(this.context)return;playbackSession(sessionType);const ctx=new AudioContext({latencyHint:'playback'});this.context=ctx;void ctx.resume().catch(()=>{});}
  async load(urls:string[],duration:number,signal:AbortSignal){
   if(!Number.isFinite(duration)||duration<=0||duration>900)throw Error('Неподдерживаемая длительность');
   this.prepare();const ctx=this.context!;
@@ -96,7 +96,7 @@ export class RemoteAudio {
  // A running state alone is not proof that WebKit's render clock is advancing.
  // Keep decoded stems and position; rebuild the audio output only on explicit Play.
  markOutputStalled(){this.pause();this.needsRecovery=true;}
- private rebuildOutput(){this.pause();const old=this.context;for(const gain of this.gains)try{gain.disconnect()}catch{}this.gains=[];this.clearPitch();this.context=null;if(old&&old.state!=='closed')void old.close().catch(()=>{});this.prepare();this.connectGains(this.context!);this.needsRecovery=false;}
+ private rebuildOutput(sessionType='playback'){this.pause();const old=this.context;for(const gain of this.gains)try{gain.disconnect()}catch{}this.gains=[];this.clearPitch();this.context=null;if(old&&old.state!=='closed')void old.close().catch(()=>{});this.prepare(sessionType);this.connectGains(this.context!);this.needsRecovery=false;}
  private async waitForClock(ctx:AudioContext){const deadline=performance.now()+1800;while(this.context===ctx&&this.running){if(ctx.state==='running'&&ctx.currentTime>this.start+.02)return;if(performance.now()>=deadline)break;await new Promise<void>(resolve=>window.setTimeout(resolve,60))}if(this.context!==ctx||!this.running)return;throw Error('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.');}
  async play(userInitiated=false){if(this.starting)return this.starting;if(!this.context||this.buffers.length!==2)throw Error('Аудио не загружено');playbackSession(this.capturing?'play-and-record':'playback');
  if(userInitiated&&(this.needsRecovery||this.interrupted||String(this.context.state)==='interrupted')){if(this.capturing)throw Error('Аудиовыход прерван. Повторите запись.');this.rebuildOutput();}
@@ -112,8 +112,19 @@ export class RemoteAudio {
  }
  pause(){if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
  async seek(t:number){const resume=this.running;this.pause();this.offset=Math.max(0,Math.min(t,this.duration));if(resume&&this.offset<this.duration)await this.play();}
- createRecordingMix(microphone:MediaStream){
- const ctx=this.context;if(!ctx||this.capturing||this.needsRecovery||!microphone.getAudioTracks().length)throw Error('Аудиовыход не готов к записи');
+ async createRecordingMix(microphone:MediaStream){
+ if(!this.context||this.capturing||this.buffers.length!==2||!microphone.getAudioTracks().some(t=>t.readyState==='live'))throw Error('Аудиовыход не готов к записи');
+ // The camera permission can interrupt Safari's old playback context. Recover
+ // synchronously on the explicit recording gesture, BEFORE attaching the mic.
+ playbackSession('play-and-record');
+ if(this.needsRecovery||this.context.state!=='running')this.rebuildOutput('play-and-record');
+ const ctx=this.context!;let timeout:number|undefined;
+ try{
+  await Promise.race([ctx.resume(),new Promise<never>((_,reject)=>{timeout=window.setTimeout(()=>reject(Error('Safari не запустил звук. Нажмите Начать запись ещё раз.')),4000)})]);
+  if(this.context!==ctx||ctx.state!=='running')throw Error('Аудиовыход недоступен. Повторите запись.');
+  if((this.semitones!==0||this.rate!==1)&&!this.pitchNode){const prepared=await this.createPitch(ctx,this.compensatedPitch());if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}this.attachPitch(ctx,prepared.node,prepared.latency)}
+  if(!microphone.getAudioTracks().some(t=>t.readyState==='live'))throw Error('Микрофон отключён');
+ }catch(e){if(this.context===ctx)this.markOutputStalled();throw e}finally{clearTimeout(timeout)}
  const destination=ctx.createMediaStreamDestination(),music=ctx.createGain(),voice=ctx.createGain(),mic=ctx.createMediaStreamSource(microphone),limiter=ctx.createDynamicsCompressor();
  music.gain.value=.55;voice.gain.value=.75;limiter.threshold.value=-6;limiter.ratio.value=8;
  const outputs=this.pitchGate?[this.pitchGate]:this.gains;
