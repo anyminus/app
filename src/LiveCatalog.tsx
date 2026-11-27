@@ -90,21 +90,21 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
    const viewport=lyricRef.current,line=viewport?.querySelector<HTMLElement>('[data-active="true"]');
    if(!viewport)return;
    if(!line){if(longIntro)viewport.scrollTop=0;return;}
-   // Measure the unscaled button, not the transformed text. Wrapped lines keep stable geometry.
-   const delta=line.getBoundingClientRect().top-viewport.getBoundingClientRect().top+(line.offsetHeight-viewport.clientHeight)/2;
-   const target=Math.max(0,Math.min(viewport.scrollHeight-viewport.clientHeight,viewport.scrollTop+delta));
+   // Font-size animation changes wrapping and row heights. Recompute the
+   // target as the active line grows and the previous line shrinks.
+   const target=()=>{const delta=line.getBoundingClientRect().top-viewport.getBoundingClientRect().top+(line.offsetHeight-viewport.clientHeight)/2;return Math.max(0,Math.min(viewport.scrollHeight-viewport.clientHeight,viewport.scrollTop+delta));};
    const from=viewport.scrollTop;
    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
-   if(!smooth||reduced.matches||Math.abs(target-from)<1){viewport.scrollTop=target;return}
-   const duration=480;
+   if(!smooth||reduced.matches){viewport.scrollTop=target();return}
+   const duration=500;
    let started:number|null=null;
    const tick=(now:number)=>{
-     if(!viewport.isConnected||reduced.matches){lyricFrame.current=null;if(viewport.isConnected)viewport.scrollTop=target;return}
+     if(!viewport.isConnected||reduced.matches){lyricFrame.current=null;if(viewport.isConnected)viewport.scrollTop=target();return}
      if(started===null)started=now;
      const progress=Math.min(1,(now-started)/duration);
-     viewport.scrollTop=from+(target-from)*lyricScrollEase(progress);
+     viewport.scrollTop=from+(target()-from)*lyricScrollEase(progress);
      if(progress<1)lyricFrame.current=requestAnimationFrame(tick);
-     else{viewport.scrollTop=target;lyricFrame.current=null}
+     else{viewport.scrollTop=target();lyricFrame.current=null}
    };
    lyricFrame.current=requestAnimationFrame(tick);
  }

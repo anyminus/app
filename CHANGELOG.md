@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.25
+- Fix premature line wrapping: inactive karaoke lyrics use actual 75% font size instead of transform scaling; active lyrics stay at 100% with smooth recentering as row heights change.
+
 ## 0.5.24
 - Require MP4 recording on native iPhone/iPad; prefer H.264/AAC and prohibit WebM or unspecified-format fallback. Disable unsupported recording while preserving normal karaoke and explicit raw-camera MP4 retry.
 

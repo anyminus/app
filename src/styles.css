@@ -93,11 +93,11 @@ body.karaoke-open .tab-bar{display:none}
 
 .artist-profile{box-sizing:border-box;width:100%;max-width:100%;min-width:0;height:clamp(208px,44vw,244px);aspect-ratio:auto}.artist-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.artist-tabs button{width:100%;min-width:0;min-height:42px;text-align:center;font-size:12px;white-space:normal;padding:8px 6px}
 
-/* Karaoke motion: fixed row geometry, independent left-anchored visual scale. */
+/* Karaoke motion: real font sizes so wrapping uses the visible text width. */
 .karaoke-lyrics.timed{overflow-anchor:none;scroll-behavior:auto}
 .karaoke-lyrics .lyric{transition:color 420ms cubic-bezier(.2,.75,.25,1),opacity 420ms cubic-bezier(.2,.75,.25,1)}
-.karaoke-lyrics .lyric-text{display:block;transform-origin:left center;transform:scale(.75);transition:transform 480ms cubic-bezier(.18,.78,.24,1)}
-.karaoke-lyrics .lyric.current .lyric-text{transform:scale(1)}
+.karaoke-lyrics .lyric-text{display:block;min-width:0;width:100%;font-size:.75em;letter-spacing:-.02em;line-height:1.25;white-space:normal;transition:font-size 480ms cubic-bezier(.18,.78,.24,1)}
+.karaoke-lyrics .lyric.current .lyric-text{font-size:1em}
 @media(prefers-reduced-motion:reduce){.karaoke-lyrics .lyric,.karaoke-lyrics .lyric-text{transition:none!important}}
 
 /* Plain lyrics are available, but without timing; warm accent in both themes. */

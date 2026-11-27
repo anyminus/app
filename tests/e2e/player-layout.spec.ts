@@ -19,7 +19,7 @@ test('active lyric scales to 100 percent and inactive lyrics to 75 percent with 
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,async r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:Array.from({length:7},(_,i)=>({text:'Motion line '+i,startMs:i*1000,endMs:(i+1)*1000,startOrigin:'source'}))},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
  const lines=page.locator('.karaoke-lyrics .lyric');await expect(lines).toHaveCount(7);const slider=page.getByRole('slider',{name:'Позиция песни'});await slider.fill('0');await expect(lines.nth(0)).toHaveAttribute('aria-current','true');
- const scale=(i:number)=>lines.nth(i).locator('.lyric-text').evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a);
+ const scale=(i:number)=>lines.nth(i).locator('.lyric-text').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)/parseFloat(getComputedStyle(el.parentElement!).fontSize));
  await expect.poll(()=>scale(0)).toBeCloseTo(1,2);await expect.poll(()=>scale(1)).toBeCloseTo(.75,2);
  expect(await lines.nth(0).locator('.lyric-text').evaluate(el=>getComputedStyle(el).transitionDuration)).not.toBe('0s');
  await slider.fill('4');await expect(lines.nth(4)).toHaveAttribute('aria-current','true');await expect.poll(()=>scale(4)).toBeCloseTo(1,2);await expect.poll(()=>scale(0)).toBeCloseTo(.75,2);
@@ -101,3 +101,15 @@ test('song ending offers artist navigation and playback can be rewound',async({p
 
 
 test('song ending opens global search without restarting playback',async({page})=>{await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await page.getByRole('button',{name:'Пауза',exact:true}).click();await page.getByRole('slider',{name:'Позиция песни'}).press('End');await page.getByRole('button',{name:'Перейти в глобальный поиск',exact:true}).click();await expect(page).toHaveURL(/#\/search$/);await expect(page.getByRole('textbox',{name:'Поиск песни'})).toHaveValue('');await expect(page.locator('.karaoke-end-panel')).toHaveCount(0)});
+
+test('inactive lyrics use their real smaller size to fit more words on a line',async({page})=>{
+ await mockApi(page);await page.emulateMedia({reducedMotion:'reduce'});await page.setViewportSize({width:390,height:844});
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Intro',startMs:0,endMs:3000,startOrigin:'source'},{text:'Karaoke melody in the night',startMs:3000,endMs:6000,startOrigin:'source'},{text:'End',startMs:6000,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
+ await page.addStyleTag({content:'.karaoke-lyrics{--lyric-size:32px!important}'});
+ const slider=page.getByRole('slider',{name:'Позиция песни'});await slider.fill('0');const line=page.getByRole('button',{name:'Karaoke melody in the night',exact:true});await expect(line).toBeVisible();
+ const span=line.locator('.lyric-text');
+ const rows=()=>span.evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);return new Set(Array.from(range.getClientRects(),rect=>Math.round(rect.top))).size;});
+ await expect.poll(rows).toBe(1);await line.click();await expect(line).toHaveAttribute('aria-current','true');await expect.poll(rows).toBeGreaterThan(1);
+ await slider.fill('0');await expect.poll(rows).toBe(1);
+});
