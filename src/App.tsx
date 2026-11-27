@@ -49,8 +49,10 @@ export function App(){
  useEffect(()=>()=>{pendingLaunch.current?.audio?.dispose();pendingLaunch.current=null},[]);
  const managerPage=route.page==='playlists'||route.page==='playlist',trackPage=['track','player','prepare'].includes(route.page);
  const catalog=useCatalog(route.page==='home'||route.page==='live'?null:route.page==='search'?query:'',route.page==='artist'?route.id:null,route.author_id);
- const [artistTab,setArtistTab]=useState<'ready'|'popular'>('ready');
- useEffect(()=>{setArtistTab('ready')},[route.page,route.id,route.author_id]);
+ const [artistTabs,setArtistTabs]=useStored<Record<string,'ready'|'popular'>>('artist-tabs-v1',{});
+ const artistTabKey=JSON.stringify([route.author_id??null,route.id]);
+ const artistTab=artistTabs?.[artistTabKey]==='popular'?'popular':'ready';
+ function setArtistTab(tab:'ready'|'popular'){setArtistTabs(old=>Object.fromEntries([[artistTabKey,tab],...Object.entries(old??{}).filter(([key])=>key!==artistTabKey)].slice(0,100)) as Record<string,'ready'|'popular'>)}
  const artistPopular=useArtistPopular(route.page==='artist'&&artistTab==='popular'?route.id:null,route.author_id);
  const remember=useCallback((items:LiveTrack[])=>setCache(old=>{let changed=false;const next={...old};for(const t of items){if(!isTrackId(t.providerTrackId))continue;const prev=old[t.providerTrackId];const val={...t,providerLyricsFormat:t.providerLyricsFormat??prev?.providerLyricsFormat,lyricsFormat:t.readyObserved&&!t.pairOperationId?undefined:t.lyricsFormat!==undefined?t.lyricsFormat:(t.pairOperationId&&prev?.pairOperationId!==t.pairOperationId?undefined:prev?.lyricsFormat),artistCredits:t.artistCredits?.length?t.artistCredits:prev?.artistCredits,coverUrl:t.coverUrl!==undefined?t.coverUrl:prev?.coverUrl,durationMs:t.durationMs??prev?.durationMs??null,pairOperationId:t.readyObserved?t.pairOperationId:t.pairOperationId||prev?.pairOperationId||null};if(t.metadataUnavailable&&prev&&!prev.metadataUnavailable){val.title=prev.title;val.artist=prev.artist;val.metadataUnavailable=false}if(!prev||JSON.stringify(prev)!==JSON.stringify(val)){next[t.providerTrackId]=val;changed=true}}return changed?next:old}),[setCache]);
  useEffect(()=>{if(catalog.items.length)remember(catalog.items)},[catalog.items,remember]);
@@ -121,7 +123,7 @@ export function App(){
  {route.page==='artist'&&<>{header(trUi('Артист'))}
  <div className="artist-hero artist-profile" style={{'--art':'#7961bd'} as React.CSSProperties}><div className="artist-profile-art" aria-hidden="true"><UserRound strokeWidth={1}/>{artistPortrait&&<LazyCover key={artistPortrait} src={artistPortrait} title={route.id}/>}</div><span className="eyebrow">{trUi("АРТИСТ · ANYMINUS")}</span><h1>{route.id}</h1><span className="artist-summary">{artistReady.length?artistReady.length+trUi(' готовых караоке')+(catalog.loading?trUi(' · загружаем остальные…'):catalog.error?trUi(' · список неполный'):''):catalog.loading?trUi('Ищем готовые караоке…'):trUi('Песни и караоке')}</span></div>
  <div className="artist-profile-actions"><button className="primary" disabled={!artistReady.length} onClick={()=>artistReady[0]&&open(artistReady[0])}><AudioLines size={20}/>{trUi("Спеть")}</button><button className="secondary" onClick={()=>shareArtist(route.id)}><Share2 size={20}/>{trUi("Поделиться артистом")}</button></div>
- <div className="chips artist-tabs" aria-label={trUi("Разделы артиста")}>{([{id:'ready',name:trUi('Готовые караоке')},{id:'popular',name:trUi('Популярные песни')}] as const).map(t=><button key={t.id} aria-pressed={artistTab===t.id} className={artistTab===t.id?'selected':''} onClick={()=>setArtistTab(t.id)}>{t.name}</button>)}</div>
+ <div className="chips artist-tabs" aria-label={trUi("Разделы артиста")}>{([{id:'popular',name:trUi('Популярные песни')},{id:'ready',name:trUi('Готовые караоке')}] as const).map(t=><button key={t.id} aria-pressed={artistTab===t.id} className={artistTab===t.id?'selected':''} onClick={()=>setArtistTab(t.id)}>{t.name}</button>)}</div>
  {artistTab==='ready'?<section className="section">{catalogRows(artistReady)}</section>:<section className="section">
  {artistPopular.items.map(row)}
  {artistPopular.loading&&<p role="status" className="metadata">{trUi("Загружаем популярные песни…")}</p>}

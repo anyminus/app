@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.69
+- Hide karaoke creation for confirmed provider NONE and explain future lyrics support; guard enqueue. Keep immediate previous/next lyrics at active font size, preserve colors. Intro countdown is an ordinary numeric lyric row in seconds. Swap artist tabs and persist last choice per artist. Fix obsolete search-ready test fixture.
+
 ## 0.5.68
 - Treat fresh list readiness as authoritative for display and local cache; never resurrect an old pair ID from cached metadata when a current search/popular response lacks a ready pair. Preserve favorites and provider hints. Add stale deleted-pair regression.
 

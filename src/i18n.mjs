@@ -736,6 +736,11 @@ const dictionary={
   "Laut Yandex Music",
   "Según Yandex Music"
  ],
+ "В данный момент сервис не сгенерировал текст для этой песни. Скоро эта возможность появится. Следите за обновлениями приложения.": [
+  "The service has not generated lyrics for this song yet. This feature is coming soon. Stay tuned for app updates.",
+  "Der Dienst hat für dieses Lied noch keinen Liedtext erstellt. Diese Funktion wird bald verfügbar sein. Achten Sie auf App-Updates.",
+  "El servicio aún no ha generado la letra de esta canción. Esta función estará disponible pronto. Sigue las actualizaciones de la aplicación."
+ ],
  "По данным Яндекс Музыки, караоке будет без текста.": [
   "According to Yandex Music, karaoke will have no lyrics.",
   "Laut Yandex Music wird Karaoke ohne Text erstellt.",

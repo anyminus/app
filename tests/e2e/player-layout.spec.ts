@@ -14,15 +14,15 @@ test('karaoke fits the viewport, follows lyrics without page scroll, keeps contr
  await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('navigation')).toBeVisible();await expect(page.locator('body')).not.toHaveClass(/karaoke-open/);
 });
 
-test('active lyric scales to 100 percent and inactive lyrics to 75 percent with smooth motion',async({page})=>{
+test('active and immediate adjacent lyrics scale to 100 percent and distant lyrics to 75 percent',async({page})=>{
  await mockApi(page);await page.emulateMedia({reducedMotion:'no-preference'});
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,async r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:Array.from({length:7},(_,i)=>({text:'Motion line '+i,startMs:i*1000,endMs:(i+1)*1000,startOrigin:'source'}))},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
  const lines=page.locator('.karaoke-lyrics .lyric');await expect(lines).toHaveCount(7);const slider=page.getByRole('slider',{name:'Позиция песни'});await slider.fill('0');await expect(lines.nth(0)).toHaveAttribute('aria-current','true');
  const scale=(i:number)=>lines.nth(i).locator('.lyric-text').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)/parseFloat(getComputedStyle(el.parentElement!).fontSize));
- await expect.poll(()=>scale(0)).toBeCloseTo(1,2);await expect.poll(()=>scale(1)).toBeCloseTo(.75,2);
+ await expect.poll(()=>scale(0)).toBeCloseTo(1,2);await expect.poll(()=>scale(1)).toBeCloseTo(1,2);await expect.poll(()=>scale(2)).toBeCloseTo(.75,2);
  expect(await lines.nth(0).locator('.lyric-text').evaluate(el=>getComputedStyle(el).transitionDuration)).not.toBe('0s');
- await slider.fill('4');await expect(lines.nth(4)).toHaveAttribute('aria-current','true');await expect.poll(()=>scale(4)).toBeCloseTo(1,2);await expect.poll(()=>scale(0)).toBeCloseTo(.75,2);
+ await slider.fill('4');await expect(lines.nth(4)).toHaveAttribute('aria-current','true');await expect.poll(()=>scale(4)).toBeCloseTo(1,2);await expect.poll(()=>scale(3)).toBeCloseTo(1,2);await expect.poll(()=>scale(5)).toBeCloseTo(1,2);await expect.poll(()=>scale(2)).toBeCloseTo(.75,2);await expect.poll(()=>scale(6)).toBeCloseTo(.75,2);await expect.poll(()=>scale(0)).toBeCloseTo(.75,2);
  await expect.poll(()=>page.locator('.karaoke-lyrics').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.evaluate(()=>window.scrollY)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await slider.fill('2');await expect(lines.nth(2)).toHaveAttribute('aria-current','true');await expect.poll(()=>scale(2)).toBeCloseTo(1,2);await expect(lines.nth(2).locator('.lyric-text')).toHaveCSS('transition-duration','0s');
 });
@@ -54,11 +54,11 @@ test('long intro counts down from the media position, pauses, disappears and ret
  await page.setViewportSize({width:390,height:664});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await page.getByRole('button',{name:'Пауза',exact:true}).click();
  const slider=page.getByRole('slider',{name:'Позиция песни'}),timer=page.getByRole('timer',{name:'До начала текста'});await expect.poll(async()=>Number(await slider.getAttribute('max'))).toBeCloseTo(20,2);await expect(timer).toBeVisible();await expect(slider).toBeEnabled();
  // Exercise actual user controls rather than range.fill's synthetic input event.
- await slider.press('Home');await expect(slider).toHaveValue('0');await expect(timer.locator('strong')).toHaveText('0:15');const hint=page.getByText('Нажмите на любую строку, чтобы перейти к ней',{exact:true});await expect(hint).toBeInViewport();
- await page.getByRole('button',{name:'Вперёд 10 секунд',exact:true}).click();await expect(slider).toHaveValue('10');await expect(timer.locator('strong')).toHaveText('0:05');await expect(timer).toBeInViewport();await page.waitForTimeout(1100);await expect(timer.locator('strong')).toHaveText('0:05');
- await slider.press('ArrowRight');await expect(slider).toHaveValue('10.1');await expect(timer.locator('strong')).toHaveText('0:05');
+ await slider.press('Home');await expect(slider).toHaveValue('0');await expect(timer.locator('strong')).toHaveText('15');const hint=page.getByText('Нажмите на любую строку, чтобы перейти к ней',{exact:true});await expect(hint).toBeInViewport();
+ await page.getByRole('button',{name:'Вперёд 10 секунд',exact:true}).click();await expect(slider).toHaveValue('10');await expect(timer.locator('strong')).toHaveText('5');await expect(timer).toBeInViewport();await page.waitForTimeout(1100);await expect(timer.locator('strong')).toHaveText('5');
+ await slider.press('ArrowRight');await expect(slider).toHaveValue('10.1');await expect(timer.locator('strong')).toHaveText('5');
  await page.getByRole('button',{name:'First timed line',exact:true}).click();await expect(slider).toHaveValue('15');await expect(timer).toHaveCount(0);await expect(hint).toBeInViewport();await expect(page.getByRole('button',{name:'First timed line'})).toHaveAttribute('aria-current','true');
- await slider.press('Home');await expect(slider).toHaveValue('0');await expect(timer.locator('strong')).toHaveText('0:15');await expect(timer).toBeInViewport();expect(await page.evaluate(()=>window.scrollY)).toBe(0);
+ await slider.press('Home');await expect(slider).toHaveValue('0');await expect(timer.locator('strong')).toHaveText('15');await expect(timer).toBeInViewport();expect(await page.evaluate(()=>window.scrollY)).toBe(0);
 });
 
 test('shared pitch shifter changes actual output frequency without changing duration or downloading stems again',async({page})=>{
@@ -104,7 +104,7 @@ test('song ending opens global search without restarting playback',async({page})
 
 test('inactive lyrics use their real smaller size to fit more words on a line',async({page})=>{
  await mockApi(page);await page.emulateMedia({reducedMotion:'reduce'});await page.setViewportSize({width:390,height:844});
- await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Intro',startMs:0,endMs:3000,startOrigin:'source'},{text:'Karaoke melody night',startMs:3000,endMs:6000,startOrigin:'source'},{text:'End',startMs:6000,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Intro',startMs:0,endMs:1500,startOrigin:'source'},{text:'Adjacent',startMs:1500,endMs:3000,startOrigin:'source'},{text:'Karaoke melody night',startMs:3000,endMs:6000,startOrigin:'source'},{text:'End',startMs:6000,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
  // Deterministic fixture typography: twenty monospaced characters fit at
  // 24px but not 32px within the real 390px mobile player. Keep production
