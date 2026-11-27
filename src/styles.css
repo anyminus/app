@@ -211,13 +211,13 @@ body.karaoke-open .tab-bar{display:none}
  .karaoke-pitch>.pitch-buttons{gap:3px}
 }
 
-/* 0.5.61: give pitch the extra width its localized heading needs.
-   Retain the speed column and compact two-row layout on narrow screens. */
-.karaoke-mix-tools{grid-template-columns:minmax(0,1fr) 106px 94px}
+/* 0.5.62: use the wider pitch column for both control panels.
+   Retain the full localized heading and compact two-row layout on narrow screens. */
+.karaoke-mix-tools{grid-template-columns:minmax(0,1fr) repeat(2,106px)}
 .karaoke-mix-tools>.mixer{padding-inline:6px}
 .karaoke-mix-tools>.karaoke-pitch>.mixer-title{font-size:9px;letter-spacing:0;white-space:nowrap;overflow-wrap:normal;overflow:visible}
 @media(max-width:440px){
- .karaoke-mix-tools{grid-template-columns:minmax(0,1fr) 90px 76px;gap:5px}
+ .karaoke-mix-tools{grid-template-columns:minmax(0,1fr) repeat(2,90px);gap:5px}
  .karaoke-mix-tools>.mixer{padding-inline:5px}
  .karaoke-mix-tools>.karaoke-pitch>.mixer-title{font-size:8px}
 }

@@ -148,6 +148,7 @@ test('pitch and speed stepper buttons stay inside their own panels across viewpo
   await page.setViewportSize(size);
   for(const label of ['PITCH','TONALITÄT','TONALIDAD','ТОНАЛЬНОСТЬ']){
    const panels=page.locator('.karaoke-mix-tools > .karaoke-pitch');await expect(panels).toHaveCount(2);
+   const pitchBox=await panels.nth(0).boundingBox(),speedBox=await panels.nth(1).boundingBox();expect(pitchBox&&speedBox).toBeTruthy();expect(Math.abs(pitchBox!.width-speedBox!.width),`equal control panels at ${size.width}px`).toBeLessThan(1);
    await panels.first().locator('.mixer-title').evaluate((el,value)=>{el.textContent=value},label);
    // A title must fit entirely on one line, not just have wrapping disabled.
    const titleFit=await panels.first().locator('.mixer-title').evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);const rects=Array.from(range.getClientRects());const bounds=el.getBoundingClientRect();return rects.length===1&&rects[0].left>=bounds.left-1&&rects[0].right<=bounds.right+1;});expect(titleFit,`full title ${label} fits at ${size.width}px`).toBe(true);

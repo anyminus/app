@@ -265,3 +265,7 @@ CI 46054667150: 115/116 E2E passed, including the new layout and cookie-free moc
 
 ## Pitch heading width (0.5.61)
 Owner screenshot on iPhone shows the Russian heading wrapping its final letter despite the stepper fix. Reduce mixer width by 12px on wide docks / 14px on mobile, preserve speed width, remove heading tracking and require actual single-line text fit (DOM Range bounds) in the existing seven-viewport/four-label test. Keep stacked layout for narrow portrait and short landscape; exceptionally narrow containers may wrap rather than clip. CI and device acceptance pending.
+
+
+## Equal pitch and speed widths (0.5.62)
+Owner approved title fit but requests equal panel widths. Use the existing wider pitch width for both columns (90px mobile, 106px wider docks), so the mixer loses only the previous width difference; retain equal fractional columns in narrow portrait and short landscape. Extend layout regression to compare panel bounding widths while preserving full heading and button containment checks. No media or backend changes. CI/device acceptance pending.

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.62
+- Equalize pitch and speed panel widths at 90px on mobile and 106px on wider screens, preserving the full title and narrow-screen two-row layout. Assert equal widths across seven viewports.
+
 ## 0.5.61
 - Allocate 12–14 extra CSS pixels to the pitch panel from the mixer, keep speed width unchanged, remove extra label tracking and test actual single-line text bounds across supported layouts.
 
