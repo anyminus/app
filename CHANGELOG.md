@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.84
+- Soften the four pitch/tempo buttons in artwork-background mode with a 45% accent fill and theme text color (60% fill while pressed). Normal-mode controls unchanged. Remove beta marker from the recording trigger, enlarge camera from 16px to 22px, keep its compact two-line label. Update header and palette regression assertions.
+
 ## 0.5.83
 - Add local recent search history below the global search input when no valid query is entered. Save only dispatched debounced searches, cap at 20 unique case-insensitive entries, replay on tap, remove individually or clear all. No new server request or server-side history storage. Add translations and model/browser tests.
 

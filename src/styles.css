@@ -243,9 +243,9 @@ body.karaoke-open .tab-bar{display:none}
 .karaoke-cover{padding:0;border-radius:8px;touch-action:manipulation}.karaoke-cover-background-on{isolation:isolate}.karaoke-cover-background{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;background:var(--base)}.karaoke-cover-background img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;filter:blur(35px);transform:scale(1.2);opacity:.9}.karaoke-cover-background:after{content:"";position:absolute;inset:0;background:rgba(16,16,25,.50)}.app.light .karaoke-cover-background:after{background:rgba(248,247,252,.65)}.karaoke-cover-background-on .karaoke-dock{background:transparent}
 
 /* Compact recording trigger belongs to the header; recorder panels stay below it. */
-.karaoke-video-trigger-host{flex:none;display:flex;align-items:center}.karaoke-video-trigger-host:empty,.video-karaoke:empty{display:none}.karaoke-video-trigger-host .video-karaoke-trigger{display:inline-grid;grid-template-columns:auto min-content auto;align-items:center;justify-content:center;width:max-content;min-height:40px;padding:5px 6px;gap:3px;border-radius:10px;touch-action:pan-x pan-y}.karaoke-video-trigger-host .video-karaoke-trigger:disabled{opacity:.5;cursor:default}.karaoke-video-trigger-host .video-karaoke-trigger svg{flex:none}
+.karaoke-video-trigger-host{flex:none;display:flex;align-items:center}.karaoke-video-trigger-host:empty,.video-karaoke:empty{display:none}.karaoke-video-trigger-host .video-karaoke-trigger{display:inline-grid;grid-template-columns:auto min-content;align-items:center;justify-content:center;width:max-content;min-height:40px;padding:5px 6px;gap:4px;border-radius:10px;touch-action:pan-x pan-y}.karaoke-video-trigger-host .video-karaoke-trigger:disabled{opacity:.5;cursor:default}.karaoke-video-trigger-host .video-karaoke-trigger svg{flex:none}
 .karaoke-video-trigger-host .video-trigger-label{min-width:0;color:inherit;font-size:11px;line-height:1.15;text-align:center;white-space:normal;overflow-wrap:normal}
-.karaoke-video-trigger-host .video-trigger-beta{flex:none;font-size:10px;color:var(--muted)}.karaoke-mix-tools>.mixer,.karaoke-mix-tools>.karaoke-pitch{background:transparent;box-shadow:none}
+.karaoke-mix-tools>.mixer,.karaoke-mix-tools>.karaoke-pitch{background:transparent;box-shadow:none}
 
 /* App viewport: preserve one-finger scrolling and slider dragging, not page zoom. */
 :where(*){touch-action:pan-x pan-y}
@@ -253,8 +253,8 @@ body.karaoke-open .tab-bar{display:none}
 @media (pointer:coarse){input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),textarea,select{font-size:16px!important}}
 
 /* Artwork background mode: pitch and speed controls share the main transport palette. */
-.karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button{background:var(--accent);color:var(--on)}
-.karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button:active:not(:disabled){filter:brightness(.88)}
+.karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button{background:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--text)}
+.karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button:active:not(:disabled){background:color-mix(in srgb,var(--accent) 60%,transparent)}
 
 /* Local recent queries, shown before a new valid search. */
 .search-history{display:grid;gap:4px;min-width:0}.search-history .section-header{margin:0 0 4px}.search-history .text-button{min-height:44px;padding:0 4px}.search-history ul{list-style:none;margin:0;padding:0}.search-history li{display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--border);min-width:0}.search-history-query{display:flex;align-items:center;gap:12px;min-width:0;flex:1;min-height:48px;text-align:left;color:var(--text);padding:5px 0}.search-history-query svg,.search-history-remove{color:var(--muted)}.search-history-query span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.search-history-remove{flex:none}

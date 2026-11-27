@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Subdued artwork controls and recording icon (0.5.84)
+Supersedes the opaque artwork-mode accent fill: `.karaoke-cover-background-on` adjustment buttons use 45% accent mixed with transparency, theme `--text` glyphs, and 60% fill while pressed. The main transport button remains opaque; ordinary mode remains unchanged. The recording trigger uses two grid columns (22px camera and min-content localized label), no beta marker, and the existing 40px minimum height. Recording handlers and playback are unchanged. Browser regression covers alpha, glyph color, icon dimensions, absence of beta, wrapping and ordinary-mode restoration.
+
 ## Local search history (0.5.83)
 Global search history is stored in `anyminus:search-history-v1` (localStorage), separate from playback history. `useCatalog` calls a stable optional observer when its existing debounced search is dispatched, not for every keystroke or for home/artist loading. `src/searchHistory.mjs` validates trimmed 2–200 character queries, deduplicates case-insensitively, caps at 20 most recent entries. Below the search field, history is shown for queries shorter than two characters; clicking an entry fills the same input and runs the existing search path. Individual deletion and clear-all are local; the history collection is not sent to the API. All five UI languages supported. Model and e2e regressions cover ordering, replay, persistence and deletion.
 
