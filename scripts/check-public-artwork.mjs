@@ -21,7 +21,7 @@ try{
     const reader=r.body?.getReader();
     if(reader){const chunk=await reader.read();bytes=chunk.value?.length||0;magic=Buffer.from(chunk.value??[]).subarray(0,12).toString('hex');await reader.cancel()}
    }else await r.body?.cancel();
-   console.log(JSON.stringify({trackId:id,status:r.status,type,cache,cors,firstChunkBytes:bytes,signature:magic}));
+   console.log(JSON.stringify({trackId:id,status:r.status,type,cache,cors,firstChunkBytes:bytes,signature:magic,stage:r.headers.get('x-anyminus-artwork-stage')}));
   }catch(e){console.log(JSON.stringify({trackId:id,error:e instanceof Error?e.name:'request_failed'}))}
  }
 }catch(e){console.log('Artwork diagnostic unavailable:',e instanceof Error?e.message:'request_failed')}

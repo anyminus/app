@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2
+- Add explicit continuation to provider-ranked artist songs; 20 per page, preserve order, deduplicate, retry failed pages without clearing earlier tracks. No general-search substitution.
+- Retry stable public artwork for tracks with missing cover metadata, including old favorites and shared tracks. Accept only known Yandex music cover origins. Server deployment and real image acceptance required.
+
 ## 0.4.1
 - Temporarily restore explicit guest karaoke creation using the signed anonymous demo session, while preserving optional Telegram login. Updated guest admission tests. Re-enable mandatory login only after live acceptance and owner approval.
 

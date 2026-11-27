@@ -92,25 +92,37 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
 }
 
  // Separate SDK-backed list. Never infer popularity from general search or ready catalog.
+ type ArtistPopularResult={name:string|null;artistId:string|null;items:LiveTrack[];cursor:string|null;error:string;loading:boolean};
+ const emptyArtist=(name:string|null,loading=false):ArtistPopularResult=>({name,artistId:null,items:[],cursor:null,error:'',loading});
  export function useArtistPopular(name:string|null){
-  const [result,setResult]=useState<{name:string|null;items:LiveTrack[];error:string;loading:boolean}>({name:null,items:[],error:'',loading:false});
-  const [retry,setRetry]=useState(0);
+  const [result,setResult]=useState<ArtistPopularResult>(emptyArtist(null));
+  const active=useRef<AbortController|null>(null),busy=useRef(false);
+  async function load(c:AbortController,artistName:string,previous:ArtistPopularResult){
+   if(c.signal.aborted||busy.current)return;
+   busy.current=true;setResult({...previous,error:'',loading:true});
+   const deadline=window.setTimeout(()=>{if(active.current===c&&!c.signal.aborted){c.abort();busy.current=false;setResult({...previous,error:'Время ожидания популярных песен истекло',loading:false})}},20000);
+   try{
+    const cursor=previous.cursor;
+    const payload=cursor?await api.artistPopular(artistName,c.signal,previous.artistId??undefined,cursor):await api.artistPopular(artistName,c.signal);
+    if(!isTrackId(payload.artistId)||(previous.artistId&&previous.artistId!==payload.artistId))throw Error('Некорректный ответ артиста');
+    const seen=new Set(previous.items.map(t=>t.providerTrackId));
+    const items=(normalizeTracks(payload) as LiveTrack[]).filter(t=>{if(seen.has(t.providerTrackId))return false;seen.add(t.providerTrackId);return true});
+    const next=payload.nextCursor;
+    if(next!==undefined&&next!==null&&(typeof next!=='string'||!['20','40','60','80'].includes(next)||Number(next)!==Number(cursor??0)+20))throw Error('Некорректная пагинация артиста');
+    if(!c.signal.aborted&&active.current===c)setResult({name:artistName,artistId:payload.artistId,items:[...previous.items,...items],cursor:typeof next==='string'?next:null,error:'',loading:false});
+   }catch(e){
+    if(!c.signal.aborted&&active.current===c)setResult({...previous,error:e instanceof ApiError&&[404,501].includes(e.status)?'Популярные песни пока недоступны: требуется обновление API.':e instanceof Error?e.message:'Не удалось загрузить популярные песни',loading:false});
+   }finally{clearTimeout(deadline);if(active.current===c)busy.current=false}
+  }
   useEffect(()=>{
-   if(name===null)return;
-   const c=new AbortController();
-   setResult({name,items:[],error:'',loading:true});
-   const timer=window.setTimeout(async()=>{
-    const deadline=window.setTimeout(()=>{setResult({name,items:[],error:'Время ожидания популярных песен истекло',loading:false});c.abort()},20000);
-    try{
-     const payload=await api.artistPopular(name,c.signal);
-     const seen=new Set<string>();const items=(normalizeTracks(payload) as LiveTrack[]).filter(t=>{if(seen.has(t.providerTrackId))return false;seen.add(t.providerTrackId);return true});
-     if(!c.signal.aborted)setResult({name,items,error:'',loading:false});
-    }catch(e){
-     if(!c.signal.aborted)setResult({name,items:[],error:e instanceof ApiError&&[404,501].includes(e.status)?'Популярные песни пока недоступны: требуется обновление API.':e instanceof Error?e.message:'Не удалось загрузить популярные песни',loading:false});
-    }finally{clearTimeout(deadline)}
-   },0);
-   return()=>{clearTimeout(timer);c.abort()};
-  },[name,retry]);
-  const current=result.name===name?result:{name,items:[],error:'',loading:name!==null};
-  return {...current,retry:()=>setRetry(v=>v+1)};
+   active.current?.abort();busy.current=false;
+   if(name===null){setResult(emptyArtist(null));return}
+   const c=new AbortController();active.current=c;setResult(emptyArtist(name,true));
+   const timer=window.setTimeout(()=>void load(c,name,emptyArtist(name)),0);
+   return()=>{clearTimeout(timer);active.current?.abort();busy.current=false};
+  },[name]);
+  const current=result.name===name?result:emptyArtist(name,name!==null);
+  function more(){if(!name||busy.current||current.loading||!current.cursor)return;const c=new AbortController();active.current=c;void load(c,name,current)}
+  function retry(){if(!name||busy.current||current.loading)return;const c=new AbortController();active.current=c;void load(c,name,current)}
+  return {...current,more,retry};
  }

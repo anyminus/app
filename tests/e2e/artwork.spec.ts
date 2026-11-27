@@ -22,18 +22,19 @@ test('public artwork renders without CORS response header in search, favorites, 
  await row.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page.locator('.karaoke-header .cover-slot')).toHaveAttribute('data-cover-state','loaded');expect(api.enqueued).toBe(0);
 });
 
-test('catalog and search use supplied artwork URL; explicit null and errors keep placeholders',async({page})=>{
+test('catalog and search use supplied artwork URL; missing metadata retries stable endpoint',async({page})=>{
  await mockApi(page);
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGOcppHCgA0wYRUdtBIA54YBMulAnr4AAAAASUVORK5CYII=','base64');
  await page.route(/^https:\/\/[^/]+\/demo\/(catalog|search)(?:\?|$)/,r=>{
  const ready=new URL(r.request().url()).pathname.endsWith('/catalog');
  return r.fulfill({json:{items:[{providerTrackId:'101',title:'Versioned cover',artist:'Artist',durationMs:8000,durationSeconds:8,pairOperationId:'00000000-0000-4000-8000-000000000001',coverUrl:'/demo/artwork/101?v=2'},{providerTrackId:'102',title:'No cover',artist:'Artist',durationMs:8000,durationSeconds:8,pairOperationId:'00000000-0000-4000-8000-000000000001',coverUrl:null}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}});
  });
+ await page.route(/^https:\/\/[^/]+\/demo\/artwork\/102$/,r=>r.fulfill({status:404,headers:{'Cache-Control':'no-store'}}));
  await page.route(/^https:\/\/[^/]+\/demo\/artwork\/101\?v=2$/,r=>r.fulfill({body:png,contentType:'image/png',headers:{'Cache-Control':'public, max-age=3600'}}));
  for(const route of ['/#/home','/#/search']){
   await page.goto(route);if(route.endsWith('search'))await page.getByRole('textbox',{name:'Поиск песни'}).fill('Cover');
   const rows=page.locator('.track-row');await expect(rows).toHaveCount(2);
   await expect(rows.nth(0).locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');await expect(rows.nth(0).locator('img')).toHaveAttribute('src',/\/demo\/artwork\/101\?v=2$/);
-  await expect(rows.nth(1).locator('img')).toHaveCount(0);await expect(rows.nth(1).locator('.artwork svg')).toBeVisible();
+  await expect(rows.nth(1).locator('.cover-slot')).toHaveAttribute('data-cover-state','unavailable');await expect(rows.nth(1).locator('img')).toHaveCount(0);await expect(rows.nth(1).locator('.artwork svg')).toBeVisible();
  }
 });

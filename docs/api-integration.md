@@ -9,3 +9,6 @@ Product control adapter is separate: Telegram bootstrap, refresh/logout, search,
 Browser verification is required for credentialed playback across origins. Existing playback keeps credentials included. Tests intercept synthetic responses, never enqueue live jobs.
 
 Main Search uses GET /demo/search with query length 2–200, limit 20, 650ms debounce, and cancellation. No fallback to fictional results.
+
+## 0.4.2 artist continuation and artwork
+GET /demo/artists/popular?name=… returns canonical artistId and optional nextCursor. Continue with artistId and cursor (20/40/60/80); 20 entries per page, up to the genuine provider-ranked list (max 100). Preserve order and prior pages on error; no generic-search substitute. Missing cover metadata uses stable /demo/artwork/:id; truly unavailable images retain a placeholder. Live acceptance requires both backend deployments, HTTP 200 and valid image bytes, not just mocked tests.
