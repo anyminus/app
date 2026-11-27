@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Readable artwork ambience (0.5.86)
+Artwork-background mode uses 12px blur, 1.08 overscale, 0.9 image opacity and theme-aware contrast scrims (.43 dark/.58 light). Pitch and tempo buttons use a 35% accent fill, 50% pressed, with theme text glyphs; play/pause and normal mode remain unchanged. The same styling is maintained in main and the face-mask preview. Browser regression checks the blur and actual button alpha.
+
 ## Compact recording controls (0.5.85)
 The existing recorder remains mounted above lyrics. A responsive two-column control grid beside the aspect-ratio-preserving thumbnail places Start and Sound settings on the first row, options and Cancel below, and guidance on its own full-width row. Recording/finishing and result controls also reuse available width. Recording settings use paired music/voice and effects sliders, a full-width delay selector and collapsed diagnostics; settings scroll internally at max 42dvh (32dvh short landscape). Existing callbacks, recorder graph, privacy, synchronization and optional mask behavior are unchanged. Browser regression checks adjacent controls and compact geometry at 320/390px, paired sliders and accessible compensation.
 

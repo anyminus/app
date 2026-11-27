@@ -15,7 +15,7 @@ test('karaoke fits the viewport, follows lyrics without page scroll, keeps contr
  const defaultPalette=await adjustments.first().evaluate(palette);
  const playPalette=await play.evaluate(palette);
  expect(defaultPalette).not.toEqual(playPalette);
- await cover.click();await expect(screen).toHaveClass(/karaoke-cover-background-on/);
+ await cover.click();await expect(screen).toHaveClass(/karaoke-cover-background-on/);await expect(screen.locator('.karaoke-cover-background img')).toHaveCSS('filter','blur(12px)');
  for(const button of await adjustments.all()){
   const appearance=await button.evaluate(el=>{
    const s=getComputedStyle(el),canvas=document.createElement('canvas');canvas.width=canvas.height=1;
@@ -23,7 +23,7 @@ test('karaoke fits the viewport, follows lyrics without page scroll, keeps contr
    const alpha=ctx.getImageData(0,0,1,1).data[3]/255;
    return {alpha,color:s.color,textColor:getComputedStyle(el.closest('.app')!).color};
   });
-  expect(appearance.alpha).toBeCloseTo(.45,2);expect(appearance.color).toBe(appearance.textColor);
+  expect(appearance.alpha).toBeCloseTo(.35,2);expect(appearance.color).toBe(appearance.textColor);
  }
  await cover.click();await expect(screen).not.toHaveClass(/karaoke-cover-background-on/);
  for(const button of await adjustments.all())expect(await button.evaluate(palette)).toEqual(defaultPalette);

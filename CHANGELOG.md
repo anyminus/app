@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.86
+- Reduce artwork blur from 35px to 12px, overscale from 1.2 to 1.08 and dark/light scrim opacity to .43/.58 for more recognizable artwork. Use 35% accent fill for adjustment buttons (50% while pressed), keep theme text and opaque main play/pause. Update regression assertions.
+
 ## 0.5.85
 - Compact recording preview, active controls and result actions into two columns beside the camera thumbnail. Keep existing labels, toggles, recording state and export behavior. Group recording levels and voice effects in two-column grids, keep compensation full width and diagnostics collapsed; cap settings height for lyrics. Extend mobile geometry regression at 320/390px.
 
