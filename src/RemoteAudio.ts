@@ -48,7 +48,7 @@ export class RemoteAudio {
  private clearPitch(){this.pitchNode?.disconnect();this.pitchNode?.port.close();this.pitchGate?.disconnect();this.pitchNode=null;this.pitchGate=null;this.pitchLatency=0}
  // Apply a validated link preset in one operation before the first source starts.
  async configureInitialPlayback(pitch:number,speed:number){
-  if(!Number.isInteger(pitch)||pitch< -6||pitch>6||!Number.isFinite(speed)||speed<.5||speed>1.5)throw Error('Некорректные настройки ссылки');
+  if(!Number.isInteger(pitch)||pitch< -6||pitch>6||!Number.isFinite(speed)||speed<.5||speed>2)throw Error('Некорректные настройки ссылки');
   if(this.running||this.starting||this.pitchNode)throw Error('Аудиовыход уже запущен');
   const ctx=this.context;if(!ctx||this.buffers.length!==2)throw Error('Аудио не загружено');
   if(pitch!==0||speed!==1){
@@ -74,7 +74,7 @@ export class RemoteAudio {
   if(resume&&this.offset<this.duration)await this.play();
  }
  async setSpeed(value:number){
-  if(!Number.isFinite(value)||value<.5||value>1.5)throw Error('Недопустимая скорость');
+  if(!Number.isFinite(value)||value<.5||value>2)throw Error('Недопустимая скорость');
   if(value===this.rate)return;
   if(this.starting)await this.starting;
   const ctx=this.context;if(!ctx||this.buffers.length!==2)throw Error('Аудио не загружено');

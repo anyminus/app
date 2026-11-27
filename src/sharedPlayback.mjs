@@ -7,7 +7,7 @@ export function validateSharedPlayback(value){
  typeof s.vocals!=='number'||!Number.isInteger(s.vocals)||s.vocals<0||s.vocals>100||
  typeof s.musicMuted!=='boolean'||typeof s.vocalsMuted!=='boolean'||
  typeof s.pitch!=='number'||!Number.isInteger(s.pitch)||s.pitch< -6||s.pitch>6||
- typeof s.speed!=='number'||!Number.isFinite(s.speed)||s.speed<.5||s.speed>1.5||Math.abs(s.speed*10-Math.round(s.speed*10))>1e-8)return null;
+ typeof s.speed!=='number'||!Number.isFinite(s.speed)||s.speed<.5||s.speed>2||Math.abs(s.speed*10-Math.round(s.speed*10))>1e-8)return null;
  return {music:s.music,vocals:s.vocals,musicMuted:s.musicMuted,vocalsMuted:s.vocalsMuted,pitch:s.pitch,speed:s.speed};
 }
 /** @param {URLSearchParams} params */

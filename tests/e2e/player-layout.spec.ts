@@ -96,3 +96,5 @@ test('tempo controls keep pitch, change source clock and both stem rates, and pr
  await minus.click();await expect(value).toHaveText('1.1×');await minus.click();await expect(value).toHaveText('1.0×');expect(api.media).toBe(2);
  for(const size of [{width:320,height:568},{width:667,height:375}]){await page.setViewportSize(size);await expect(panel).toBeInViewport({ratio:.95})}
 });
+
+test('song ending offers artist navigation and playback can be rewound',async({page})=>{await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await page.getByRole('button',{name:'Пауза',exact:true}).click();const slider=page.getByRole('slider',{name:'Позиция песни'});await slider.press('End');const ending=page.getByRole('heading',{name:'Выбрать другую песню исполнителя'});await expect(ending).toBeVisible();await slider.press('Home');await expect(ending).toHaveCount(0);await slider.press('End');await expect(ending).toBeVisible();await page.locator('.karaoke-end-panel button').first().click();await expect(page).toHaveURL(/#\/artist\//);});

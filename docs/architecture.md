@@ -49,3 +49,6 @@ The track share sheet has an unchecked-by-default «Передать настр�
 
 ## Share playback wording (0.5.6)
 The optional share preset helper explicitly says «Громкость аудиодорожек, тональность и скорость». No changes to link encoding or playback behavior.
+
+## Speed range and end-of-song artist action (0.5.7)
+Owner confirmed 0.5–2.0x, step 0.1, default 1. Extend DSP speed guard, shared link validation and UI maximum together. Existing source-clock, countdown and pitch compensation remain unchanged. End screen replaces lyrics only at the end of source media while stopped; rewind or restart restores the original lyrics. Artist actions use existing canonical artist navigation and render each known artist separately, legacy fallback remains. Tests cover preset limit, end screen navigation and rewind. No backend changes for these controls. 2x quality requires device acceptance.

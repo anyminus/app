@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.7
+- Extend playback speed to 2.0× and offer artist navigation at the end of a song.
+
 ## 0.5.6
 - Clarify the optional playback share description: volume of audio tracks, pitch and speed.
 
