@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.56
+- Keep the optional listening boost checkbox accessible during active recording; clarify that recording sliders do not affect listening volume.
+
 ## 0.5.55
 - Add an opt-in +3 dB listening-only boost during video recording with separate peak protection, live toggle and local preference. Recorded mix and normal playback stay unchanged.
 

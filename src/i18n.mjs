@@ -2415,6 +2415,11 @@ const dictionary={
   "Optional listening boost during video recording.",
   "Optionale Wiedergabeverstärkung bei Videoaufnahme.",
   "Amplificación opcional de escucha durante la grabación de vídeo."
+ ],
+ "Ползунки записи меняют только звук видео. Запас уровня защищает от перегрузки.": [
+  "Recording sliders affect the video audio only. Headroom helps prevent clipping.",
+  "Aufnahmeregler ändern nur den Videoton. Pegelreserve hilft gegen Übersteuerung.",
+  "Los controles de grabación solo cambian el audio del vídeo. El margen ayuda a evitar saturación."
  ]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}
