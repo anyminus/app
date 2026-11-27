@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.75
+- Toggle full-player cover background by tapping the header artwork. Preserve image aspect ratio, apply strong blur and theme-aware contrast scrim; keep playback, mixer and recording unchanged.
+
 ## 0.5.74
 - Simplify home ready rows: hide redundant database and lyrics status labels except confirmed plain lyrics. Filter out rows without an actual ready pair; other screens retain full statuses.
 

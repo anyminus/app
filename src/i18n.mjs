@@ -978,6 +978,7 @@ const dictionary={
   "Mixer",
   "Mezclador"
  ],
+ "Фон из обложки": ["Cover background","Cover-Hintergrund","Fondo de portada"],
  "Показать микшер": [
   "Show mixer",
   "Mixer anzeigen",

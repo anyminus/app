@@ -53,3 +53,20 @@ test('artist page ready tab loads a portrait by canonical artist ID',async({page
  await page.goto('/#/artist/Test?author_id=42');
  const cover=page.locator('.artist-profile-art .cover-slot');await expect(cover).toHaveAttribute('data-cover-state','loaded');await expect(cover.locator('img')).toHaveAttribute('src',/\/demo\/artist-artwork\/42$/);await expect.poll(()=>cover.locator('img').evaluate((el:HTMLImageElement)=>el.naturalWidth)).toBe(8);
 });
+
+test('karaoke cover toggles proportional blurred full-player background without changing mixer or audio',async({page})=>{
+ const api=await mockApi(page);await page.setViewportSize({width:390,height:664});await page.goto('/');
+ await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Пауза',exact:true}).click();
+ const cover=page.getByRole('button',{name:'Фон из обложки',exact:true}),background=page.locator('.karaoke-cover-background'),screen=page.locator('.karaoke-screen');
+ await expect(cover.locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');await expect(cover).toHaveAttribute('aria-pressed','false');await expect(background).toHaveCount(0);
+ const src=await cover.locator('img').evaluate((el:HTMLImageElement)=>el.currentSrc);
+ await cover.click();await expect(cover).toHaveAttribute('aria-pressed','true');await expect(background.locator('img')).toHaveAttribute('src',src);await expect(background.locator('img')).toHaveCSS('object-fit','cover');await expect(background.locator('img')).toHaveCSS('filter','blur(90px)');await expect(background).toHaveCSS('pointer-events','none');await expect.poll(()=>background.locator('img').evaluate((el:HTMLImageElement)=>el.naturalWidth)).toBeGreaterThan(0);
+ async function fullScreen(){const a=(await background.boundingBox())!,b=(await screen.boundingBox())!;expect(Math.abs(a.width-b.width)).toBeLessThan(1);expect(Math.abs(a.height-b.height)).toBeLessThan(1)}
+ await fullScreen();await page.getByRole('button',{name:'Свернуть микшер',exact:true}).click();await expect(background).toBeVisible();await expect(cover).toBeVisible();await page.setViewportSize({width:667,height:375});await fullScreen();
+ await cover.click();await expect(background).toHaveCount(0);await expect(cover).toHaveAttribute('aria-pressed','false');await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});
+test('missing cover never enables a broken karaoke background',async({page})=>{
+ await mockApi(page);await page.route(/^https:\/\/[^/]+\/demo\/artwork\/101$/,r=>r.fulfill({status:404}));
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();const cover=page.getByRole('button',{name:'Фон из обложки',exact:true});await expect(cover.locator('.cover-slot')).toHaveAttribute('data-cover-state','unavailable');await cover.click();await expect(cover).toHaveAttribute('aria-pressed','false');await expect(page.locator('.karaoke-cover-background')).toHaveCount(0);
+});

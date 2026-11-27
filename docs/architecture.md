@@ -319,3 +319,7 @@ Owner requested the same visible artwork in normal and lyrics-focus modes, squar
 
 ## Home ready-only presentation (0.5.74)
 Owner requested no status captions on the home ready catalog except «Текст без таймкодов». Home and legacy live alias render compact ready rows and filter out items without a validated pair ID. Full queue/database/lyrics labels remain on search, artist and other screens. No new backend filtering or media mutation. Tests cover home LRC/TEXT/NONE/unknown, unready exclusion, and search readiness labels. CI pending.
+
+
+## Optional cover ambience in karaoke player (0.5.75)
+Owner requested tap-to-toggle full-height proportional cover backdrop with 90% blur. CSS blur takes a length, not percent: chosen 90px strong blur, object-fit:cover with 100% player height/width (player uses 100vh/100dvh), slight overscan prevents edge bleed, theme-specific scrim maintains readability. Reuse the actually loaded thumbnail URL (including existing fallback), no canvas or new upstream permissions. Noninteractive isolated layer behind all controls, transparent dock only while active. No cover means unchanged normal background. Reset on track change; no recording canvas changes. E2E tests cover toggle, image validity, bounds, landscape and mixer mode, no extra media/enqueue, unavailable cover. CI pending.
