@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.6
+- Ready karaoke without stored text gets the pale-red «Караоке без текста» status; distinguish terminal missing text from pending/unknown. Preserve playback and upgrade status when lyrics arrive.
+
 ## 0.4.5
 - Mark ready songs with confirmed unsynchronized lyrics as «Текст без таймкодов» in a muted orange theme accent; timed/unknown retain the ready label. Propagate optional stored format from catalog and popularity, refresh it when actual lyrics load.
 

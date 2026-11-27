@@ -99,3 +99,6 @@ body.karaoke-open .tab-bar{display:none}
 
 /* Plain lyrics are available, but without timing; warm accent in both themes. */
 .app{--lyrics-plain:#e1a56f}.app.light{--lyrics-plain:#a65b22}.track-ready.track-ready-plain{color:var(--lyrics-plain)}
+
+/* Ready audio with no stored lyrics: a soft red, with darker light-theme contrast. */
+.app{--lyrics-missing:#e7a0a7}.app.light{--lyrics-missing:#a84250}.track-ready.track-ready-missing{color:var(--lyrics-missing)}

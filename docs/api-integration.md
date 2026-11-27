@@ -18,3 +18,6 @@ New artist hashes use `#/artist/<encoded name>?author_id=<numeric SDK Artist.id>
 
 ## 0.4.5 catalog lyrics format
 Optional `lyricsFormat: TEXT | LRC` on verified ready catalog and ready artist popularity rows. TEXT maps to “Текст без таймкодов” and the warm theme accent; LRC and unknown keep the previous readiness label. Not inferred from availability flags. Browser cache retains known format for the same ready pair; real loaded lyrics update the cached format. No per-track fetch on list rendering. Backend requires additive 0045 read-only receipt projection. Real acceptance pending.
+
+## 0.4.6 missing lyrics
+`lyricsFormat: NONE` explicitly means no current stored/published text (confirmed absent or terminal failed with no registered lyrics object). Ready rows show «Караоке без текста» in pale red. Pending, unknown, or transport failure is not NONE. Verified TEXT or LRC replaces NONE when available. No playback or retry behavior changed. Backend additive 0046. The absence sentinel is not a claim about permanent provider availability.
