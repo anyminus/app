@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.21
+- Gate video karaoke by actual browser capabilities; prefer WebM on Android, fall back to basic camera constraints and allow raw recording when lyric composition is unavailable.
+
 ## 0.5.20
 - Harden composited video startup: keep the camera attached, wait for the first frame, select a compatible encoder and expose specific capture errors.
 
