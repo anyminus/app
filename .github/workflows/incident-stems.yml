@@ -1,4 +1,4 @@
-name: Track stem incident diagnostic
+name: Track lyrics SDK diagnostic
 on:
   push:
     branches: [incident/track-108591168]
@@ -8,12 +8,12 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node scripts/probe-track-stems.mjs
+      - run: node scripts/probe-track-lyrics.mjs
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
