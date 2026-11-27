@@ -26,3 +26,16 @@ test('system media controls publish metadata, seek both stems, pause, resume and
  await action('seekto',{seekTime:5});await expect.poll(async()=>Number(await page.getByRole('slider',{name:'Позиция песни'}).inputValue())).toBeGreaterThanOrEqual(5);
  await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('navigation')).toBeVisible();await expect.poll(async()=>(await state()).actions).toEqual([]);expect((await state()).playback).toBe('none');expect((await state()).title).toBeUndefined();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
 });
+
+test('CarPlay mode persists and requests play-and-record without microphone access',async({page})=>{
+ await page.addInitScript(()=>{
+ const session={type:'auto'};Object.defineProperty(navigator,'audioSession',{configurable:true,value:session});
+ Reflect.set(window,'__captureRequests',0);
+ Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>{Reflect.set(window,'__captureRequests',Number(Reflect.get(window,'__captureRequests'))+1);throw Error('No capture expected')}});
+ });
+ await mockApi(page);await page.goto('/#/profile');const mode=page.getByRole('combobox',{name:'Режим аудиовыхода'});await expect(mode).toHaveValue('auto');await mode.selectOption('carplay');await page.reload();await expect(mode).toHaveValue('carplay');
+ await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ const session=()=>page.evaluate(()=>(navigator as Navigator&{audioSession:{type:string}}).audioSession.type);await expect.poll(session).toBe('play-and-record');
+ await page.getByRole('button',{name:'Пауза',exact:true}).click();await page.getByRole('slider',{name:'Позиция песни'}).fill('3');await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect.poll(session).toBe('play-and-record');await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(await page.evaluate(()=>Reflect.get(window,'__captureRequests'))).toBe(0);
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'Профиль',exact:true}).click();await mode.selectOption('standard');await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect.poll(session).toBe('playback');
+});

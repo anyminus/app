@@ -2265,6 +2265,56 @@ const dictionary={
   "Automatic device language and manual choice in Profile.",
   "Automatische Gerätesprache und manuelle Auswahl im Profil.",
   "Idioma automático del dispositivo y selección manual en Perfil."
+ ],
+ "Режим аудиовыхода": [
+  "Audio output mode",
+  "Audioausgabemodus",
+  "Modo de salida de audio"
+ ],
+ "Автоматический": [
+  "Automatic",
+  "Automatisch",
+  "Automático"
+ ],
+ "Стандартный": [
+  "Standard",
+  "Standard",
+  "Estándar"
+ ],
+ "Совместимость с CarPlay": [
+  "CarPlay compatibility",
+  "CarPlay-Kompatibilität",
+  "Compatibilidad con CarPlay"
+ ],
+ "Обычный вывод. При сбое повторный Play пробует другой аудиобуфер.": [
+  "Normal output. After a failure, pressing Play tries a different audio buffer.",
+  "Normale Ausgabe. Nach einem Fehler nutzt erneutes Abspielen einen anderen Audiopuffer.",
+  "Salida normal. Tras un fallo, al pulsar Reproducir se prueba otro búfer."
+ ],
+ "Обычный вывод без смены типа буфера.": [
+  "Normal output without changing the buffer type.",
+  "Normale Ausgabe ohne Wechsel des Puffertyps.",
+  "Salida normal sin cambiar el tipo de búfer."
+ ],
+ "Экспериментальный режим iOS без включения микрофона. Громкость и качество могут отличаться.": [
+  "Experimental iOS mode without activating the microphone. Volume and quality may differ.",
+  "Experimenteller iOS-Modus ohne Mikrofonaktivierung. Lautstärke und Qualität können abweichen.",
+  "Modo experimental de iOS sin activar el micrófono. El volumen y la calidad pueden variar."
+ ],
+ "Браузер не поддерживает переключение аудиосессии.": [
+  "This browser does not support changing the audio session.",
+  "Dieser Browser unterstützt keinen Wechsel der Audiositzung.",
+  "Este navegador no admite cambiar la sesión de audio."
+ ],
+ "Применяется при следующем открытии караоке.": [
+  "Applies the next time you open karaoke.",
+  "Gilt beim nächsten Öffnen von Karaoke.",
+  "Se aplica al volver a abrir el karaoke."
+ ],
+ "Экспериментальный режим совместимости с CarPlay в профиле.": [
+  "Experimental CarPlay compatibility mode in Profile.",
+  "Experimenteller CarPlay-Kompatibilitätsmodus im Profil.",
+  "Modo experimental de compatibilidad con CarPlay en Perfil."
  ]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}

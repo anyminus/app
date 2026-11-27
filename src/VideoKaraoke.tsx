@@ -91,7 +91,7 @@ export function VideoKaraoke(props:Props){
  const latest=useRef(props);latest.current=props;
  const mounted=useRef(false),generation=useRef(0),camera=useRef<MediaStream|null>(null),preview=useRef<HTMLVideoElement|null>(null),recorder=useRef<MediaRecorder|null>(null),mix=useRef<Awaited<ReturnType<RemoteAudio['createRecordingMix']>>|null>(null),url=useRef(''),chunks=useRef<Blob[]>([]),bytes=useRef(0),stopReason=useRef(''),starting=useRef(false);
  function releaseCanvas(){resetVideoMotion(canvas.current);canvasStream.current?.getTracks().forEach(t=>t.stop());canvasStream.current=null;}
- function release(){clearTimeout(tailTimer.current);tailTimer.current=undefined;clockHistory.current=[];recordDelay.current=0;releaseCanvas();const hadMix=!!mix.current;mix.current?.close();mix.current=null;const stream=camera.current;camera.current=null;videoOnlyPreview.current=null;if(preview.current)preview.current.srcObject=null;stream?.getTracks().forEach(t=>t.stop());playbackSession();if((hadMix||stream)&&appleMobile())latest.current.audio.current?.markOutputStalled();}
+ function release(){clearTimeout(tailTimer.current);tailTimer.current=undefined;clockHistory.current=[];recordDelay.current=0;releaseCanvas();const hadMix=!!mix.current;mix.current?.close();mix.current=null;const stream=camera.current;camera.current=null;videoOnlyPreview.current=null;if(preview.current)preview.current.srcObject=null;stream?.getTracks().forEach(t=>t.stop());const audio=latest.current.audio.current;if(audio)audio.restorePlaybackSession();else playbackSession();if((hadMix||stream)&&appleMobile())audio?.markOutputStalled(false);}
  function closeViewer(){previewResult.current?.pause();setViewOpen(false);}
  useEffect(()=>{if(!viewOpen)return;const dialog=viewer.current;if(!dialog)return;dialog.showModal();return()=>{previewResult.current?.pause();if(dialog.open)dialog.close();viewButton.current?.focus();};},[viewOpen]);
  function clearResult(){closeViewer();shareAttempt.current++;shareBusy.current=false;setSharing(false);setShareHint('');if(url.current)URL.revokeObjectURL(url.current);url.current='';setResult(null);}
@@ -157,7 +157,7 @@ export function VideoKaraoke(props:Props){
  async function start(){
   if(props.disabled||!camera.current||!props.audio.current||recorder.current||starting.current)return;starting.current=true;const id=generation.current;const source=camera.current;const withText=includeLyrics&&canOverlay;setRecordOverlay(withText);setError('');setPhase('starting');chunks.current=[];bytes.current=0;stopReason.current='';
   try{
-   if(apple&&captureUsed.current)props.audio.current.markOutputStalled();
+   if(apple&&captureUsed.current)props.audio.current.markOutputStalled(false);
    const prepared=await props.audio.current.createRecordingMix(source,syncSettings,levels);
    if(!mounted.current||generation.current!==id||camera.current!==source){prepared.close();return;}mix.current=prepared;captureUsed.current=true;recordDelay.current=prepared.delayMs;clockHistory.current=[];setAppliedDelay(prepared.delayMs);setDiagnostics(prepared.diagnostics);setSyncOpen(false);
    let videoTracks=source.getVideoTracks();

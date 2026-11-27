@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.49
+- Add persistent experimental audio output modes in Profile: Auto (alternate latency hint after a detected failure on explicit Play), Standard, and CarPlay compatibility (play-and-record session without media capture). Preserve original audio and recording routing.
+
 ## 0.5.48
 - Fix nullable stored language preference TypeScript build error.
 
