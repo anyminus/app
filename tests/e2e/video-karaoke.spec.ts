@@ -1,5 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {mockApi} from './fixture';
+import {delayedClock,resolveDelay,type ClockSample,type AudioDiagnostics} from '../../src/recordingSync';
 test.use({launchOptions:{args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']},permissions:['camera','microphone']});
 test('local video capture stays above lyrics and exports a file',async({page})=>{
  await page.setViewportSize({width:390,height:844});
@@ -212,8 +213,9 @@ test('video mixer changes live stem gain without restarting the recording',async
  expect(await page.evaluate(()=>[Reflect.get(window,'__mixerRecorderStarts'),Reflect.get(window,'__mixerRecorderStops')])).toEqual([1,1]);expect(api.media).toBe(2);
 });
 
-test('video canvas animates natural lyric transition and snaps on a seek',async({page})=>{
+test('video canvas animates natural lyric transition and snaps on a seek without compensation',async({page})=>{
  await page.addInitScript(()=>{
+ localStorage.setItem('anyminus.video.sync.v1',JSON.stringify({mode:'off',manualMs:150}));
  const draw=CanvasRenderingContext2D.prototype.fillText;Reflect.set(window,'__motionFrames',[]);
  CanvasRenderingContext2D.prototype.fillText=function(...args:Parameters<CanvasRenderingContext2D['fillText']>){if(this.canvas.classList.contains('video-overlay')&&document.querySelector('.video-karaoke-rec')){const size=Number(this.font.match(/([0-9.]+)px/)?.[1]);const frames=Reflect.get(window,'__motionFrames') as {text:string;size:number;y:number;alpha:number}[];frames.push({text:args[0],size,y:args[2],alpha:this.globalAlpha});}return draw.apply(this,args)};
  });
@@ -378,4 +380,25 @@ test('video sync settings use browser estimates, persist manual mode and delay o
  expect(graph).not.toBeNull();expect(graph!.delay).toBeCloseTo(.2,3);expect(graph).toMatchObject({unity:1,speaker:true,toLimiter:true,directSpeaker:false});
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
  await page.getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();await expect(panel.locator('output')).toHaveText('200 мс');await expect(panel.getByRole('button',{name:'Вручную',exact:true})).toHaveAttribute('aria-pressed','true');
+});
+
+test('compensated canvas clock delays seek boundaries without interpolating across them',()=>{
+ const history:ClockSample[]=[];
+ const tick=(time:number,position:number,revision:number,delay=200)=>delayedClock(history,{time,position,revision},delay);
+ expect(tick(0,1,0).position).toBe(1);
+ tick(100,1.1,0);tick(200,1.2,0);
+ expect(tick(250,5,1)).toMatchObject({position:1.05,revision:0});
+ const before=tick(400,5.15,1);expect(before.position).toBeCloseTo(1.2,6);expect(before.revision).toBe(0);
+ const boundary=tick(450,5.2,1);expect(boundary.position).toBe(5);expect(boundary.revision).toBe(1);
+ const after=tick(500,5.25,1);expect(after.position).toBeCloseTo(5.05,6);expect(after.revision).toBe(1);
+ expect(tick(510,7,2,0)).toEqual({time:510,position:7,revision:2});expect(history).toHaveLength(0);
+});
+test('automatic recording compensation uses reported latency and does not guess from microphone label',()=>{
+ const info:AudioDiagnostics={micLabel:'AirPods',inputMs:10,baseMs:20,outputMs:null,sampleRate:48000,micRate:48000,channels:1,sinkId:null};
+ expect(resolveDelay({mode:'auto',manualMs:150},info)).toBe(0);
+ expect(resolveDelay({mode:'auto',manualMs:150},{...info,outputMs:150})).toBe(180);
+ expect(resolveDelay({mode:'auto',manualMs:150},{...info,baseMs:5,inputMs:0,outputMs:10})).toBe(0);
+ expect(resolveDelay({mode:'auto',manualMs:150},{...info,outputMs:900})).toBe(500);
+ expect(resolveDelay({mode:'manual',manualMs:200},info)).toBe(200);
+ expect(resolveDelay({mode:'off',manualMs:200},{...info,outputMs:150})).toBe(0);
 });
