@@ -1,0 +1,17 @@
+{
+  "appId": "com.anyminus.app",
+  "appName": "AnyMinus",
+  "webDir": "dist",
+  "server": {
+    "hostname": "localhost",
+    "iosScheme": "capacitor"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": false
+    },
+    "CapacitorCookies": {
+      "enabled": false
+    }
+  }
+}

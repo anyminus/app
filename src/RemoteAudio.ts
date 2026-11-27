@@ -10,6 +10,8 @@ export class RemoteAudio {
  private get sessionType(){return this.outputMode==='carplay'?'play-and-record':'playback';}
  restorePlaybackSession(){playbackSession(this.sessionType);}
  private context:AudioContext|null=null;private capturing=false;private playEpoch=0;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private output:GainNode|null=null;private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
+ get nativeInstrumental():AudioBuffer|null{return this.buffers[0]??null;}
+ async suspendForNative(){this.pause();if(this.context?.state==='running')await this.context.suspend();}
  get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start)*this.rate:this.offset));}
  get length(){return this.duration;}
  get pitch(){return this.semitones;}

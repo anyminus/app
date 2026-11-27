@@ -2,6 +2,7 @@ import {t as trUi} from './i18n.mjs';
 import {useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type RefObject,type Ref,type CSSProperties} from 'react';
 import {Video,Square,Download,X,Share2,Settings2,Play,Music2,MicVocal} from 'lucide-react';
 import {RemoteAudio,playbackSession} from './RemoteAudio';
+import {nativeLabAvailable,openNativeLab} from './nativeAudioLab';
 import {loadSync,saveSync,loadMonitorBoost,saveMonitorBoost,resolveDelay,usesCarPlayEstimate,boundedDelay,delayedClock,loadRecordingLevels,saveRecordingLevels,boundedLevel,type RecordingLevels,type SyncSettings,type SyncMode,type AudioDiagnostics,type ClockSample} from './recordingSync';
 import {drawKaraokeFrame,overlaySupported,resetVideoMotion,type TimedLine} from './videoOverlay';
 const noVideoLyrics:readonly TimedLine[]=[];
@@ -65,6 +66,18 @@ function startRecorder(stream:MediaStream,overlay:boolean,profile:CaptureProfile
  throw Error((appleMobile()?trUi('Не удалось запустить MP4 на iPhone/iPad: '):trUi('Не удалось запустить кодирование видео: '))+(last instanceof Error?last.message:trUi('нет доступного формата')));
 }
 export function VideoKaraoke(props:Props){
+ const [nativeBusy,setNativeBusy]=useState(false);
+ const nativeAbort=useRef<AbortController|null>(null);
+ useEffect(()=>()=>nativeAbort.current?.abort(),[]);
+ async function runNativeLab(){
+  if(nativeAbort.current||props.disabled)return;
+  const a=props.audio.current,buffer=a?.nativeInstrumental;
+  if(!a||!buffer){setError('Фонограмма не загружена');return;}
+  const controller=new AbortController();nativeAbort.current=controller;setNativeBusy(true);setError('');props.onMode(true);props.onStop();
+  try{await a.suspendForNative();await openNativeLab(buffer,props.title,controller.signal);}
+  catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'Не удалось открыть iOS-модуль');}
+  finally{nativeAbort.current=null;if(!controller.signal.aborted){props.onMode(false);setNativeBusy(false);}}
+ }
  const [cameraRatio,setCameraRatio]=useState(16/9);
  const frameStyle={'--camera-ratio':cameraRatio} as CSSProperties;
  function updateCameraRatio(video:HTMLVideoElement){if(video.videoWidth>0&&video.videoHeight>0)setCameraRatio(video.videoWidth/video.videoHeight);}
@@ -199,7 +212,8 @@ export function VideoKaraoke(props:Props){
  }
  const active=phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing';
  return <div className="video-karaoke" aria-label={trUi("Видеокараоке")}>
-  {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||!supported} onClick={()=>void enable()}><Video size={16}/>{trUi("Записать видео ")}<span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">{missingMP4?trUi('В этом браузере iPhone/iPad недоступна запись MP4. Видеокараоке отключено.'):missingCanvas?trUi('Браузер не поддерживает запись видео с оформлением.'):trUi('Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.')}</p>}</>}
+  {phase==='idle'&&nativeLabAvailable()&&<><button type="button" className="video-karaoke-trigger" disabled={props.disabled||nativeBusy} onClick={()=>void runNativeLab()}><Video size={16}/>{nativeBusy?'Подготовка iOS…':'Нативная запись iOS · тест'}</button><p className="video-karaoke-error">Тест: исходная фонограмма без изменения темпа и тональности.</p></>}
+  {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||nativeBusy||!supported} onClick={()=>void enable()}><Video size={16}/>{trUi("Записать видео ")}<span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">{missingMP4?trUi('В этом браузере iPhone/iPad недоступна запись MP4. Видеокараоке отключено.'):missingCanvas?trUi('Браузер не поддерживает запись видео с оформлением.'):trUi('Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.')}</p>}</>}
   {phase==='permission'&&<div className="video-karaoke-actions"><span role="status">{trUi("Разрешите камеру и микрофон…")}</span><button type="button" onClick={cancel}>{trUi("Отмена")}</button></div>}
   {active&&<div className="video-karaoke-panel"><div className="video-karaoke-preview" style={frameStyle}><video ref={preview} autoPlay muted playsInline onLoadedMetadata={e=>updateCameraRatio(e.currentTarget)} onResize={e=>updateCameraRatio(e.currentTarget)} aria-label={trUi("Предпросмотр камеры")}/><canvas ref={canvas} className={showOverlay?'video-overlay visible':'video-overlay'} aria-label={trUi("Текст в видео")} aria-hidden={!showOverlay}/>{phase==='recording'&&<span className="video-karaoke-rec">● REC</span>}</div><div className="video-karaoke-actions">
    {phase==='preview'?<><button type="button" className="video-karaoke-start" disabled={props.disabled} onClick={()=>void start()}><Video size={16}/>{trUi("Начать запись")}</button><label className="video-overlay-option"><input type="checkbox" checked={includeLyrics&&canIncludeLyrics} disabled={!canIncludeLyrics} onChange={e=>setIncludeLyrics(e.target.checked)}/>{trUi("Текст на видео")}</label><span>{!canIncludeLyrics?trUi('Без таймкодов: название, артист и логотип сохраняются.'):trUi('Лучше в наушниках')}</span><button type="button" onClick={()=>{refreshDiagnostics();setSyncOpen(o=>!o)}} aria-expanded={syncOpen} aria-controls="video-sync-settings"><Settings2 size={14}/>{trUi("Настройки звука")}</button><button type="button" onClick={cancel}><X size={14}/>{trUi("Отмена")}</button></>:phase==='finishing'?<><span role="status">{trUi("Сохраняем видео…")}</span><button type="button" onClick={()=>{const r=recorder.current;if(r){try{if(r.state!=='inactive')r.stop();}catch{}complete(r,true)}}}>{trUi("Завершить принудительно")}</button></>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>{trUi("Остановить")}</button><span role="status">{phase==='starting'?trUi('Запуск…'):trUi('Идёт запись · локально')}</span>{phase==='recording'&&<span>{trUi("Компенсация: ")}{appliedDelay}{trUi(" мс")}</span>}{phase==='recording'&&<button type="button" aria-expanded={syncOpen} aria-controls="video-sync-settings" onClick={()=>setSyncOpen(o=>!o)}><Settings2 size={14}/>{trUi("Настройки звука")}</button>}</>}

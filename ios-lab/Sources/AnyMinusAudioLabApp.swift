@@ -7,8 +7,14 @@ struct AnyMinusAudioLabApp: App {
     var body: some Scene { WindowGroup { LabView() } }
 }
 
+@MainActor
 struct LabView: View {
-    @StateObject private var lab = AudioLab()
+    @StateObject private var lab: AudioLab
+    private let onClose: (() -> Void)?
+    init(lab: AudioLab = AudioLab(), onClose: (() -> Void)? = nil) {
+        _lab = StateObject(wrappedValue: lab)
+        self.onClose = onClose
+    }
     @State private var importing = false
     var body: some View {
         NavigationStack {
@@ -43,7 +49,13 @@ struct LabView: View {
                     if let mixed = lab.mixedVideo { ShareLink(item: mixed) { Label("Поделиться видео с фонограммой", systemImage: "square.and.arrow.up") } }
                     Text("Тестовый микс добавляет исходную фонограмму к звуку микрофона. Синхронизация приблизительная; при воспроизведении через динамик возможен повторный захват музыки микрофоном.").font(.caption)
                 }.padding()
-            }.navigationTitle("AnyMinus iOS Lab")
+            }.navigationTitle("AnyMinus iOS Lab").toolbar {
+                if let onClose {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Закрыть") { Task { await lab.shutdown(); onClose() } }.disabled(lab.busy || lab.recording)
+                    }
+                }
+            }
         }.fileImporter(isPresented: $importing, allowedContentTypes: [.audio]) { result in
             switch result {
             case .success(let url): lab.importTrack(url)
@@ -110,6 +122,32 @@ final class AudioLab: NSObject, ObservableObject, AVCaptureFileOutputRecordingDe
         let inputs = audio.currentRoute.inputs.map { $0.portName }.joined(separator: ", ")
         let outputs = audio.currentRoute.outputs.map { $0.portName }.joined(separator: ", ")
         route = "Input: \(inputs)\nOutput: \(outputs)\nRate: \(audio.sampleRate) Hz · Mode: \(audio.mode.rawValue)"
+    }
+
+    func loadLocalTrack(_ source: URL, name: String) {
+        do {
+            let next = try AVAudioPlayer(contentsOf: source)
+            next.numberOfLoops = -1
+            player?.stop()
+            player = next
+            trackURL = source
+            trackName = name
+            playing = false
+            status = "Фонограмма загружена"
+        } catch { status = error.localizedDescription }
+    }
+
+    func shutdown() async {
+        busy = true
+        player?.stop()
+        playing = false
+        let session = capture
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            queue.async { if session.isRunning { session.stopRunning() }; continuation.resume() }
+        }
+        armed = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        busy = false
     }
 
     func importTrack(_ source: URL) {

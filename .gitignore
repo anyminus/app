@@ -4,3 +4,6 @@ playwright-report/
 test-results/
 .env*
 !.env.example
+
+/ios/
+/ios-build/
