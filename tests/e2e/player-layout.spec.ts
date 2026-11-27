@@ -26,3 +26,12 @@ test('active lyric scales to 100 percent and inactive lyrics to 75 percent with 
  await expect.poll(()=>page.locator('.karaoke-lyrics').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.evaluate(()=>window.scrollY)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await slider.fill('2');await expect(lines.nth(2)).toHaveAttribute('aria-current','true');await expect.poll(()=>scale(2)).toBeCloseTo(1,2);await expect(lines.nth(2).locator('.lyric-text')).toHaveCSS('transition-duration','0s');
 });
+
+test('player heading keeps collaborating artists and punctuation on a single line',async({page})=>{
+ await mockApi(page);
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'101',title:'Collaboration',artist:'Kai Angel, 9mice',artistCredits:[{author_id:'16509384',name:'Kai Angel'},{author_id:'13739916',name:'9mice'}],durationSeconds:8,pairOperationId:'00000000-0000-4000-8000-000000000001'}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.setViewportSize({width:390,height:664});await page.goto('/');await page.getByRole('button',{name:'Collaboration',exact:true}).click();
+ const heading=page.locator('.karaoke-heading'),artists=heading.locator('.artist-credits');await expect(artists).toHaveText('Kai Angel, 9mice');await expect(artists.getByRole('button')).toHaveCount(2);
+ for(const width of [390,320,540]){await page.setViewportSize({width,height:664});const first=await artists.getByRole('button',{name:'Kai Angel',exact:true}).boundingBox();const second=await artists.getByRole('button',{name:'9mice',exact:true}).boundingBox();expect(first&&second).toBeTruthy();expect(Math.abs(first!.y-second!.y)).toBeLessThan(2);expect(second!.x).toBeGreaterThan(first!.x);await expect(artists).toHaveCSS('white-space','nowrap');}
+ await artists.getByRole('button',{name:'9mice',exact:true}).click();await expect(page).toHaveURL(/#\/artist\/9mice\?author_id=13739916$/);
+});

@@ -37,14 +37,16 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  async function openPlayer(pairId=job?.pairOperationId,warmed:RemoteAudio|null=null){if(!api||!selected||!pairId||opening.current){warmed?.dispose();return}opening.current=true;const version=selectionVersion.current;setLoadingAudio(true);setError('');const c=new AbortController();selectionAbort.current?.abort();selectionAbort.current=c;const a=warmed||new RemoteAudio();if(audio.current!==a)audio.current?.dispose();audio.current=a;try{a.prepare();const r=await api.playback(pairId,selected.providerTrackId,getTelegramToken()??token.current?.value,c.signal);const pair=r.pairOperationId;const urls=[mediaUrl(origin,pair,'instrumental',r.instrumental),mediaUrl(origin,pair,'vocals',r.vocals)];await a.load(urls,r.durationSeconds,c.signal);if(version!==selectionVersion.current||c.signal.aborted){a.dispose();return;}const m=mixerRef.current;a.setVolumes(effectiveVolume(m.music,m.musicMuted),effectiveVolume(m.vocals,m.vocalsMuted));setLength(a.length);setPlayerReady(true);setPosition(0);setLyricPair(pair);onReady(pair);try{await a.play();if(version!==selectionVersion.current||c.signal.aborted){a.dispose();return}setPlaying(true);onPlayed()}catch(e){if(version===selectionVersion.current&&!c.signal.aborted)showError(e)}}catch(e){a.dispose();if(!c.signal.aborted)showError(e)}finally{opening.current=false;if(version===selectionVersion.current)setLoadingAudio(false)}}
  // Read only: check an unknown provider capability before enabling creation.
  useEffect(()=>{
-  if(selected.pairOperationId){setPreviewChecking(false);return}
+  if(selected.pairOperationId||job?.state==='ready'){setPreviewChecking(false);return}
   if(selected.providerLyricsFormat){setPreviewFormat(selected.providerLyricsFormat);setPreviewChecking(false);return}
+  // Resolve readiness first: a ready track does not need a provider preview.
+  if(!job||!(job.state==='none'||job.state==='failed'))return;
   const c=new AbortController();let disposed=false;
   setPreviewChecking(true);
   const deadline=window.setTimeout(()=>{c.abort();if(!disposed)setPreviewChecking(false)},10000);
   void (async()=>{try{const key=await session(c.signal);const meta=await api.metadata(selected.providerTrackId,key,c.signal);if(!disposed&&!c.signal.aborted&&meta?.providerTrackId===selected.providerTrackId)setPreviewFormat(providerLyricsHint(meta))}catch{/* unknown is not absent */}finally{clearTimeout(deadline);if(!disposed)setPreviewChecking(false)}})();
   return()=>{disposed=true;c.abort();clearTimeout(deadline)};
- },[selected.providerTrackId,selected.pairOperationId,selected.providerLyricsFormat]);
+ },[selected.providerTrackId,selected.pairOperationId,selected.providerLyricsFormat,job?.state]);
  // Consume only an explicit click's launch intent, after StrictMode's first cleanup.
  useEffect(()=>{const timer=window.setTimeout(()=>{const launch=takeLaunch(selected.providerTrackId);if(launch)audio.current=launch.audio;if(selected.pairOperationId)void openPlayer(selected.pairOperationId,audio.current);else void getStatus()},0);return()=>clearTimeout(timer)},[selected.providerTrackId,takeLaunch]);
 

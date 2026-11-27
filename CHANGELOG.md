@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.9
+- Keep collaborating artists on one line in the karaoke header, with separate artist ID links and truncation for long names.
+- Avoid redundant provider metadata preview on already-ready tracks; preserve pre-create text checking.
+
 ## 0.4.8
 - Display lyrics availability for every popular/search result and on the song page before Create; use neutral unknown and prefer verified stored format for ready songs. Unknown capability triggers a bounded metadata check; absence never inferred from a failed request.
 

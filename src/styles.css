@@ -27,7 +27,10 @@ body.karaoke-open .tab-bar{display:none}
 .karaoke-header .icon-button{width:40px;height:44px}
 .karaoke-heading{min-width:0;flex:1;display:grid;gap:3px}
 .karaoke-heading h1{font-size:16px;line-height:1.22;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.karaoke-heading .artist-link{display:block;color:var(--muted);font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.karaoke-heading .artist-link{display:inline;color:var(--muted);font-size:12px;line-height:1.2;white-space:nowrap;overflow:visible;text-overflow:clip;vertical-align:baseline;max-width:none}
+.karaoke-heading .artist-credits{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.2}
+.karaoke-heading .artist-credits>span{display:inline;white-space:nowrap}
+.karaoke-heading>.artist-link{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .karaoke-focus-toggle[aria-pressed=true]{color:var(--accent);background:var(--raised)}
 .karaoke-lyrics{min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:12px 0}
 .karaoke-lyrics::-webkit-scrollbar{display:none}

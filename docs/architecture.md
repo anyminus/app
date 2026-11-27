@@ -7,3 +7,6 @@ The audio clock and active-line selection are unchanged. Timed lyrics use a 100%
 
 ### Motion tuning and maintenance
 Keep the outer `.lyric` button at full-size layout and apply transforms only to its `.lyric-text` span. `src/styles.css`: scale 0.75/1, `transform-origin: left center`, 480ms `cubic-bezier(.18,.78,.24,1)`; color and opacity 420ms `cubic-bezier(.2,.75,.25,1)`. `src/lyrics.mjs`: `lyricScrollEase(t)` = normalized `1-(1+7t)exp(-7t)` with exact endpoints and no overshoot. `src/LiveCatalog.tsx`: one cancellable RAF, 480ms, target clamped to the lyrics viewport; no page scroll. This is a deterministic damped easing, not an imported Anime.js runtime. Manual input cancels current scroll; automatic following resumes on the next active-line change if enabled. See [acceptance and regression checks](acceptance-0.4.4.md).
+
+## Compact artist credits (0.4.9)
+Player heading keeps individual artist ID links and comma separators in one no-wrap text line. Long credits clip with ellipsis rather than growing the header; the title and lyrics status retain their own rows. Regression checks at 320/390/540 px. Also delay unknown provider lyrics preview until job status confirms none/failed; ready shared links do not incur an unnecessary extra metadata request. No backend contract change.
