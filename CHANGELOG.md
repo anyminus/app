@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.35
+- Reduce normal canvas lyric center spacing by 40% while maintaining safe clearance for wrapped lines and preserving the fading drum, lower anchor, font sizes and watermark.
+
 ## 0.5.34
 - Show a numeric countdown in the lyric list during verified instrumental gaps strictly longer than ten seconds; use active lyric typography and current playback tempo.
 

@@ -68,11 +68,15 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
   return cached(layouts,JSON.stringify([text,width,px,bold,template.fontFamily]),()=>layout(ctx,text,width,px,bold,template.fontFamily));
  };
  const height=(item:ReturnType<typeof layout>)=>item.rows.length*item.size*1.24;
- // Stable two-slot drum. Reserve room for two wrapped rows in each slot;
- // changing the line length never changes the scroll distance.
- const step=(activeSize+nextSize)*1.24+gap;
+ // Compact drum spacing for single lines; preserve clearance for wrapped rows.
+ const nominalStep=(activeSize+nextSize)*1.24+gap;
+ const minimumStep=(a:ReturnType<typeof layout>,b:ReturnType<typeof layout>)=>(height(a)+height(b))/2+gap*.6;
+ const pairStep=(a:ReturnType<typeof layout>,b:ReturnType<typeof layout>)=>Math.max(nominalStep*template.lyrics.spacingScale,minimumStep(a,b));
+ const currentLine=line(index,activeSize,750),nextLine=line(index+1,nextSize,550);
+ const previousLine=line(index-1,activeSize,750),previousNext=line(index,nextSize,550);
+ const step=pairStep(currentLine,nextLine),oldStep=pairStep(previousLine,previousNext);
  const nextCenter=bottom-nextSize*1.24,activeCenter=nextCenter-step;
- const clipTop=Math.max(headerEnd,activeCenter-activeSize*1.24-gap);
+ const clipTop=Math.max(headerEnd,nextCenter-Math.max(step,progress<1?oldStep:step)-activeSize*1.24-gap);
  const clipBottom=Math.min(markY-gap,bottom+gap);
  const shadeStart=Math.max(0,clipTop-margin*2);
  const shade=ctx.createLinearGradient(0,shadeStart,0,h);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.4,'rgba(0,0,0,.65)');shade.addColorStop(1,'rgba(0,0,0,'+template.lyrics.shadeOpacity+')');
@@ -86,12 +90,17 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
   let y=center-height(item)/2;for(const row of item.rows){ctx.fillText(row,x(template.lyrics.align),y,width);y+=item.size*1.24;}
  }
  if(progress<1){
-  paint(line(index-1,lerp(activeSize,nextSize,progress),lerp(750,550,progress)),blendColor(template.lyrics.currentColor,template.lyrics.nextColor,progress),activeCenter-step*progress,1-progress);
-  paint(line(index,lerp(nextSize,activeSize,progress),lerp(550,750,progress)),blendColor(template.lyrics.nextColor,template.lyrics.currentColor,progress),nextCenter-step*progress,lerp(template.lyrics.nextOpacity,1,progress));
-  paint(line(index+1,nextSize,550),template.lyrics.nextColor,nextCenter+step*(1-progress),template.lyrics.nextOpacity*progress);
+  const outgoing=line(index-1,lerp(activeSize,nextSize,progress),lerp(750,550,progress));
+  const incoming=line(index,lerp(nextSize,activeSize,progress),lerp(550,750,progress));
+  const center=nextCenter-step*progress;
+  const outgoingCenter=Math.min(nextCenter-oldStep-step*progress,center-minimumStep(outgoing,incoming));
+  const nextEnteringCenter=Math.max(nextCenter+step*(1-progress),center+minimumStep(incoming,nextLine));
+  paint(outgoing,blendColor(template.lyrics.currentColor,template.lyrics.nextColor,progress),outgoingCenter,1-progress);
+  paint(incoming,blendColor(template.lyrics.nextColor,template.lyrics.currentColor,progress),center,lerp(template.lyrics.nextOpacity,1,progress));
+  paint(nextLine,template.lyrics.nextColor,nextEnteringCenter,template.lyrics.nextOpacity*progress);
  }else{
-  paint(line(index,activeSize,750),template.lyrics.currentColor,activeCenter,1);
-  paint(line(index+1,nextSize,550),template.lyrics.nextColor,nextCenter,template.lyrics.nextOpacity);
+  paint(currentLine,template.lyrics.currentColor,activeCenter,1);
+  paint(nextLine,template.lyrics.nextColor,nextCenter,template.lyrics.nextOpacity);
  }
  ctx.restore();
  singleLine(template.watermark.text,markSize,650,template.watermark.color,template.watermark.align,markY);
