@@ -237,3 +237,5 @@ body.karaoke-open .tab-bar{display:none}
 .track-queue-action{padding:5px 0;margin:-5px 0;text-align:left;min-height:22px;touch-action:manipulation}.track-queue-action:hover{text-decoration:underline}.track-queue-state{color:var(--muted)}.track-queue-error{font-size:10px;color:var(--lyrics-missing);line-height:1.3}
 
 .track-database-status{font-size:10px;line-height:1.1;color:var(--accent);font-weight:650}
+
+.search-artist-icon{position:relative;overflow:hidden}.search-artist-icon .cover-image{object-fit:cover}.search-artist-icon:has(.cover-slot[data-cover-state="loaded"])>svg{visibility:hidden}

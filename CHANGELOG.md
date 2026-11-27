@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.72
+- Use independent SDK artist suggestions and tolerant token matching with exact-first ranking, verified IDs, and circular artist portrait tiles. Update previous default-tab integration test.
+
 ## 0.5.71
 - Use «Караоке в базе» for verified stored tracks and completion notices; retain separate lyric-format status.
 - Turn existing Create karaoke row label into a direct queue action; use existing authenticated status/enqueue APIs, prevent repeated clicks, persist confirmed pending notices, keep original playback and list navigation independent. Show retryable errors without claiming success. Update verified ready rows only for the current response snapshot.

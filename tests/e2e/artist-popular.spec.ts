@@ -27,8 +27,17 @@ test('exact artist search puts one artist link above songs and navigates by veri
  const items=[{providerTrackId:'201',title:'First song',artist:'Soldatov, Guest',artistCredits:[{author_id:'42',name:'Soldatov'},{author_id:'43',name:'Guest'}],durationMs:8000},{providerTrackId:'202',title:'Second song',artist:'Soldatov',artistCredits:[{author_id:'42',name:'Soldatov'}],durationMs:8000},{providerTrackId:'203',title:'Soldatov',artist:'Different artist',durationMs:8000}];
  await page.route(/^https:\/\/[^/]+\/demo\/search\?/,r=>r.fulfill({json:{items,nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
  await page.goto('/#/search');const input=page.getByRole('textbox',{name:'Поиск песни'});await input.fill('sold');
- await expect(page.getByRole('button',{name:'First song',exact:true})).toBeVisible();await expect(page.locator('.search-artist-result')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'First song',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Открыть артиста: Soldatov',exact:true})).toBeVisible();
  await input.fill('SOLDATOV');const artist=page.getByRole('button',{name:'Открыть артиста: Soldatov',exact:true});await expect(artist).toHaveCount(1);await expect(artist).toBeVisible();await expect(page.locator('.track-row')).toHaveCount(3);
  expect(await artist.evaluate(el=>el.getBoundingClientRect().bottom<=document.querySelector('.track-row')!.getBoundingClientRect().top+1)).toBe(true);
  await artist.click();await expect(page).toHaveURL(/#\/artist\/Soldatov\?author_id=42$/);await expect(page.getByRole('heading',{name:'Soldatov',exact:true})).toBeVisible();
+});
+
+test('independent SDK artist suggestion shows portrait for surname and reordered diminutive with no matching songs',async({page})=>{
+ await mockApi(page);const headers={'Access-Control-Allow-Origin':'*'};
+ await page.route(/^https:\/\/[^/]+\/demo\/search\?/,r=>r.fulfill({json:{items:[],artists:[{author_id:'42',name:'Юлия Коган'}],nextCursor:null},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/artist-artwork\/42$/,r=>r.fulfill({body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGOcppHCgA0wYRUdtBIA54YBMulAnr4AAAAASUVORK5CYII=','base64'),contentType:'image/png'}));
+ await page.goto('/#/search');const input=page.getByRole('textbox',{name:'Поиск песни'});const artist=page.getByRole('button',{name:'Открыть артиста: Юлия Коган',exact:true});
+ await input.fill('Коган');await expect(artist).toBeVisible();await expect(artist.locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');
+ await input.fill('Коган Юля');await expect(artist).toBeVisible();await artist.click();await expect(page).toHaveURL(/author_id=42$/);
 });

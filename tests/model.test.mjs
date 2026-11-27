@@ -80,7 +80,7 @@ test('interlude countdown requires a verified gap strictly longer than ten secon
 import {exactSearchArtists} from '../src/model.mjs';
 test('exact search artist suggestion prefers verified individual credits and deduplicates IDs',()=>{
  const tracks=[{artist:'Soldatov',title:'Other'},{artist:'Soldatov, Guest',artistCredits:[{name:'Soldatov',author_id:'42'},{name:'Guest',author_id:'43'}]},{artist:'Soldatov',artistCredits:[{name:'Soldatov',author_id:'42'}]},{artist:'Other',title:'Soldatov'}];
- assert.deepEqual(exactSearchArtists('  SOLDATOV ',tracks),[{name:'Soldatov',author_id:'42'}]);assert.deepEqual(exactSearchArtists('Sold',tracks),[]);assert.deepEqual(exactSearchArtists('Guest',tracks),[{name:'Guest',author_id:'43'}]);assert.deepEqual(exactSearchArtists('Other title',[{artist:'Other',title:'Other title'}]),[]);assert.deepEqual(exactSearchArtists('soldatov',[{artist:'Soldatov'}]),[{name:'Soldatov'}]);assert.deepEqual(exactSearchArtists('Guest',[{artist:'Soldatov, Guest'}]),[]);
+ assert.deepEqual(exactSearchArtists('  SOLDATOV ',tracks),[{name:'Soldatov',author_id:'42'}]);assert.deepEqual(exactSearchArtists('Sold',tracks),[{name:'Soldatov',author_id:'42'}]);assert.deepEqual(exactSearchArtists('Guest',tracks),[{name:'Guest',author_id:'43'}]);assert.deepEqual(exactSearchArtists('Other title',[{artist:'Other',title:'Other title'}]),[]);assert.deepEqual(exactSearchArtists('soldatov',[{artist:'Soldatov'}]),[{name:'Soldatov'}]);assert.deepEqual(exactSearchArtists('Guest',[{artist:'Soldatov, Guest'}]),[]);
 });
 
 import {detectLanguage,effectiveLanguage,t} from '../src/i18n.mjs';
@@ -95,3 +95,5 @@ test('recorded intro shows only 3, 2, 1 before an eligible first timestamp',()=>
 });
 
 test('fresh list readiness observation differs from metadata-only lookup',()=>{const sample={providerTrackId:'123',title:'Demo',artist:'Artist',durationMs:8000,karaokeStatus:{state:'unknown'}};assert.equal(normalizeTracks({items:[sample]},false,true)[0].readyObserved,true);assert.equal(normalizeTracks({items:[sample]},false,true)[0].pairOperationId,null);assert.equal(normalizeTracks({items:[sample]})[0].readyObserved,undefined);});
+
+test('artist suggestions accept surname, reordered words, modest spelling variation and independent SDK results',()=>{const artists=[{name:'Юлия Коган',author_id:'42'},{name:'Коган',author_id:'43'},{name:'Другой артист',author_id:'44'}];assert.deepEqual(exactSearchArtists('Коган Юля',[],artists),[{name:'Юлия Коган',author_id:'42'}]);assert.deepEqual(exactSearchArtists('Коган',[],artists).map(a=>a.author_id),['43','42']);assert.deepEqual(exactSearchArtists('Юлия Коган',[],artists).map(a=>a.author_id),['42']);assert.deepEqual(exactSearchArtists('Ко',[],artists),[]);assert.deepEqual(exactSearchArtists('случайная песня',[],artists),[]);});
