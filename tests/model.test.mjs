@@ -53,3 +53,6 @@ test('provider lyric capability is separate and unknown is not absent',()=>{asse
 
 import {introCountdown} from '../src/lyrics.mjs';
 test('long intro countdown uses source timestamp and media position',()=>{assert.equal(introCountdown(undefined,0),null);assert.equal(introCountdown(10000,0),null);assert.equal(introCountdown(10001,0),11);assert.equal(introCountdown(30000,0),30);assert.equal(introCountdown(30000,24.25),6);assert.equal(introCountdown(30000,29.99),1);assert.equal(introCountdown(30000,30),null);assert.equal(introCountdown(30000,31),null);assert.equal(introCountdown(30000,5),25);assert.equal(introCountdown(30000,NaN),null)});
+
+import {publishedUpgrade} from '../src/release-version.mjs';
+test('published release comparator rejects malformed, same and stale versions',()=>{const m=version=>({schemaVersion:1,version});assert.equal(publishedUpgrade('0.5.2',m('0.5.2')),null);assert.equal(publishedUpgrade('0.5.2',m('0.5.1')),null);assert.equal(publishedUpgrade('0.5.9',m('0.5.10')),'0.5.10');assert.equal(publishedUpgrade('0.5.9',m('0.6.0')),'0.6.0');assert.equal(publishedUpgrade('0.5.2',m('garbage')),null);assert.equal(publishedUpgrade('0.5.2',{version:'1.0.0'}),null);assert.equal(publishedUpgrade('0.5.2',null),null)});

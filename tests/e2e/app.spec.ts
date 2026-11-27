@@ -41,3 +41,16 @@ test('shared link recovers from a transient auth gateway error',async({page})=>{
 import {readFileSync} from 'node:fs';
 const appVersion=JSON.parse(readFileSync(new URL('../../package.json',import.meta.url),'utf8')).version as string;
 test('home and profile display the package version',async({page})=>{await mockApi(page);await page.goto('/#/home');await expect(page.locator('.brand-header .app-version')).toHaveText('v'+appVersion);await page.getByRole('navigation').getByRole('button',{name:'Профиль',exact:true}).click();await expect(page.getByText('ANYMINUS '+appVersion,{exact:true})).toBeVisible()});
+
+test('published release notice is global, does not reload automatically, and supports later or explicit reload',async({page})=>{
+ await mockApi(page);let published=appVersion;let requests=0;
+ await page.route(/\/version\.json(?:\?|$)/,r=>{requests++;return r.fulfill({json:{schemaVersion:1,version:published}})});
+ await page.goto('/#/home');const notice=page.getByRole('complementary',{name:'Уведомление об обновлении'});await expect.poll(()=>requests).toBeGreaterThan(0);await expect(notice).toHaveCount(0);
+ await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ published='999.1.0';await page.waitForTimeout(3100);await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+ await expect(notice).toContainText('v999.1.0');await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page).toHaveURL(/#\/track\/101$/);
+ await notice.getByRole('button',{name:'Позже'}).click();await expect(notice).toHaveCount(0);
+ published='999.2.0';await page.waitForTimeout(3100);await page.evaluate(()=>window.dispatchEvent(new Event('online')));await expect(notice).toContainText('v999.2.0');
+ published=appVersion;await Promise.all([page.waitForEvent('load'),notice.getByRole('button',{name:'Обновить страницу'}).click()]);await expect(page).toHaveURL(/#\/track\/101$/);await expect(notice).toHaveCount(0);
+});
+test('built Pages artifact exposes exactly its packaged version',async({request})=>{const r=await request.get('/version.json');expect(r.ok()).toBeTruthy();expect(await r.json()).toEqual({schemaVersion:1,version:appVersion})});

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+- Notify all open app instances when a newer successfully published Pages version is detected; manual refresh or dismiss, without stopping playback.
+- Serve the upstream pitch AudioWorklet as an unbundled same-origin asset to avoid serialized/minified function startup failures.
+
 ## 0.5.1
 - Add a shared +/- semitone control to the right of the mixer using Signalsmith Stretch Web Audio/WASM, preserving original tempo and synchronized lyrics.
 

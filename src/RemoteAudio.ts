@@ -24,6 +24,9 @@ export class RemoteAudio {
   if(!ctx.audioWorklet||typeof AudioWorkletNode==='undefined')throw Error('Изменение тональности не поддерживается браузером');
   let expired=false,timer:number|undefined,node:StretchNode|null=null;
   const init=async()=>{const {default:factory}=await import('signalsmith-stretch');if(expired||this.context!==ctx)throw Error('Аудиовыход изменился');
+   // Use the unbundled, same-origin upstream worklet. The factory's default
+   // Blob serializes functions, which a bundler/minifier can break.
+   factory.moduleUrl=new URL('./signalsmith-worklet.js',document.baseURI).href;
    const n=await factory(ctx,{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[2],channelCount:2,channelCountMode:'explicit'});node=n;
    if(expired||this.context!==ctx){n.disconnect();n.port.close();throw Error('Аудиовыход изменился')}
    const latency=await n.latency();if(!Number.isFinite(latency)||latency<0||latency>.8)throw Error('Недопустимая задержка аудио');
