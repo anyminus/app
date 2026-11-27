@@ -191,3 +191,20 @@ test('artist tab order and last selected tab survive track navigation and reload
  await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');await page.getByRole('button',{name:'Popular song',exact:true}).click();await expect(page.getByText('Караоке ещё не создано')).toBeVisible();await page.getByRole('button',{name:'Назад',exact:true}).click();
  await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('button',{name:'Popular song',exact:true})).toBeVisible();await tabs.nth(1).click();await expect(tabs.nth(1)).toHaveAttribute('aria-pressed','true');await page.reload();await expect(tabs.nth(1)).toHaveAttribute('aria-pressed','true');await page.goto('/#/artist/Other?author_id=43');await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');
 });
+
+test('one tap on create in artist list enqueues once without navigating or interrupting original playback',async({page})=>{
+ const mock=await mockApi(page);const headers={'Access-Control-Allow-Origin':'*'};let accepted=false;
+ await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>r.fulfill({json:{artistId:'42',name:'Test',items:[{providerTrackId:'102',title:'Queue song',artist:'Test',durationMs:8000,providerLyricsFormat:'LRC'},{providerTrackId:'106',title:'Missing song',artist:'Test',durationMs:8000,providerLyricsFormat:'NONE'}],nextCursor:null},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/karaoke\/status(?:\?|$)/,r=>r.fulfill({json:{state:accepted?'queued':'none'},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/karaoke$/,async r=>{if(r.request().method()==='OPTIONS'){await r.fallback();return}await r.fallback();accepted=true});
+ await page.goto('/#/artist/Test?author_id=42');const row=page.locator('.track-row').filter({hasText:'Queue song'});
+ await expect(page.locator('.track-row').filter({hasText:'Missing song'}).getByRole('button',{name:'Создать караоке',exact:true})).toHaveCount(0);
+ await row.getByRole('button',{name:'Создать караоке',exact:true}).click();await expect(row.getByText('Добавлено в очередь',{exact:true})).toBeVisible();await expect(row.getByRole('button',{name:'Создать караоке',exact:true})).toHaveCount(0);expect(mock.enqueued).toBe(1);expect(mock.media).toBe(0);await expect(page).toHaveURL(/#\/artist\/Test/);
+ await page.reload();await expect(row.getByText('Добавлено в очередь',{exact:true})).toBeVisible();expect(mock.enqueued).toBe(1);
+});
+test('row enqueue failure does not falsely show queue confirmation and allows retry',async({page})=>{
+ const mock=await mockApi(page);const headers={'Access-Control-Allow-Origin':'*'};
+ await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>r.fulfill({json:{artistId:'42',name:'Test',items:[{providerTrackId:'102',title:'Retry song',artist:'Test',durationMs:8000,providerLyricsFormat:'LRC'}],nextCursor:null},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/karaoke$/,r=>r.request().method()==='OPTIONS'?r.fallback():r.fulfill({status:503,json:{},headers}));
+ await page.goto('/#/artist/Test?author_id=42');const row=page.locator('.track-row').filter({hasText:'Retry song'});await row.getByRole('button',{name:'Создать караоке',exact:true}).click();await expect(row.getByRole('alert')).toContainText('Не удалось добавить в очередь');await expect(row.getByText('Добавлено в очередь')).toHaveCount(0);await expect(row.getByRole('button',{name:'Создать караоке',exact:true})).toBeEnabled();expect(mock.enqueued).toBe(0);
+});

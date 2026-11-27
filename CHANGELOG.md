@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.71
+- Turn existing Create karaoke row label into a direct queue action; use existing authenticated status/enqueue APIs, prevent repeated clicks, persist confirmed pending notices, keep original playback and list navigation independent. Show retryable errors without claiming success. Update verified ready rows only for the current response snapshot.
+
 ## 0.5.70
 - Open popular songs by default for new artist pages; retain explicitly selected ready/popular tab per artist. Update regression tests.
 

@@ -301,3 +301,7 @@ Owner requested four UI changes. Confirmed NONE hides creation/login CTA and gua
 
 ## Artist default tab (0.5.70)
 Owner clarified that Popular songs is the default for artists without a saved selection. Existing explicit choices remain authoritative; switching artists does not carry another artist's tab choice. Updated browser regression tests to verify first visit, return, reload, and independent artist selection. No backend changes.
+
+
+## Inline karaoke queue (0.5.71)
+Owner asks existing Create karaoke list text to be actionable. Confirmed LRC unready row only; TEXT/NONE/unknown labels unchanged. Reuse guest/Telegram token and status before enqueue, no request if already queued/running/ready; one in-flight action per track, no speculative waiting state on failed POST. Existing pending notices persist across navigation/reload and verify completion through status/WebSocket. Current snapshot ready override stored by object identity to avoid reviving stale deleted pairs on new list responses. No automatic navigation, no audio start/stop. No changes to server or storage. Added E2E queue success, reload and failed POST. CI pending.

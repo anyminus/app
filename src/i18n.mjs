@@ -806,6 +806,8 @@ const dictionary={
   "Wähle einen anderen Song. Wir melden uns in der geöffneten App, sobald Karaoke bereit ist.",
   "Elige otra canción. Te avisaremos en la app abierta cuando el karaoke esté listo."
  ],
+ "Добавлено в очередь": ["Added to queue","Zur Warteschlange hinzugefügt","Añadido a la cola"],
+ "Не удалось добавить в очередь. Попробуйте ещё раз.": ["Could not add to queue. Please try again.","Hinzufügen zur Warteschlange fehlgeschlagen. Bitte erneut versuchen.","No se pudo añadir a la cola. Inténtalo de nuevo."],
  "Создать караоке": [
   "Create karaoke",
   "Karaoke erstellen",

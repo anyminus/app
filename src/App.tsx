@@ -7,6 +7,7 @@ import {defaults,parseRoute,matchesArtist,artistPath,formatTime,exactSearchArtis
 import {sharedTrackPath,validateSharedPlayback,validateSharedTime,type PlaybackSettings} from './sharedPlayback.mjs';
 import {LazyCover,Artwork,Mixer,IconButton,TrackRow,type Track} from './components';
 import {LiveCatalog} from './LiveCatalog';
+import {normalizeJob,validPairId,providerLyricsHint} from './api.mjs';
 import {RemoteAudio} from './RemoteAudio';
 import {cacheStats,clearStemCache,CACHE_LIMIT} from './stemCache';
 import {readAudioOutputMode,saveAudioOutputMode,audioSessionAvailable} from './audioOutputMode';
@@ -39,6 +40,13 @@ export function App(){
  const [favorites,setFavorites]=useStored<string[]>('real-favorites',[]),[history,setHistory]=useStored<string[]>('real-history',[]),[playlists,setPlaylists]=useStored<Playlist[]>('real-playlists',[]),[favoritePlaylists,setFavoritePlaylists]=useStored<string[]>('real-favorite-playlists',[]),[cache,setCache]=useStored<Record<string,LiveTrack>>('real-track-cache',{});
  const [lyricsSubscriptions,setLyricsSubscriptions]=useStored<LyricsSubscriptions>('lyrics-subscriptions',{});
  const [karaokeNotices,setKaraokeNotices]=useStored<KaraokeNotices>('karaoke-notifications',{});
+ const queueLocks=useRef(new Set<string>());
+ const [queueBusy,setQueueBusy]=useState<Record<string,boolean>>({});
+ const [queueErrors,setQueueErrors]=useState<Record<string,string>>({});
+ // A verified status may update only the current list snapshot, never a later
+ // server response that says the pair is no longer ready.
+ const verifiedRows=useRef(new WeakMap<LiveTrack,LiveTrack>());
+ const visibleRows=useRef<LiveTrack[]>([]);
  const [music,setMusic]=useStored('music',defaults.music),[vocals,setVocals]=useStored('vocals',defaults.vocals),[musicMuted,setMusicMuted]=useStored('music-muted',false),[vocalsMuted,setVocalsMuted]=useStored('vocals-muted',false),[theme,setTheme]=useStored<'dark'|'light'>('theme','dark'),[name,setName]=useStored('name','Гость'),[font,setFont]=useStored('font',32),[autoScroll,setAutoScroll]=useStored('autoscroll',true);
  const [editingFavorites,setEditingFavorites]=useState(false),[favoriteTab,setFavoriteTab]=useState<'songs'|'playlists'>('songs'),[playlistMode,setPlaylistMode]=useState(()=>{try{return sessionStorage.getItem('anyminus:playlist-mode')==='1'}catch{return false}});
  const [includePlayback,setIncludePlayback]=useState(false);const [includeTime,setIncludeTime]=useState(false);
@@ -54,6 +62,7 @@ export function App(){
  const artistTab=artistTabs?.[artistTabKey]==='ready'?'ready':'popular';
  function setArtistTab(tab:'ready'|'popular'){setArtistTabs(old=>Object.fromEntries([[artistTabKey,tab],...Object.entries(old??{}).filter(([key])=>key!==artistTabKey)].slice(0,100)) as Record<string,'ready'|'popular'>)}
  const artistPopular=useArtistPopular(route.page==='artist'&&artistTab==='popular'?route.id:null,route.author_id);
+ visibleRows.current=[...catalog.items,...artistPopular.items];
  const remember=useCallback((items:LiveTrack[])=>setCache(old=>{let changed=false;const next={...old};for(const t of items){if(!isTrackId(t.providerTrackId))continue;const prev=old[t.providerTrackId];const val={...t,providerLyricsFormat:t.providerLyricsFormat??prev?.providerLyricsFormat,lyricsFormat:t.readyObserved&&!t.pairOperationId?undefined:t.lyricsFormat!==undefined?t.lyricsFormat:(t.pairOperationId&&prev?.pairOperationId!==t.pairOperationId?undefined:prev?.lyricsFormat),artistCredits:t.artistCredits?.length?t.artistCredits:prev?.artistCredits,coverUrl:t.coverUrl!==undefined?t.coverUrl:prev?.coverUrl,durationMs:t.durationMs??prev?.durationMs??null,pairOperationId:t.readyObserved?t.pairOperationId:t.pairOperationId||prev?.pairOperationId||null};if(t.metadataUnavailable&&prev&&!prev.metadataUnavailable){val.title=prev.title;val.artist=prev.artist;val.metadataUnavailable=false}if(!prev||JSON.stringify(prev)!==JSON.stringify(val)){next[t.providerTrackId]=val;changed=true}}return changed?next:old}),[setCache]);
  useEffect(()=>{if(catalog.items.length)remember(catalog.items)},[catalog.items,remember]);
  useEffect(()=>{if(artistPopular.name!==null&&artistPopular.items.length)remember(artistPopular.items)},[artistPopular.name,artistPopular.items,remember]);
@@ -66,7 +75,8 @@ export function App(){
  const readyNotifications=Object.values(lyricsSubscriptions).filter(s=>s.state==='ready');
  function watchKaraoke(t:LiveTrack){setKaraokeNotices(old=>{if(old[t.providerTrackId]?.state==='waiting')return old;const bounded=Object.fromEntries(Object.entries(old).filter(([id])=>id!==t.providerTrackId).sort(([,a],[,b])=>b.requestedAt-a.requestedAt).slice(0,49));return {...bounded,[t.providerTrackId]:{track:t,state:'waiting',requestedAt:Date.now()}}})}
  function dismissKaraoke(id:string){setKaraokeNotices(old=>{if(!old[id])return old;const next={...old};delete next[id];return next})}
- const updateKaraoke=useCallback((id:string,state:'ready'|'failed',track?:LiveTrack)=>{if(track&&state==='ready')remember([track]);setKaraokeNotices(old=>old[id]?.state==='waiting'?{...old,[id]:{...old[id],state,track:track??old[id].track}}:old)},[remember,setKaraokeNotices]);
+ const confirmRowReady=useCallback((track:LiveTrack)=>{for(const item of visibleRows.current)if(item.providerTrackId===track.providerTrackId)verifiedRows.current.set(item,{...item,pairOperationId:track.pairOperationId,lyricsFormat:track.lyricsFormat,readyObserved:true});remember([track])},[remember]);
+ const updateKaraoke=useCallback((id:string,state:'ready'|'failed',track?:LiveTrack)=>{if(track&&state==='ready')confirmRowReady(track);setKaraokeNotices(old=>old[id]?.state==='waiting'?{...old,[id]:{...old[id],state,track:track??old[id].track}}:old)},[confirmRowReady,setKaraokeNotices]);
  useKaraokeWatch(karaokeNotices,trackPage?route.id:null,telegram.getToken,updateKaraoke);
  const karaokeReady=Object.values(karaokeNotices).filter(s=>s?.state==='ready'&&s.track?.providerTrackId!==(trackPage?route.id:null));
  function toggleLyricsSubscription(t:LiveTrack){setLyricsSubscriptions(old=>{if(old[t.providerTrackId]){const next={...old};delete next[t.providerTrackId];return next}return {...old,[t.providerTrackId]:{track:t,state:'waiting'}}})}
@@ -102,7 +112,29 @@ export function App(){
   }catch{if(location.hash!==hash)return}
   if(t.artist)navigate('artist',t.artist);
  }
- function row(t:LiveTrack){const prior=cache[t.providerTrackId];const known=prior?.pairOperationId;const track=toTrack({...t,pairOperationId:t.readyObserved?t.pairOperationId:t.pairOperationId??known??null,providerLyricsFormat:t.providerLyricsFormat??prior?.providerLyricsFormat,lyricsFormat:t.readyObserved&&!t.pairOperationId?undefined:t.lyricsFormat!==undefined?t.lyricsFormat:(!t.pairOperationId||t.pairOperationId===known?prior?.lyricsFormat:undefined)});return <TrackRow key={track.id} track={track} showLyricsAvailability={route.page==='search'||(route.page==='artist'&&artistTab==='popular')} liked={favorites.includes(track.id)} onTrack={()=>open(t)} onOriginal={!track.ready?()=>{remember([t]);original.toggle(t)}:undefined} originalPlaying={original.track?.providerTrackId===track.id&&(original.playing||original.waiting)} onArtist={credit=>void openArtist(t,credit)} onShare={()=>shareTrack(track)} onLike={()=>{remember([t]);like(track.id)}}/>}
+ async function queueFromRow(t:LiveTrack){
+  const id=t.providerTrackId;
+  if(!api||!isTrackId(id)||t.pairOperationId||t.providerLyricsFormat!=='LRC'||queueLocks.current.has(id)||karaokeNotices[id]?.state==='waiting')return;
+  queueLocks.current.add(id);setQueueBusy(old=>({...old,[id]:true}));setQueueErrors(old=>({...old,[id]:''}));
+  const signal=AbortSignal.timeout(25000);
+  try{
+   const telegramToken=telegram.getToken();const token=telegramToken??(await api.auth(signal)).accessToken;
+   let next=normalizeJob(await api.status(id,token,signal));
+   let track=t;
+   if(next.state==='none'||(next.state==='failed'&&next.retryable)){
+    if(!track.durationMs){const meta=await api.metadata(id,token,signal);if(meta?.providerTrackId!==id)throw Error(trUi('Некорректные метаданные песни'));const hint=providerLyricsHint(meta);if(hint==='NONE'){remember([{...track,providerLyricsFormat:'NONE'}]);throw Error(trUi('Текст отсутствует'))}track={...track,durationMs:meta.durationMs,title:meta.title,artist:meta.artist};}
+    if(telegramToken!==null&&telegram.getToken()!==token)throw Error(trUi('Войдите через Telegram снова'));
+    next=normalizeJob(await api.enqueue(track,token,signal));
+   }
+   if(next.state==='queued'||next.state==='running'){watchKaraoke(track);return}
+   if(next.state==='ready'&&validPairId(next.pairOperationId)){confirmRowReady({...track,pairOperationId:next.pairOperationId,lyricsFormat:next.lyricsFormat,readyObserved:true});return}
+   throw Error(trUi('Не удалось добавить в очередь. Попробуйте ещё раз.'));
+  }catch(e){
+   if(e instanceof Error&&'status' in e&&e.status===401){api.invalidateAuth();if(telegram.getToken())telegram.logout()}
+   setQueueErrors(old=>({...old,[id]:e instanceof Error&&e.message===trUi('Текст отсутствует')?e.message:trUi('Не удалось добавить в очередь. Попробуйте ещё раз.')}));
+  }finally{queueLocks.current.delete(id);setQueueBusy(old=>{const next={...old};delete next[id];return next})}
+ }
+ function row(t:LiveTrack){t=verifiedRows.current.get(t)??t;const prior=cache[t.providerTrackId];const known=prior?.pairOperationId;const displayed={...t,pairOperationId:t.readyObserved?t.pairOperationId:t.pairOperationId??known??null,providerLyricsFormat:t.providerLyricsFormat??prior?.providerLyricsFormat,lyricsFormat:t.readyObserved&&!t.pairOperationId?undefined:t.lyricsFormat!==undefined?t.lyricsFormat:(!t.pairOperationId||t.pairOperationId===known?prior?.lyricsFormat:undefined)};const track=toTrack(displayed);return <TrackRow key={track.id} track={track} queueState={queueBusy[track.id]?'sending':karaokeNotices[track.id]?.state==='waiting'?'queued':undefined} queueError={queueErrors[track.id]} onCreateKaraoke={()=>void queueFromRow(displayed)} showLyricsAvailability={route.page==='search'||(route.page==='artist'&&artistTab==='popular')} liked={favorites.includes(track.id)} onTrack={()=>open(displayed)} onOriginal={!track.ready?()=>{remember([t]);original.toggle(t)}:undefined} originalPlaying={original.track?.providerTrackId===track.id&&(original.playing||original.waiting)} onArtist={credit=>void openArtist(t,credit)} onShare={()=>shareTrack(track)} onLike={()=>{remember([t]);like(track.id)}}/>}
  function rows(ids:string[]){return ids.map(id=>cache[id]?row(cache[id]):<button key={id} className="secondary" onClick={()=>navigate('track',id)}>{trUi("Открыть песню ")}{id}</button>)}
  const savedPlaylists=favoritePlaylists.flatMap(id=>playlists.filter(p=>p.id===id)),collection=playlists.find(p=>p.id===route.id);
  function playlistHeart(p:Playlist){const liked=favoritePlaylists.includes(p.id);return <button type="button" className={'icon-button playlist-heart'+(liked?' active':'')} aria-label={(liked?trUi('Убрать плейлист из любимого: '):trUi('Добавить плейлист в любимое: '))+p.name} aria-pressed={liked} onClick={()=>setFavoritePlaylists(old=>toggleFavoritePlaylist(old,p.id))}><Heart size={20} fill={liked?'currentColor':'none'}/></button>}
