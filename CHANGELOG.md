@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.12
+- Label unprepared songs with timed lyrics as «Создать караоке» in track lists.
+
 ## 0.5.11
 - Optionally share the current song timestamp, independently of mixer, pitch and playback speed.
 

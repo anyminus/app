@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';import {mockApi} from './fixture';
 test('popular pages preserve provider order, deduplicate and retry without clearing',async({page})=>{
  await mockApi(page);let retries=0;
- const song=(id:string)=>({providerTrackId:id,title:'Popular '+id,artist:'Artist',durationMs:180000,coverUrl:null});
+ const song=(id:string)=>({providerTrackId:id,title:'Popular '+id,artist:'Artist',durationMs:180000,coverUrl:null,providerLyricsFormat:'LRC'});
  await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,async r=>{
   const q=new URL(r.request().url()).searchParams;
   if(q.has('cursor')){
@@ -13,7 +13,7 @@ test('popular pages preserve provider order, deduplicate and retry without clear
   return r.fulfill({json:{artistId:'42',name:'Artist',items:[song('9'),song('2')],nextCursor:'20'},headers:{'Access-Control-Allow-Origin':'*'}});
  });
  await page.goto('/#/artist/Artist');await page.getByRole('button',{name:'Популярные песни'}).click();
- await expect(page.locator('.track-row .track-title')).toHaveText(['Popular 9','Popular 2']);
+ await expect(page.locator('.track-row .track-title')).toHaveText(['Popular 9','Popular 2']);await expect(page.locator('.track-row').getByText('Создать караоке',{exact:true})).toHaveCount(2);
  await page.getByRole('button',{name:'Загрузить ещё'}).click();await expect(page.getByRole('button',{name:'Повторить запрос'})).toBeVisible();
  await expect(page.locator('.track-row .track-title')).toHaveText(['Popular 9','Popular 2']);
  await page.getByRole('button',{name:'Повторить запрос'}).click();await expect(page.locator('.track-row .track-title')).toHaveText(['Popular 9','Popular 2','Popular 3']);
