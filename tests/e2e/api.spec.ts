@@ -14,7 +14,8 @@ test('unknown readiness never offers creation until a successful status response
  await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByRole('button',{name:'Повторить загрузку'})).toBeVisible();await expect(page.getByRole('button',{name:'Создать караоке'})).toHaveCount(0);expect(api.enqueued).toBe(0);
 });
 test('search marks freshly confirmed ready tracks and opens them without a status roundtrip',async({page})=>{
- const api=await mockApi(page);await page.goto('/');await expect(page.getByText('Текст с таймкодами',{exact:true}).first()).toBeVisible();
+ const api=await mockApi(page);
+ await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'103',title:'Test song three',artist:'Other artist',durationMs:8000,lyricsFormat:'LRC',karaokeStatus:{state:'ready',pairOperationId:'00000000-0000-4000-8000-000000000001'}}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));await page.goto('/');await expect(page.getByText('Текст с таймкодами',{exact:true}).first()).toBeVisible();
  await page.getByRole('navigation').getByRole('button',{name:'Поиск',exact:true}).click();await page.getByRole('textbox',{name:'Поиск песни'}).fill('Other artist');const row=page.locator('.track-row').filter({has:page.getByRole('button',{name:'Test song three',exact:true})});await expect(row.getByText('Текст с таймкодами')).toBeVisible();
  await row.getByRole('button',{name:'Test song three',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.requests.filter(p=>p==='/demo/karaoke/status')).toHaveLength(0);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
 });
