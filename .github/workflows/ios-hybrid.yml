@@ -16,12 +16,13 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm test
+      - run: pod --version
       - run: npm run ios:prepare
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
           VITE_TELEGRAM_MINI_APP_URL: ${{ vars.TELEGRAM_MINI_APP_URL }}
       - run: |
-          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO MARKETING_VERSION=0.1.1 CURRENT_PROJECT_VERSION=${{ github.run_number }} -derivedDataPath ios-build build
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO MARKETING_VERSION=0.1.1 CURRENT_PROJECT_VERSION=${{ github.run_number }} -derivedDataPath ios-build build
       - uses: actions/upload-artifact@v4
         with:
           name: AnyMinus-iOS-simulator

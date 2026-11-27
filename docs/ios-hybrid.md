@@ -12,7 +12,7 @@ npm install
 npm run ios:prepare
 npx cap open ios
 ```
-The generated ios/ directory is intentionally ignored. prepare-ios.sh runs Capacitor CLI using Swift Package Manager, synchronizes assets and patches native entrypoint, storyboard and permission strings. Repeatable on a generated project; do not store manual changes there. Native sources live in ios-lab/ and ios-hybrid/. CI builds simulator and uploads the app; it does not sign an IPA.
+The generated ios/ directory is intentionally ignored. prepare-ios.sh runs Capacitor CLI using CocoaPods, synchronizes assets and patches native entrypoint, storyboard and permission strings. Repeatable on a generated project; do not store manual changes there. Native sources live in ios-lab/ and ios-hybrid/. CI builds simulator and uploads the app; it does not sign an IPA.
 TestFlight: select Apple Developer Team, confirm a unique App ID, marketing/build version, app icon and privacy disclosures, archive with a currently accepted Xcode SDK and upload via Xcode/App Store Connect. No signing credentials in Git. Bundle ID com.anyminus.app is provisional until account confirms it.
 
 ## Required device verification
@@ -21,3 +21,5 @@ TestFlight: select Apple Developer Team, confirm a unique App ID, marketing/buil
 - Repeat speaker, headphones, CarPlay while stationary. Check interruption/background behavior, app exit, cancellation and repeated recordings. Compare sync against reference; no claim of sample-accurate synchronization.
 - Validate web fallback and no native button in standard browser. Verify production Pages deployment remains main-only.
 - Before production: full native dual-stem mixer and shared transport, pitch/time-stretch, lyric overlay, compensation, lifecycle and storage cleanup, localization, signing, App Store review rights/privacy. Native auth including Telegram is not validated.
+
+CI 46052585239 failed because Capacitor sync expected a Podfile after SPM generation. Use the standard CocoaPods template and build the generated App.xcworkspace. Requires CocoaPods on macOS; regenerate any previously generated SPM project after saving local changes. No production Pages changes.

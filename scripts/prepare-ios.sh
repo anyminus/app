@@ -3,7 +3,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 test -f dist/index.html
 if [[ ! -d ios/App/App.xcodeproj ]]; then
-  npx cap add ios --packagemanager SPM
+  npx cap add ios
+fi
+if [[ ! -f ios/App/Podfile ]]; then
+  echo 'Generated iOS project uses unsupported SPM layout; remove the generated ios/ directory and rerun ios:prepare.' >&2
+  exit 1
 fi
 npx cap sync ios
 python3 - <<'PY'
