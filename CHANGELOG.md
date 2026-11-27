@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.36
+- Register system previous/next actions as ten-second seeks in the current karaoke track; retain absolute and relative seek handlers, refresh native playback position on visibility changes and page restoration.
+
 ## 0.5.35
 - Reduce normal canvas lyric center spacing by 40% while maintaining safe clearance for wrapped lines and preserving the fading drum, lower anchor, font sizes and watermark.
 

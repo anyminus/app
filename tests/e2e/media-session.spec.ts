@@ -14,6 +14,11 @@ test('system media controls publish metadata, seek both stems, pause, resume and
  await action('seekto',{seekTime:4});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('4');await expect.poll(async()=>(await state()).position.position).toBe(4);
  await action('seekbackward',{seekOffset:2});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('2');
  await action('seekforward',{seekOffset:1});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('3');
+ await action('previoustrack');await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('0');
+ await action('nexttrack');await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('8');
+ await expect.poll(async()=>(await state()).position.position).toBe(8);
+ await action('seekto',{seekTime:3,fastSeek:true});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('3');
+ await page.evaluate(()=>{(window as any).__systemMedia.session.position=null;document.dispatchEvent(new Event('visibilitychange'))});await expect.poll(async()=>(await state()).position?.position).toBe(3);
  await action('play');await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect.poll(async()=>(await state()).playback).toBe('playing');
  await action('seekto',{seekTime:5});await expect.poll(async()=>Number(await page.getByRole('slider',{name:'Позиция песни'}).inputValue())).toBeGreaterThanOrEqual(5);
  await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('navigation')).toBeVisible();await expect.poll(async()=>(await state()).actions).toEqual([]);expect((await state()).playback).toBe('none');expect((await state()).title).toBeUndefined();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
