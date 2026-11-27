@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.53
+- Render a usable song placeholder immediately for cold shared links, keep it on metadata errors, add a 30-second overall lookup deadline and a 4-second ready-catalog scan limit before direct metadata fallback.
+
 ## 0.5.52
 - Always record the composited canvas with song title, artist and AnyMinus watermark, including plain/missing lyrics and when timed lyrics are disabled. Do not silently export raw unbranded video.
 

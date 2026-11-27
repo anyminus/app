@@ -55,7 +55,14 @@ function transient(e:unknown){return e instanceof ApiError&&(e.status===0||e.sta
 function delay(ms:number,signal:AbortSignal){return new Promise<void>((resolve,reject)=>{if(signal.aborted){reject(signal.reason);return}const abort=()=>{clearTimeout(timer);reject(signal.reason)};const timer=window.setTimeout(()=>{signal.removeEventListener('abort',abort);resolve()},ms);signal.addEventListener('abort',abort,{once:true})})}
 async function retryRead<T>(read:()=>Promise<T>,signal:AbortSignal):Promise<T>{try{return await read()}catch(e){if(signal.aborted||!transient(e))throw e;await delay(700,signal);return read()}}
 // Bounded public catalog lookup: never request every page without a limit.
-async function findCatalogTrack(id:string,signal:AbortSignal,maxPages=8):Promise<LiveTrack|undefined>{
+async function findCatalogTrack(id:string,parent:AbortSignal,maxPages=8):Promise<LiveTrack|undefined>{
+ // Prefer ready receipts, but don't let pagination on slow mobile networks
+ // block direct provider metadata. Keep cancellation local to this scan.
+ const c=new AbortController(),signal=c.signal;
+ const abort=()=>c.abort(parent.reason);
+ parent.addEventListener('abort',abort,{once:true});if(parent.aborted)abort();
+ const timeout=window.setTimeout(()=>c.abort(new Error('Catalog lookup deadline')),4000);
+ try{
  let cursor:string|null=null;const seen=new Set<string>();
  for(let i=0;i<maxPages;i++){
   if(signal.aborted)throw signal.reason;
@@ -66,6 +73,7 @@ async function findCatalogTrack(id:string,signal:AbortSignal,maxPages=8):Promise
   if(typeof next!=='string'||!/^\d{1,20}$/.test(next)||seen.has(next))break;
   seen.add(next);cursor=next;
  }
+ }finally{clearTimeout(timeout);parent.removeEventListener('abort',abort)}
 }
 async function providerMetadata(id:string,signal:AbortSignal):Promise<LiveTrack>{
  const auth=await api.auth(signal);

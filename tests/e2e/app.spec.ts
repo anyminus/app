@@ -79,3 +79,22 @@ test('share time is separately optional and opens both stems at the captured sou
  await page.getByRole('button',{name:'Пауза',exact:true}).click();expect(Number(await slider.inputValue())).toBeLessThan(8);
  await page.evaluate(()=>{location.hash='#/track/101?t=900'});await expect(page.getByRole('heading',{name:'Выбрать другую песню исполнителя'})).toBeVisible();await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeVisible();
 });
+
+test('cold shared link immediately shows a song card and falls back from stalled catalog',async({page})=>{
+ const api=await mockApi(page);let release!:()=>void;const wait=new Promise<void>(resolve=>{release=resolve});
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,async route=>{await wait;await route.fulfill({json:{items:[],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}).catch(()=>{})});
+ await page.goto('/#/track/101');
+ try{
+ const card=page.getByRole('region',{name:'Информация о песне'});await expect(card).toBeVisible();await expect(card.getByText('ID: 101')).toBeVisible();await expect(card.locator('.artwork')).toBeVisible();await expect(card.getByRole('status')).toContainText('Загрузка песни');await expect(page.getByRole('button',{name:'Создать караоке'})).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'Test song one',exact:true})).toBeVisible({timeout:15000});await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:15000});expect(api.enqueued).toBe(0);
+ }finally{release()}
+});
+test('missing metadata keeps a usable card and retries without inventing title or readiness',async({page})=>{
+ const api=await mockApi(page);let attempts=0;
+ const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,content-type','Access-Control-Allow-Methods':'GET,OPTIONS'};
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[],nextCursor:null},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/track-metadata\/36016832$/,r=>{if(r.request().method()==='OPTIONS')return r.fulfill({status:204,headers});attempts++;return attempts===1?r.fulfill({status:404,json:{},headers}):r.fulfill({json:{providerTrackId:'36016832',title:'Recovered title',artist:'Recovered artist',durationMs:8000},headers})});
+ await page.route(/^https:\/\/[^/]+\/demo\/karaoke\/status(?:\?|$)/,r=>r.request().method()==='OPTIONS'?r.fulfill({status:204,headers}):r.fulfill({json:{state:'none'},headers}));
+ await page.goto('/#/track/36016832');const card=page.getByRole('region',{name:'Информация о песне'});await expect(card.getByRole('alert')).toBeVisible();await expect(card.getByText('ID: 36016832')).toBeVisible();await expect(card.locator('.artwork')).toBeVisible();await expect(page.getByRole('button',{name:'Создать караоке'})).toHaveCount(0);await card.getByRole('button',{name:'Повторить',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Recovered title',exact:true})).toBeVisible();await expect(card).toHaveCount(0);expect(attempts).toBe(2);expect(api.enqueued).toBe(0);
+});

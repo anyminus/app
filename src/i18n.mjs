@@ -2365,6 +2365,26 @@ const dictionary={
   "This browser cannot record branded video.",
   "Dieser Browser unterstützt keine Videoaufnahme mit Gestaltung.",
   "Este navegador no admite grabar vídeo con diseño."
+ ],
+ "Информация о песне": [
+  "Song information",
+  "Songinformationen",
+  "Información de la canción"
+ ],
+ "Время ожидания песни истекло. Повторите запрос.": [
+  "Song lookup timed out. Please retry.",
+  "Zeitlimit für die Songsuche überschritten. Erneut versuchen.",
+  "Se agotó el tiempo de búsqueda. Inténtalo de nuevo."
+ ],
+ "Информация о песне появится после ответа сервера.": [
+  "Song information will appear when the server responds.",
+  "Songinformationen erscheinen, sobald der Server antwortet.",
+  "La información de la canción aparecerá cuando responda el servidor."
+ ],
+ "Карточка песни отображается даже при медленной сети.": [
+  "Song page remains visible on slow networks.",
+  "Songseite bleibt bei langsamer Verbindung sichtbar.",
+  "La página de la canción se muestra incluso con una conexión lenta."
  ]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}

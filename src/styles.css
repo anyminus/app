@@ -185,3 +185,5 @@ body.karaoke-open .tab-bar{display:none}
 .audio-output-settings{margin:4px 0 12px}.audio-output-settings .setting-row{margin-bottom:4px}.audio-output-settings .metadata{font-size:12px;line-height:1.4;margin:4px 0}.audio-output-settings select{max-width:64%}
 
 .stem-cache-settings{margin:4px 0 12px}.stem-cache-settings .setting-row{margin-bottom:4px}.stem-cache-settings .metadata{font-size:12px;line-height:1.4;margin:4px 0 8px}.stem-cache-settings .secondary{min-height:36px;font-size:13px}.stem-loading .stem-cache-saved{color:var(--accent)}
+
+.track-lookup-card{display:grid;gap:14px;padding-top:8px}.track-lookup-card .detail-title h1{margin:0}.track-lookup-card .metadata{margin:0;line-height:1.45;overflow-wrap:anywhere}.track-lookup-card .secondary{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;width:100%}.track-lookup-card .karaoke-checking{justify-content:flex-start;min-height:34px}
