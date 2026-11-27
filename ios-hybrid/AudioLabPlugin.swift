@@ -3,7 +3,7 @@ import UIKit
 import SwiftUI
 
 class AnyMinusBridgeViewController: CAPBridgeViewController {
-    override open func capacitorDidLoad() {
+    override func capacitorDidLoad() {
         bridge?.registerPluginInstance(AnyMinusAudioLabPlugin())
     }
 }

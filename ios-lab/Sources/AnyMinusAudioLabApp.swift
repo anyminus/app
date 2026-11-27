@@ -11,8 +11,8 @@ struct AnyMinusAudioLabApp: App {
 struct LabView: View {
     @StateObject private var lab: AudioLab
     private let onClose: (() -> Void)?
-    init(lab: AudioLab = AudioLab(), onClose: (() -> Void)? = nil) {
-        _lab = StateObject(wrappedValue: lab)
+    init(lab: AudioLab? = nil, onClose: (() -> Void)? = nil) {
+        _lab = StateObject(wrappedValue: lab ?? AudioLab())
         self.onClose = onClose
     }
     @State private var importing = false
