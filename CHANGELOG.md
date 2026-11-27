@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.22
+- Add song title, artist and AnyMinus watermark to composited video using a versioned declarative style template.
+- Handle timeline Home/End explicitly during playback and recording; retain seek regression coverage.
+
 ## 0.5.21
 - Gate video karaoke by actual browser capabilities; prefer WebM on Android, fall back to basic camera constraints and allow raw recording when lyric composition is unavailable.
 

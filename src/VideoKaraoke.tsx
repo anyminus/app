@@ -4,7 +4,7 @@ import {RemoteAudio,playbackSession} from './RemoteAudio';
 import {drawKaraokeFrame,overlaySupported,type TimedLine} from './videoOverlay';
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
 export type VideoTransport={toggle:()=>void};
-type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];playing:boolean;title:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
+type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];playing:boolean;title:string;artist:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
 const mp4=['video/mp4','video/mp4;codecs=avc1.42E01E,mp4a.40.2'];
 const webm=['video/webm;codecs=vp8,opus','video/webm'];
 // Feature detection, not a phone model or OS allowlist.
@@ -45,7 +45,7 @@ export function VideoKaraoke(props:Props){
  useEffect(()=>{
   if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing'))return;
   let raf=0,last=-Infinity;
-  function tick(now:number){if(now-last>=1000/24-2){last=now;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{drawKaraokeFrame(cv,vid,p.lyrics,p.audio.current?.position??0);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
+  function tick(now:number){if(now-last>=1000/24-2){last=now;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{drawKaraokeFrame(cv,vid,p.lyrics,p.audio.current?.position??0,{title:p.title,artist:p.artist});}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
   raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
  },[showOverlay,phase]);
  useEffect(()=>{const hidden=()=>{if(!document.hidden)return;if(recorder.current?.state==='recording')finish('Запись остановлена: приложение свернули.');else if(camera.current){cancel();setError('Камера отключена: приложение свернули.');}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);
@@ -75,13 +75,13 @@ export function VideoKaraoke(props:Props){
     if(!cv||!vid)throw Error('Предпросмотр камеры недоступен.');
     // Permission resolution is not proof that a decoded camera frame exists.
     const deadline=performance.now()+2500;
-    while(!drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0)){
+    while(!drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist})){
      if(!mounted.current||generation.current!==id||camera.current!==source)return;
      if(performance.now()>=deadline)throw Error('Камера не передала первый кадр. Повторите запуск записи.');
      await new Promise<void>(resolve=>window.setTimeout(resolve,50));
     }
     if(!mounted.current||generation.current!==id||camera.current!==source)return;
-    try{canvasStream.current=cv.captureStream(24);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0);}
+    try{canvasStream.current=cv.captureStream(24);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist});}
     catch{releaseCanvas();setOverlayFailed(true);setIncludeLyrics(false);throw Error('Наложение текста недоступно в этом браузере. Можно записать видео без текста.');}
     for(const track of videoTracks)track.addEventListener('ended',()=>{if(mounted.current&&recorder.current?.state==='recording')finish('Видеопоток с текстом прерван.');},{once:true});
    }

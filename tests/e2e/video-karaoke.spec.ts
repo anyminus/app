@@ -93,9 +93,11 @@ test('timed lyrics are drawn into the captured video canvas and follow a seek',a
  await page.getByRole('button',{name:/Записать видео/}).click();
  const checkbox=page.getByRole('checkbox',{name:'Текст на видео'});await expect(checkbox).toBeChecked();
  await checkbox.uncheck();await expect(page.locator('canvas.video-overlay')).not.toHaveClass(/visible/);await checkbox.check();
- await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toContain('Alpha');
+ await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toEqual(expect.arrayContaining(['Alpha','Test song one','Test artist','AnyMinus']));
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect.poll(async()=>await page.getByText('● REC',{exact:true}).isVisible()?'recording':(await page.locator('.video-karaoke-error,.karaoke-error').allTextContents()).join(' | ')||'starting',{timeout:10000}).toBe('recording');
  expect(await page.evaluate(()=>Reflect.get(window,'__recordedCanvas'))).toBe(true);
+ await page.evaluate(()=>{(Reflect.get(window,'__overlayText') as string[]).length=0;});
+ await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toEqual(expect.arrayContaining(['Test song one','Test artist','AnyMinus']));
  await page.getByRole('button',{name:'Bravo',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toContain('Charlie');
  await page.waitForTimeout(600);await page.getByRole('button',{name:'Остановить',exact:true}).click();const save=page.getByRole('link',{name:'Сохранить видео'});await expect(save).toBeVisible();
