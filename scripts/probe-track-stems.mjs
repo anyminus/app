@@ -3,6 +3,7 @@ const origin='https://anyminus.github.io';
 const api=new URL(process.env.VITE_DEMO_API_ORIGIN||'https://anyminus-demo-search-dev.demo-search.workers.dev');
 if(api.protocol!=='https:'||api.href!==api.origin+'/')throw Error('Bad API origin');
 const id='108591168';
+let ticketSuccess=0;
 async function call(path,opts={}){
  const start=Date.now(),headers={Origin:origin,...(opts.headers||{})};
  try{const r=await fetch(new URL(path,api),{method:opts.method||'GET',headers,body:opts.body,redirect:'error',signal:AbortSignal.timeout(15000)});
@@ -43,8 +44,11 @@ for(const authenticated of [false,true]){
   const path=playback.data?.[role];
   if(path!==('/demo/catalog/media/'+playback.data?.pairOperationId+'/'+role))continue;
   if(cookie)await call(path,{headers:{Cookie:cookie,Range:'bytes=0-1023'}});
-  if(typeof ticket==='string')await call(path,{headers:{'X-AnyMinus-Media-Ticket':ticket,Range:'bytes=0-1023'}});
+  if(typeof ticket==='string'){const result=await call(path,{headers:{'X-AnyMinus-Media-Ticket':ticket,Range:'bytes=0-1023'}});if(result.status===206)ticketSuccess++;}
   else console.log('Server has not returned the new ticket yet');
  }
  break;
 }
+
+console.log('Cookie-free range requests passed:',ticketSuccess,'of 2');
+if(ticketSuccess!==2)process.exitCode=1;
