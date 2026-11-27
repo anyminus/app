@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.12
+- Shuffle the entire ready catalog on the home page on each reload using the existing server-side seeded order; reuse the seed across pagination and prevent duplicate results.
+
 ## 0.4.11
 - Use one status per ready karaoke row; keep only «Караоке готово» for timed tracks and preserve plain/missing labels. Provider-format labels remain on uncreated songs.
 

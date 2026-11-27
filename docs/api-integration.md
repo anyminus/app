@@ -35,3 +35,6 @@ For an already-ready karaoke with verified `lyricsFormat: NONE`, render only «�
 
 ## 0.4.11 — single status on ready tracks
 Every already-ready karaoke shows exactly one stored readiness label: LRC or unspecified => «Караоке готово», TEXT => «Текст без таймкодов», NONE => «Караоке без текста». Do not add the provider-format label to any ready row, including popular/search lists. For tracks not yet created, preserve the provider-format or unknown label. Shared TrackRow regression verifies single timed and missing labels. No API changes.
+
+## 0.4.12 — home catalog shuffle
+Home uses a fresh random UUID seed for a new catalog traversal (including every browser reload). GET /demo/catalog?limit=100&seed=... sends it from the first page and keeps it for every continuation cursor. Existing core migration 0041 merges and deduplicates all ready demo/production rows before sorting by md5(seed||provider_track_id), so shuffle covers the full selection, not each page. Preserve server order, append distinct track IDs, stop repeated cursors and prevent concurrent pagination. New traversal on retry or returning to home. Artist and direct-track lookup remain unseeded; provider popularity/search unaffected. No database change. Browser regression verifies seed renewal and continuation with the same seed.

@@ -23,6 +23,7 @@ export function createDemoApi(origin,fetcher=fetch){
  artistPopular:(name,signal,artistId=undefined,cursor=undefined)=>{const text=name.trim();if(!text||text.length>200)throw Error('Некорректное имя артиста');if((artistId!==undefined&&!/^\d{1,20}$/.test(artistId))||(cursor!==undefined&&(!/^(20|40|60|80)$/.test(cursor)||!artistId)))throw Error('Некорректная страница артиста');return call('/demo/artists/popular',{query:artistId===undefined?{name:text}:{artistId,cursor},signal})},
  /** @param {string[]} ids @param {AbortSignal} [signal] */
  trackArtists:(ids,signal)=>{if(!ids.length||ids.length>20||ids.some(id=>!/^\d{1,20}$/.test(id)))throw Error('Некорректные ID песен');return call('/demo/track-artists',{query:{ids:ids.join(',')},signal})},
+ /** @param {string|null} cursor @param {AbortSignal} [signal] @param {string} [seed] */
  catalog:(cursor,signal,seed=undefined)=>call('/demo/catalog',{query:{limit:100,cursor,seed},signal}),
  auth,
  invalidateAuth:()=>{session=null},
