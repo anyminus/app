@@ -60,3 +60,18 @@ test('long intro counts down from the media position, pauses, disappears and ret
  await page.getByRole('button',{name:'First timed line',exact:true}).click();await expect(slider).toHaveValue('15');await expect(timer).toHaveCount(0);await expect(page.getByRole('button',{name:'First timed line'})).toHaveAttribute('aria-current','true');
  await slider.press('Home');await expect(slider).toHaveValue('0');await expect(timer.locator('strong')).toHaveText('0:15');await expect(timer).toBeInViewport();expect(await page.evaluate(()=>window.scrollY)).toBe(0);
 });
+
+test('shared pitch shifter changes actual output frequency without changing duration or downloading stems again',async({page})=>{
+ await page.addInitScript(()=>{const native=AudioNode.prototype.connect;AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(native,this,args);if(args[0]===this.context.destination&&this instanceof GainNode){const analyser=this.context.createAnalyser();analyser.fftSize=8192;Reflect.apply(native,this,[analyser]);Reflect.set(window,'__pitchAnalyser',analyser)}return result} as typeof native;});
+ const api=await mockApi(page);await page.setViewportSize({width:390,height:664});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await page.getByRole('button',{name:'Пауза',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Тональность',exact:true});const plus=panel.getByRole('button',{name:'Повысить тональность'});const minus=panel.getByRole('button',{name:'Понизить тональность'});const value=panel.getByLabel('Тональность в полутонах');const slider=page.getByRole('slider',{name:'Позиция песни'});
+ await expect(value).toHaveText('0');await expect(plus).toBeEnabled();const duration=Number(await slider.getAttribute('max'));await slider.press('Home');
+ await plus.click();await expect(value).toHaveText('+1',{timeout:10000});await plus.click();await expect(value).toHaveText('+2');await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ const frequency=()=>page.evaluate(()=>{const a=Reflect.get(window,'__pitchAnalyser') as AnalyserNode;if(!a)return 0;const bins=new Float32Array(a.frequencyBinCount);a.getFloatFrequencyData(bins);let peak=0;for(let i=1;i<bins.length;i++)if(bins[i]>bins[peak])peak=i;return bins[peak]>-70?peak*a.context.sampleRate/a.fftSize:0});
+ // Fixture contains 440 Hz in both stems, +2 semitones should be about 494 Hz.
+ await expect.poll(async()=>Math.abs(await frequency()-493.883),{timeout:5000}).toBeLessThan(15);
+ await page.getByRole('button',{name:'Пауза',exact:true}).click();await expect(slider).toBeEnabled();expect(Number(await slider.getAttribute('max'))).toBeCloseTo(duration,3);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+ await minus.click();await expect(value).toHaveText('+1');await minus.click();await expect(value).toHaveText('0');
+ for(const size of [{width:320,height:568},{width:667,height:375}]){await page.setViewportSize(size);await expect(panel).toBeInViewport({ratio:.95})}
+});

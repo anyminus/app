@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.1
+- Add a shared +/- semitone control to the right of the mixer using Signalsmith Stretch Web Audio/WASM, preserving original tempo and synchronized lyrics.
+
 ## 0.5.0
 - Receive karaoke-ready hints via one hibernating Cloudflare WebSocket per waiting tab, confirm through the existing status API, reconnect automatically and keep polling fallback.
 
