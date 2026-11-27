@@ -6,7 +6,7 @@ export function trackArtworkUrl(origin,id,provided){
   const expected=new URL('/demo/artwork/'+id,base);
   if(provided===null)return expected.href;
   if(typeof provided==='string'){
-   try{const u=new URL(provided,base);if(u.protocol==='https:'&&!u.username&&!u.password&&!u.hash&&((u.origin===base.origin&&u.pathname===expected.pathname)||(['avatars.yandex.net','avatars.mds.yandex.net'].includes(u.hostname)&&u.pathname.startsWith('/get-music-content/')&&!u.port)))return u.href}catch{}
+   try{const u=new URL(provided,base);if(u.protocol==='https:'&&!u.username&&!u.password&&!u.hash&&((u.origin===base.origin&&u.pathname===expected.pathname)||(['avatars.yandex.net','avatars.mds.yandex.net','avatars-fast.yandex.net'].includes(u.hostname)&&u.pathname.startsWith('/get-music-content/')&&!u.port)))return u.href}catch{}
    return null;
   }
   return expected.href;

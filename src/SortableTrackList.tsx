@@ -12,7 +12,7 @@ function SortableRow({id,children,onArrow,itemLabel}:{id:string;children:ReactNo
  <button type="button" ref={setActivatorNodeRef} className="drag-handle" {...attributes} {...listeners} onKeyDown={e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();onArrow(e.key==='ArrowUp'?-1:1)}}} aria-label={trUi('Переместить ')+title} title={trUi("Перетащите или используйте стрелки вверх и вниз")}><GripVertical size={22}/></button>
  <div className="sortable-content">{children}</div></div>;
 }
-export function SortableTrackList({ids,renderItem,onMove,itemLabel,label={trUi('Изменение порядка песен')}}:Props){
+export function SortableTrackList({ids,renderItem,onMove,itemLabel,label=trUi('Изменение порядка песен')}:Props){
  const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:5}}));
  function end({active,over}:DragEndEvent){if(over&&active.id!==over.id)onMove(String(active.id),String(over.id));}
  return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={end} accessibility={{screenReaderInstructions:{draggable:trUi('Используйте стрелки вверх и вниз на ручке для изменения порядка.')}}}><SortableContext items={ids} strategy={verticalListSortingStrategy}><div className="sortable-list" aria-label={label}>{ids.map((id,i)=><SortableRow key={id} id={id} itemLabel={itemLabel} onArrow={direction=>{const target=ids[i+direction];if(target)onMove(id,target)}}>{renderItem(id)}</SortableRow>)}</div></SortableContext></DndContext>

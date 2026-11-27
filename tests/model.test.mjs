@@ -85,3 +85,5 @@ test('exact search artist suggestion prefers verified individual credits and ded
 
 import {detectLanguage,effectiveLanguage,t} from '../src/i18n.mjs';
 test('locale detection and manual preference',()=>{assert.equal(detectLanguage(['de-AT','ru-RU']),'de');assert.equal(detectLanguage(['cs-CZ','es-MX']),'es');assert.equal(detectLanguage(['ja-JP']),'en');assert.equal(effectiveLanguage('ru',['de-DE']),'ru');assert.equal(effectiveLanguage('auto',['en-GB']),'en');assert.equal(t('Профиль','es'),'Perfil');assert.equal(t(' Профиль ','de'),' Profil ');assert.equal(t('untranslated song title','es'),'untranslated song title');});
+
+test('fast Yandex artwork CDN is accepted by exact hostname only',()=>{const origin='https://api.example.test',url='https://avatars-fast.yandex.net/get-music-content/123/example/200x200';assert.equal(trackArtworkUrl(origin,'123',url),url);assert.equal(trackArtworkUrl(origin,'123',url.replace('yandex.net','yandex.net.evil.example')),null);});

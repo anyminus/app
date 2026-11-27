@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.47
+- Allow the exact fast Yandex artwork CDN host in the client; correct the localization compile syntax in SortableTrackList.
+
 ## 0.5.46
 - Localize interface in Russian, English, German and Spanish; detect device language automatically and persist explicit selection in Profile. Keep song titles, artists and lyrics unchanged.
 

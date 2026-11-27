@@ -205,3 +205,7 @@ Owner requested artist link first when query exactly matches an artist name. Der
 
 ## Interface localization (0.5.46)
 Owner requested multilingual UI, automatic phone/browser language and persistent explicit selection. Initial languages ru/en/de/es, use navigator.languages in order, English fallback, explicit localStorage anyminus:language wins; Auto removes override, languagechange updates automatic mode. Native names in selector, HTML lang updated, no reload or playback restart. Shared i18n.mjs dictionary translates authored UI, accessibility labels and known errors, not provider lyrics, artist names or track titles. Unknown historical release-note translations fall back to a generic localized notice; native system prompts and externally supplied errors are not controlled by app. Existing Playwright suite uses ru-RU explicitly; new tests cover detection, fallback, persistence, and unchanged song metadata. No backend changes. New CI pending.
+
+
+## Artwork fast CDN (0.5.47)
+Production probe in 0.5.45 and 0.5.46 returned `other_yandex_host` for four tracks. Core e28a9a0b92884a52ec93dd355211e9fc8673d799 adds the exact publicly used avatars-fast.yandex.net CDN in both Workers and preserves its validated host. Client accepts the same hostname; malicious lookalikes still rejected. Both Worker deployments and live image probe are required to confirm recovery; actual rejected raw hostname remains unconfirmed. Fix TS1003 in localized SortableTrackList default parameter. No other feature changes. Tests and new deployment pending.
