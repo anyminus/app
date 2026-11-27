@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.44
+- Show real byte progress for both stems and combined download; resume interrupted downloads with verified HTTP ranges, refresh media permissions, pause downloads in background/offline and continue on return.
+
 ## 0.5.43
 - Compact recording sound settings: closely spaced level sliders, compensation directly underneath, current delay beside its label, optional collapsed device diagnostics, taller responsive panel and accurate range progress fills.
 

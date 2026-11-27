@@ -1,4 +1,5 @@
 import type {StretchNode} from 'signalsmith-stretch';
+import {StemDownload,type DownloadProgress} from './stemDownload';
 import {defaultSync,readAudioDiagnostics,resolveDelay,recordingGains,defaultRecordingLevels,type RecordingLevels,type SyncSettings} from './recordingSync';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
 export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session&&session.type!==type)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
@@ -14,12 +15,12 @@ export class RemoteAudio {
  get playing(){return this.running&&this.context?.state==='running';}
  get interrupted(){return this.running&&this.context?.state!=='running';}
  prepare(sessionType='playback'){if(this.context)return;playbackSession(sessionType);const ctx=new AudioContext({latencyHint:'playback'});this.context=ctx;void ctx.resume().catch(()=>{});}
- async load(urls:string[],duration:number,signal:AbortSignal){
-  if(!Number.isFinite(duration)||duration<=0||duration>900)throw Error('Неподдерживаемая длительность');
+ async load(urls:string[],duration:number,signal:AbortSignal,download=new StemDownload(urls),onProgress:(p:DownloadProgress)=>void=()=>{},refresh:()=>Promise<void>=async()=>{}){
+  if(!Number.isFinite(duration)||duration<=0||duration>900||urls.length!==2||!download.matches(urls))throw Error('Неподдерживаемая длительность или дорожки');
   this.prepare();const ctx=this.context!;
-  try{const buffers=await Promise.all(urls.map(async url=>{const res=await fetch(url,{credentials:'include',cache:'no-store',redirect:'error',signal});if(!res.ok||!res.body)throw Error('Дорожки недоступны: проверьте media cookie и CORS');const reader=res.body.getReader();const parts:Uint8Array<ArrayBuffer>[]=[];let total=0;try{while(true){const chunk=await reader.read();if(chunk.done)break;total+=chunk.value.byteLength;if(total>19000000){await reader.cancel();throw Error('Дорожка превышает 19 МБ')}parts.push(new Uint8Array(chunk.value));}}finally{reader.releaseLock();}const bytes=new Uint8Array(total);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}return ctx.decodeAudioData(bytes.buffer);}));
-  if(signal.aborted)throw Error('Отменено');if(buffers.length!==2||buffers.some(b=>Math.abs(b.duration-duration)>1)||Math.abs(buffers[0].duration-buffers[1].duration)>0.1)throw Error('Длительности дорожек не совпадают');
-  this.buffers=buffers;this.duration=Math.min(duration,...buffers.map(b=>b.duration));this.connectGains(ctx);
+  try{const bytes=await download.fetchAll(signal,onProgress,refresh);
+   let buffers:AudioBuffer[];try{buffers=await Promise.all(bytes.map(b=>ctx.decodeAudioData(b.buffer)));if(buffers.some(b=>Math.abs(b.duration-duration)>1)||Math.abs(buffers[0].duration-buffers[1].duration)>0.1)throw Error('Длительности дорожек не совпадают');}catch(e){download.clear();throw e}
+   if(signal.aborted||this.context!==ctx)throw Error('Отменено');this.buffers=buffers;this.duration=Math.min(duration,...buffers.map(b=>b.duration));this.connectGains(ctx);
   }catch(e){this.dispose();throw e;}
  }
  setVolumes(music:number,vocals:number){this.levels=[music,vocals].map(n=>Number.isFinite(n)?Math.max(0,Math.min(100,n)):0);this.gains.forEach((g,i)=>g.gain.setTargetAtTime(this.levels[i]/100,this.context!.currentTime,.015));}
