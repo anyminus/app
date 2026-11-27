@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.9
+- Move the favorite button beside Share in the karaoke transport, keeping Play centered.
+- Snap the last slider step to the actual track duration to show the end screen.
+
 ## 0.5.8
 - Show up to two short release highlights in update notifications using version-matched deployment notes.
 
