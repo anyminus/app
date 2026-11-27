@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.87
+- Promote the iPhone-verified Pico/lploc notes mask to production. Enable by default, provide a compact checkbox in recording preview, retain live detection status, local worker and throttled fallback, and render into the existing recorded canvas. Add default/on-off and real-face capture regression tests. Fix stale 35px artwork blur assertion to match the intended 12px styling. Audio and backend unchanged.
+
 ## 0.5.86
 - Reduce artwork blur from 35px to 12px, overscale from 1.2 to 1.08 and dark/light scrim opacity to .43/.58 for more recognizable artwork. Use 35% accent fill for adjustment buttons (50% while pressed), keep theme text and opaque main play/pause. Update regression assertions.
 

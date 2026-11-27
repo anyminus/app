@@ -359,3 +359,6 @@ Owner requested a more recognizable backdrop, transparent mixer/pitch/tempo pane
 
 ## Single ready-track row caption (0.5.78)
 Owner requested only «Караоке в базе» for stored tracks instead of two status captions. Shared TrackRow non-compact ready branch renders exactly one database status regardless of lyric format. Home compact mode retains previous rule: only plain-text badge, no other ready labels. Uncreated track availability, queue progress, lyric data and playback behavior unchanged. Updated search, artist-ready and queue-completion E2E expectations. No backend changes. CI pending.
+
+## Local musical face mask (0.5.87)
+Promoted from `prototype/face-masks` after owner iPhone verification. Default enabled on component mount; the user may uncheck it in video preview, with the selection retained while the component remains mounted. Frames are never uploaded. Worker only starts in active video capture; disabling or leaving capture disposes it. Worker performs classic decision-tree detection on downsampled frames; local throttled fallback if needed. Notes are rendered into the existing recording canvas, independent of lyrics. Audio graph and backend unchanged. See [face mask design and acceptance](face-mask-prototype.md).

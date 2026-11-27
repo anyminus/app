@@ -35,3 +35,6 @@ Provider-ranked artist songs use explicit 20-track continuation where available.
 
 ### GitHub Pages: тестовые ветки
 Рабочая версия всегда в корне /app/. [Публикация прототипов в отдельных каталогах](docs/pages-previews.md).
+
+### Маска в видеокараоке (0.5.87)
+Музыкальные ноты поверх глаз включены по умолчанию, отключаются галочкой перед записью. [Детекция, приватность и критерии проверки](docs/face-mask-prototype.md).

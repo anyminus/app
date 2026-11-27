@@ -28,13 +28,14 @@ const labelsByCanvas=new WeakMap<HTMLCanvasElement,Map<string,string>>();
 function cached<K,V>(cache:Map<K,V>,key:K,compute:()=>V){const hit=cache.get(key);if(hit!==undefined)return hit;const value=compute();if(cache.size>=256){const first=cache.keys().next();if(!first.done)cache.delete(first.value);}cache.set(key,value);return value;}
 export function resetVideoMotion(canvas:HTMLCanvasElement|null){if(canvas){motionByCanvas.delete(canvas);layoutsByCanvas.delete(canvas);labelsByCanvas.delete(canvas);}}
 function blendColor(a:string,b:string,t:number){if(!/^#[0-9a-f]{6}$/i.test(a)||!/^#[0-9a-f]{6}$/i.test(b))return t<.5?a:b;const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return 'rgb('+[16,8,0].map(shift=>Math.round(((x>>shift)&255)*(1-t)+((y>>shift)&255)*t)).join(',')+')';}
-export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement,lines:readonly TimedLine[],seconds:number,metadata:VideoMetadata,template:VideoTemplate=classicVideoTemplate,revision=0,now=performance.now(),animate=true,rate=1){
+export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement,lines:readonly TimedLine[],seconds:number,metadata:VideoMetadata,template:VideoTemplate=classicVideoTemplate,revision=0,now=performance.now(),animate=true,rate=1,mask?:(ctx:CanvasRenderingContext2D,video:HTMLVideoElement,w:number,h:number,now:number)=>void){
  if(video.readyState<2||!video.videoWidth||!video.videoHeight)return false;
  const scale=Math.min(1,1280/Math.max(video.videoWidth,video.videoHeight));
  const w=Math.max(2,Math.round(video.videoWidth*scale/2)*2),h=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;resetVideoMotion(canvas);}
  const context=canvas.getContext('2d');if(!context)return false;const ctx:CanvasRenderingContext2D=context;
  ctx.drawImage(video,0,0,w,h);
+ mask?.(ctx,video,w,h,now);
  let index=-1;for(let i=0;i<lines.length&&lines[i].startMs<=seconds*1000;i++)index=i;
  let motion=motionByCanvas.get(canvas);
  const duration=Math.max(0,template.lyrics.transitionMs);
