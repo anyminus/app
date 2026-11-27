@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Compact recording controls (0.5.85)
+The existing recorder remains mounted above lyrics. A responsive two-column control grid beside the aspect-ratio-preserving thumbnail places Start and Sound settings on the first row, options and Cancel below, and guidance on its own full-width row. Recording/finishing and result controls also reuse available width. Recording settings use paired music/voice and effects sliders, a full-width delay selector and collapsed diagnostics; settings scroll internally at max 42dvh (32dvh short landscape). Existing callbacks, recorder graph, privacy, synchronization and optional mask behavior are unchanged. Browser regression checks adjacent controls and compact geometry at 320/390px, paired sliders and accessible compensation.
+
 ## Subdued artwork controls and recording icon (0.5.84)
 Supersedes the opaque artwork-mode accent fill: `.karaoke-cover-background-on` adjustment buttons use 45% accent mixed with transparency, theme `--text` glyphs, and 60% fill while pressed. The main transport button remains opaque; ordinary mode remains unchanged. The recording trigger uses two grid columns (22px camera and min-content localized label), no beta marker, and the existing 40px minimum height. Recording handlers and playback are unchanged. Browser regression covers alpha, glyph color, icon dimensions, absence of beta, wrapping and ordinary-mode restoration.
 

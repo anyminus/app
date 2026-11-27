@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.85
+- Compact recording preview, active controls and result actions into two columns beside the camera thumbnail. Keep existing labels, toggles, recording state and export behavior. Group recording levels and voice effects in two-column grids, keep compensation full width and diagnostics collapsed; cap settings height for lyrics. Extend mobile geometry regression at 320/390px.
+
 ## 0.5.84
 - Soften the four pitch/tempo buttons in artwork-background mode with a 45% accent fill and theme text color (60% fill while pressed). Normal-mode controls unchanged. Remove beta marker from the recording trigger, enlarge camera from 16px to 22px, keep its compact two-line label. Update header and palette regression assertions.
 
