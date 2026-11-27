@@ -21,3 +21,6 @@ Optional `lyricsFormat: TEXT | LRC` on verified ready catalog and ready artist p
 
 ## 0.4.6 missing lyrics
 `lyricsFormat: NONE` explicitly means no current stored/published text (confirmed absent or terminal failed with no registered lyrics object). Ready rows show «Караоке без текста» in pale red. Pending, unknown, or transport failure is not NONE. Verified TEXT or LRC replaces NONE when available. No playback or retry behavior changed. Backend additive 0046. The absence sentinel is not a claim about permanent provider availability.
+
+## 0.4.7 song detail
+The ready label is shared between list rows and the song/player heading. A new request shows normal audio creation progress plus neutral lyrics-format checking; a verified ready status from the create/poll API supplies `lyricsFormat` and the player immediately shows the corresponding color/label. Actual stored lyrics may refine it, temporary HTTP failures never switch to NONE. No additional provider query, enqueue or playback changes. Unknown ready format keeps generic readiness.

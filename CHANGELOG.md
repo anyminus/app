@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.7
+- Show the same three colored lyrics availability labels on the song/player page after create and ready polling, with neutral lyrics checking during creation.
+
 ## 0.4.6
 - Ready karaoke without stored text gets the pale-red «Караоке без текста» status; distinguish terminal missing text from pending/unknown. Preserve playback and upgrade status when lyrics arrive.
 
