@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.1
+- Temporarily restore explicit guest karaoke creation using the signed anonymous demo session, while preserving optional Telegram login. Updated guest admission tests. Re-enable mandatory login only after live acceptance and owner approval.
+
 ## 0.4.0
 - Add Telegram browser OIDC authorization-code/PKCE login, retaining signed Mini App authentication. Restore the selected song/profile after redirect, reject mismatched state, keep access tokens in memory. Server configuration and live deployment required.
 

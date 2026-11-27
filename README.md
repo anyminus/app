@@ -17,3 +17,6 @@ npm run storybook
 ```
 
 https://anyminus.github.io/app/ · https://anyminus.github.io/app/storybook/
+
+### Temporary DEV creation policy (0.4.1)
+Telegram login remains optional while real-browser acceptance is pending. Explicit creation uses a server-issued signed demo session for guests or the verified Telegram session when available. No creation on navigation or login. The server flag and frontend gate must be enabled together only after owner approval.

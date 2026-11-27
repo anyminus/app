@@ -43,7 +43,7 @@ test('unknown search readiness retains status check on selection and does not cr
  await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,route=>route.fulfill({json:{items:[{providerTrackId:'102',title:'Unknown song',artist:'Artist',durationMs:8000,karaokeStatus:{state:'unknown'}}]},headers:{'Access-Control-Allow-Origin':'*'}}));
  await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Unknown');await expect(page.getByRole('button',{name:'Unknown song',exact:true})).toBeVisible();
  await expect(page.getByText('Караоке готово',{exact:true})).toHaveCount(0);expect(api.enqueued).toBe(0);
- await page.getByRole('button',{name:'Unknown song',exact:true}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();await expect(page.getByRole('button',{name:'Создать караоке'})).toHaveCount(0);expect(api.requests.filter(p=>p==='/demo/karaoke/status')).toHaveLength(1);expect(api.enqueued).toBe(0);
+ await page.getByRole('button',{name:'Unknown song',exact:true}).click();await expect(page.getByRole('button',{name:'Создать караоке'})).toBeVisible();expect(api.requests.filter(p=>p==='/demo/karaoke/status')).toHaveLength(1);expect(api.enqueued).toBe(0);
 });
 
 test('artist pages find ready songs beyond the first catalog page and include collaborations',async({page})=>{
@@ -104,17 +104,16 @@ test('pending 503 explicitly says lyrics absent from database',async({page})=>{
  await page.goto('/#/track/101');await expect(page.getByText('Текст отсутствует в базе',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Подписаться на обновление'})).toBeVisible();
 });
 
-test('guest creation is replaced by Telegram login and profile offers the same login',async({page})=>{
- const api=await mockApi(page);await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song two');await page.getByRole('button',{name:'Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();await expect(page.getByRole('button',{name:'Создать караоке'})).toHaveCount(0);
- await page.getByRole('navigation').getByRole('button',{name:'Профиль'}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();expect(api.enqueued).toBe(0);
+test('guest creation requires an explicit click and uses a signed demo session',async({page})=>{
+ const api=await mockApi(page);await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song two');await page.getByRole('button',{name:'Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Создать караоке'})).toBeVisible();expect(api.enqueued).toBe(0);
+ await page.getByRole('button',{name:'Создать караоке'}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible({timeout:10000});expect(api.enqueued).toBe(1);
 });
-test('rejected Telegram initData never unlocks creation',async({page})=>{
- const api=await mockApi(page,'rejected');await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song two');await page.getByRole('button',{name:'Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();await expect(page.getByText('Telegram не подтвердил вход. Откройте мини-приложение заново.')).toBeVisible();await expect(page.getByRole('button',{name:'Создать караоке'})).toHaveCount(0);expect(api.enqueued).toBe(0);
+test('rejected Telegram initData leaves guest creation available without auto-enqueue',async({page})=>{
+ const api=await mockApi(page,'rejected');await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song two');await page.getByRole('button',{name:'Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Создать караоке'})).toBeVisible();expect(api.enqueued).toBe(0);
 });
-test('verified Telegram session displays profile and logout restores guest gate',async({page})=>{
- const api=await mockApi(page,'accepted');await page.goto('/#/profile');await expect(page.getByRole('heading',{name:'Test Telegram'})).toBeVisible();await expect(page.getByText('Telegram · вход подтверждён')).toBeVisible();await page.getByRole('button',{name:'Выйти из аккаунта'}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();await page.getByRole('navigation').getByRole('button',{name:'Поиск'}).click();await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song two');await page.getByRole('button',{name:'Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();expect(api.enqueued).toBe(0);
+test('verified Telegram session displays profile and logout restores optional guest access',async({page})=>{
+ const api=await mockApi(page,'accepted');await page.goto('/#/profile');await expect(page.getByRole('heading',{name:'Test Telegram'})).toBeVisible();await expect(page.getByText('Telegram · вход подтверждён')).toBeVisible();await page.getByRole('button',{name:'Выйти из аккаунта'}).click();await expect(page.getByRole('button',{name:'Войти через Telegram'})).toBeVisible();await page.getByRole('navigation').getByRole('button',{name:'Поиск'}).click();await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song two');await page.getByRole('button',{name:'Test song two',exact:true}).click();await expect(page.getByRole('button',{name:'Создать караоке'})).toBeVisible();expect(api.enqueued).toBe(0);
 });
-
 test('browser OIDC callback validates stored state and restores profile',async({page})=>{
  const api=await mockApi(page);let exchanged=0;
  await page.addInitScript(()=>{if(location.search.includes('code=fixture'))sessionStorage.setItem('anyminus:telegram-oidc-pending',JSON.stringify({state:'fixture-state',verifier:'v'.repeat(43),returnHash:'#/profile',expires:Date.now()+60000}))});
