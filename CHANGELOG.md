@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.61
+- Allocate 12–14 extra CSS pixels to the pitch panel from the mixer, keep speed width unchanged, remove extra label tracking and test actual single-line text bounds across supported layouts.
+
 ## 0.5.60
 - Align the exact ready-track playback contract assertion with the explicit mediaTicket opt-in; keep all behavioral checks. No runtime changes from 0.5.59.
 

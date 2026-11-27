@@ -149,6 +149,8 @@ test('pitch and speed stepper buttons stay inside their own panels across viewpo
   for(const label of ['PITCH','TONALITÄT','TONALIDAD','ТОНАЛЬНОСТЬ']){
    const panels=page.locator('.karaoke-mix-tools > .karaoke-pitch');await expect(panels).toHaveCount(2);
    await panels.first().locator('.mixer-title').evaluate((el,value)=>{el.textContent=value},label);
+   // A title must fit entirely on one line, not just have wrapping disabled.
+   const titleFit=await panels.first().locator('.mixer-title').evaluate(el=>{const range=document.createRange();range.selectNodeContents(el);const rects=Array.from(range.getClientRects());const bounds=el.getBoundingClientRect();return rects.length===1&&rects[0].left>=bounds.left-1&&rects[0].right<=bounds.right+1;});expect(titleFit,`full title ${label} fits at ${size.width}px`).toBe(true);
    for(const panel of await panels.all()){
     const box=await panel.boundingBox();const buttons=await panel.locator('.pitch-buttons > button').all();const left=await buttons[0].boundingBox(),right=await buttons[1].boundingBox();
     expect(box&&left&&right).toBeTruthy();expect(left!.x).toBeGreaterThanOrEqual(box!.x-1);expect(right!.x+right!.width).toBeLessThanOrEqual(box!.x+box!.width+1);expect(left!.x+left!.width).toBeLessThanOrEqual(right!.x+1);expect(Math.abs(left!.y-right!.y)).toBeLessThan(2);expect(Math.abs(left!.width-right!.width)).toBeLessThan(2);

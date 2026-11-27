@@ -210,3 +210,22 @@ body.karaoke-open .tab-bar{display:none}
  .karaoke-mix-tools>.karaoke-pitch>.mixer-title{grid-column:auto}
  .karaoke-pitch>.pitch-buttons{gap:3px}
 }
+
+/* 0.5.61: give pitch the extra width its localized heading needs.
+   Retain the speed column and compact two-row layout on narrow screens. */
+.karaoke-mix-tools{grid-template-columns:minmax(0,1fr) 106px 94px}
+.karaoke-mix-tools>.mixer{padding-inline:6px}
+.karaoke-mix-tools>.karaoke-pitch>.mixer-title{font-size:9px;letter-spacing:0;white-space:nowrap;overflow-wrap:normal;overflow:visible}
+@media(max-width:440px){
+ .karaoke-mix-tools{grid-template-columns:minmax(0,1fr) 90px 76px;gap:5px}
+ .karaoke-mix-tools>.mixer{padding-inline:5px}
+ .karaoke-mix-tools>.karaoke-pitch>.mixer-title{font-size:8px}
+}
+@media(max-width:350px),(orientation:landscape) and (max-height:650px){
+ .karaoke-mix-tools{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+ .karaoke-mix-tools>.mixer{grid-column:1/-1}
+}
+/* Keep labels legible without clipping if an embedded viewport is unusually narrow. */
+@container mix-tools (max-width:170px){
+ .karaoke-mix-tools>.karaoke-pitch>.mixer-title{white-space:normal;overflow-wrap:anywhere}
+}

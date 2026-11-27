@@ -261,3 +261,7 @@ Owner screenshot: plus/minus overflow the pitch/speed cards on a narrow iPhone S
 
 ## Playback contract CI correction (0.5.60)
 CI 46054667150: 115/116 E2E passed, including the new layout and cookie-free mock regression. The remaining assertion expected the old playback request body without mediaTicket:true; update exact expected request while retaining no-auth/no-status/no-enqueue checks. Production diagnostic 46055067935 independently confirmed opaque ticket issuance and both HTTP 206 range requests without cookies. Full frontend deployment and physical iPhone acceptance pending.
+
+
+## Pitch heading width (0.5.61)
+Owner screenshot on iPhone shows the Russian heading wrapping its final letter despite the stepper fix. Reduce mixer width by 12px on wide docks / 14px on mobile, preserve speed width, remove heading tracking and require actual single-line text fit (DOM Range bounds) in the existing seven-viewport/four-label test. Keep stacked layout for narrow portrait and short landscape; exceptionally narrow containers may wrap rather than clip. CI and device acceptance pending.
