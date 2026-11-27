@@ -78,3 +78,26 @@ test('video recording survives timeline, lyric and ten-second jumps',async({page
  expect(await page.evaluate(()=>[Reflect.get(window,'__videoStarts'),Reflect.get(window,'__videoStops')])).toEqual([1,1]);expect(media).toBe(2);
  await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeVisible();
 });
+
+test('timed lyrics are drawn into the captured video canvas and follow a seek',async({page})=>{
+ await page.addInitScript(()=>{
+  const draw=CanvasRenderingContext2D.prototype.fillText,capture=HTMLCanvasElement.prototype.captureStream,start=MediaRecorder.prototype.start;
+  Reflect.set(window,'__overlayText',[]);Reflect.set(window,'__overlayTrack',null);Reflect.set(window,'__recordedCanvas',false);
+  CanvasRenderingContext2D.prototype.fillText=function(...args:Parameters<CanvasRenderingContext2D['fillText']>){if(this.canvas.classList.contains('video-overlay')){const rows=Reflect.get(window,'__overlayText') as string[];rows.push(args[0]);if(rows.length>150)rows.shift();}return draw.apply(this,args)};
+  HTMLCanvasElement.prototype.captureStream=function(rate?:number){const stream=capture.call(this,rate);if(this.classList.contains('video-overlay'))Reflect.set(window,'__overlayTrack',stream.getVideoTracks()[0]);return stream;};
+  MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__recordedCanvas',this.stream.getVideoTracks()[0]===Reflect.get(window,'__overlayTrack'));return start.apply(this,args)};
+ });
+ const api=await mockApi(page);
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Alpha',startMs:0,endMs:3000,startOrigin:'source'},{text:'Bravo',startMs:3000,endMs:6000,startOrigin:'source'},{text:'Charlie',startMs:6000,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Alpha',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();
+ const checkbox=page.getByRole('checkbox',{name:'Текст на видео'});await expect(checkbox).toBeChecked();
+ await checkbox.uncheck();await expect(page.locator('canvas.video-overlay')).not.toHaveClass(/visible/);await checkbox.check();
+ await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toContain('Alpha');
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>Reflect.get(window,'__recordedCanvas'))).toBe(true);
+ await page.getByRole('button',{name:'Bravo',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toContain('Charlie');
+ await page.waitForTimeout(600);await page.getByRole('button',{name:'Остановить',exact:true}).click();const save=page.getByRole('link',{name:'Сохранить видео'});await expect(save).toBeVisible();
+ expect(await page.evaluate(()=>(Reflect.get(window,'__overlayTrack') as MediaStreamTrack).readyState)).toBe('ended');const href=await save.getAttribute('href');expect(await page.evaluate(async u=>(await (await fetch(u!)).blob()).size,href)).toBeGreaterThan(1000);expect(api.media).toBe(2);
+});
