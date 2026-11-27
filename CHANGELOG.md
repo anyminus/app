@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.29
+- Restore pitch and tempo controls in video preview and recording. Route the processed accompaniment through a stable shared output bus to both playback and recording, retain the microphone signal and prevent asynchronous tempo changes from restarting stopped playback.
+
 ## 0.5.28
 - Make the lyric wrapping regression deterministic across CI fonts; assert actual 75% and 100% font sizes and real line wrapping. Retain all 0.5.27 video and mixer features unchanged.
 

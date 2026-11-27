@@ -2,7 +2,7 @@ import type {StretchNode} from 'signalsmith-stretch';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
 export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session&&session.type!==type)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
 export class RemoteAudio {
- private context:AudioContext|null=null;private capturing=false;private playEpoch=0;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
+ private context:AudioContext|null=null;private capturing=false;private playEpoch=0;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private output:GainNode|null=null;private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
  get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start)*this.rate:this.offset));}
  get length(){return this.duration;}
  get pitch(){return this.semitones;}
@@ -41,7 +41,7 @@ export class RemoteAudio {
   finally{clearTimeout(timer)}
  }
  private attachPitch(ctx:AudioContext,node:StretchNode,latency:number){
-  const gate=ctx.createGain();gate.gain.value=0;node.connect(gate);gate.connect(ctx.destination);
+  const gate=ctx.createGain();gate.gain.value=0;node.connect(gate);gate.connect(this.output!);
   for(const gain of this.gains){gain.disconnect();gain.connect(node)}
   this.pitchNode=node;this.pitchGate=gate;this.pitchLatency=latency;
  }
@@ -68,8 +68,8 @@ export class RemoteAudio {
    if(this.context!==ctx)throw Error('Аудиовыход изменился');this.semitones=value;return;
   }
   if(value===0){this.semitones=0;return}
-  const prepared=await this.createPitch(ctx,this.compensatedPitch(value));
-  if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}
+  const epoch=this.playEpoch;const prepared=await this.createPitch(ctx,this.compensatedPitch(value));
+  if(this.context!==ctx||epoch!==this.playEpoch){prepared.node.disconnect();prepared.node.port.close();if(this.context!==ctx)throw Error('Аудиовыход изменился');return;}
   const resume=this.running;this.pause();this.attachPitch(ctx,prepared.node,prepared.latency);this.semitones=value;
   if(resume&&this.offset<this.duration)await this.play();
  }
@@ -80,9 +80,9 @@ export class RemoteAudio {
   const ctx=this.context;if(!ctx||this.buffers.length!==2)throw Error('Аудио не загружено');
   // Prepare the DSP before stopping dry playback, so failed setup leaves the
   // current position, speed and audio unchanged.
-  const prepared=this.pitchNode?null:await this.createPitch(ctx,this.compensatedPitch(this.semitones,value));
-  if(this.context!==ctx){prepared?.node.disconnect();prepared?.node.port.close();throw Error('Аудиовыход изменился')}
-  const resume=this.running;this.pause();
+  const epoch=this.playEpoch;const prepared=this.pitchNode?null:await this.createPitch(ctx,this.compensatedPitch(this.semitones,value));
+  if(this.context!==ctx||epoch!==this.playEpoch){prepared?.node.disconnect();prepared?.node.port.close();if(this.context!==ctx)throw Error('Аудиовыход изменился');return;}
+  const resume=this.running;this.pause();const resumeEpoch=this.playEpoch;
   if(prepared)this.attachPitch(ctx,prepared.node,prepared.latency);
   else{
    try{await this.pitchNode!.schedule({active:true,rate:1,semitones:this.compensatedPitch(this.semitones,value),output:ctx.currentTime+this.pitchLatency})}
@@ -90,13 +90,13 @@ export class RemoteAudio {
   }
   if(this.context!==ctx)throw Error('Аудиовыход изменился');
   this.rate=value;
-  if(resume&&this.offset<this.duration)await this.play();
+  if(resume&&resumeEpoch===this.playEpoch&&this.offset<this.duration)await this.play();
  }
- private connectGains(ctx:AudioContext){this.gains=this.buffers.map((_,i)=>{const gain=ctx.createGain();gain.gain.value=this.levels[i]/100;gain.connect(ctx.destination);return gain;});}
+ private connectGains(ctx:AudioContext){const output=ctx.createGain();output.connect(ctx.destination);this.output=output;this.gains=this.buffers.map((_,i)=>{const gain=ctx.createGain();gain.gain.value=this.levels[i]/100;gain.connect(output);return gain;});}
  // A running state alone is not proof that WebKit's render clock is advancing.
  // Keep decoded stems and position; rebuild the audio output only on explicit Play.
  markOutputStalled(){this.pause();this.needsRecovery=true;}
- private rebuildOutput(sessionType='playback'){this.pause();const old=this.context;for(const gain of this.gains)try{gain.disconnect()}catch{}this.gains=[];this.clearPitch();this.context=null;if(old&&old.state!=='closed')void old.close().catch(()=>{});this.prepare(sessionType);this.connectGains(this.context!);this.needsRecovery=false;}
+ private rebuildOutput(sessionType='playback'){this.pause();const old=this.context;for(const gain of this.gains)try{gain.disconnect()}catch{}this.gains=[];this.clearPitch();this.output?.disconnect();this.output=null;this.context=null;if(old&&old.state!=='closed')void old.close().catch(()=>{});this.prepare(sessionType);this.connectGains(this.context!);this.needsRecovery=false;}
  private async waitForClock(ctx:AudioContext){const deadline=performance.now()+1800;while(this.context===ctx&&this.running){if(ctx.state==='running'&&ctx.currentTime>this.start+.02)return;if(performance.now()>=deadline)break;await new Promise<void>(resolve=>window.setTimeout(resolve,60))}if(this.context!==ctx||!this.running)return;throw Error('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.');}
  async play(userInitiated=false){if(this.starting)return this.starting;if(!this.context||this.buffers.length!==2)throw Error('Аудио не загружено');playbackSession(this.capturing?'play-and-record':'playback');
  if(userInitiated&&(this.needsRecovery||this.interrupted||String(this.context.state)==='interrupted')){if(this.capturing)throw Error('Аудиовыход прерван. Повторите запись.');this.rebuildOutput();}
@@ -128,9 +128,9 @@ export class RemoteAudio {
  }catch(e){if(this.context===ctx)this.markOutputStalled();throw e}finally{clearTimeout(timeout)}
  const destination=ctx.createMediaStreamDestination(),music=ctx.createGain(),voice=ctx.createGain(),mic=ctx.createMediaStreamSource(microphone),limiter=ctx.createDynamicsCompressor();
  music.gain.value=.55;voice.gain.value=.75;limiter.threshold.value=-6;limiter.ratio.value=8;
- const outputs=this.pitchGate?[this.pitchGate]:this.gains;
- outputs.forEach(node=>node.connect(music));music.connect(limiter);mic.connect(voice);voice.connect(limiter);limiter.connect(destination);this.capturing=true;
- let closed=false;return {stream:destination.stream,close:()=>{if(closed)return;closed=true;this.capturing=false;for(const node of outputs)try{node.disconnect(music)}catch{}music.disconnect();mic.disconnect();voice.disconnect();limiter.disconnect();destination.stream.getTracks().forEach(t=>t.stop());}};
+ const output=this.output!;
+ output.connect(music);music.connect(limiter);mic.connect(voice);voice.connect(limiter);limiter.connect(destination);this.capturing=true;
+ let closed=false;return {stream:destination.stream,close:()=>{if(closed)return;closed=true;this.capturing=false;try{output.disconnect(music)}catch{}music.disconnect();mic.disconnect();voice.disconnect();limiter.disconnect();destination.stream.getTracks().forEach(t=>t.stop());}};
  }
- dispose(){this.pause();const ctx=this.context;this.clearPitch();this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.rate=1;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
+ dispose(){this.pause();const ctx=this.context;this.clearPitch();this.output?.disconnect();this.output=null;this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.rate=1;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
 }

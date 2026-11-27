@@ -226,3 +226,31 @@ test('video canvas animates natural lyric transition and snaps on a seek',async(
  expect((await frames()).filter(f=>f.text==='Charlie').every(f=>f.alpha===1)).toBe(true);
  await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });
+
+test('video pitch and tempo use a continuous recording audio bus',async({page})=>{
+ await page.addInitScript(()=>{
+  const connect=AudioNode.prototype.connect,start=MediaRecorder.prototype.start,stop=MediaRecorder.prototype.stop,sourceStart=AudioBufferSourceNode.prototype.start;
+  Reflect.set(window,'__pitchVideoStarts',0);Reflect.set(window,'__pitchVideoStops',0);Reflect.set(window,'__pitchVideoRates',[]);
+  AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(this instanceof GainNode&&args[0] instanceof DynamicsCompressorNode&&Math.abs(this.gain.value-.55)<.001){const analyser=this.context.createAnalyser();analyser.fftSize=8192;Reflect.apply(connect,this,[analyser]);Reflect.set(window,'__recordingMusicAnalyser',analyser);}return result} as typeof connect;
+  MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__pitchVideoStarts',Number(Reflect.get(window,'__pitchVideoStarts'))+1);Reflect.set(window,'__pitchVideoTrack',this.stream.getAudioTracks()[0]);return start.apply(this,args)};
+  MediaRecorder.prototype.stop=function(){Reflect.set(window,'__pitchVideoStops',Number(Reflect.get(window,'__pitchVideoStops'))+1);return stop.call(this)};
+  AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){(Reflect.get(window,'__pitchVideoRates') as number[]).push(this.playbackRate.value);return sourceStart.apply(this,args)};
+ });
+ const api=await mockApi(page);await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Показать микшер',exact:true}).click();const pitch=page.getByLabel('Тональность в полутонах'),speed=page.getByLabel('Скорость воспроизведения'),slider=page.getByRole('slider',{name:'Позиция песни'});
+ await expect(pitch).toHaveText('0');await expect(speed).toHaveText('1.0×');await slider.press('Home');await expect(slider).toHaveValue('0');
+ const overlay=page.getByRole('checkbox',{name:'Текст на видео'});if(await overlay.isEnabled())await overlay.uncheck();
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ const frequency=()=>page.evaluate(()=>{const a=Reflect.get(window,'__recordingMusicAnalyser') as AnalyserNode;if(!a)return 0;const bins=new Float32Array(a.frequencyBinCount);a.getFloatFrequencyData(bins);let peak=0;for(let i=1;i<bins.length;i++)if(bins[i]>bins[peak])peak=i;return bins[peak]>-70?peak*a.context.sampleRate/a.fftSize:0;});
+ await expect.poll(async()=>Math.abs(await frequency()-440),{timeout:3000}).toBeLessThan(15);
+ await page.getByRole('button',{name:'Повысить тональность'}).click();await expect(pitch).toHaveText('+1',{timeout:10000});
+ await page.getByRole('button',{name:'Повысить тональность'}).click();await expect(pitch).toHaveText('+2');
+ await expect.poll(async()=>Math.abs(await frequency()-493.883),{timeout:4000}).toBeLessThan(15);
+ await page.getByRole('button',{name:'Увеличить скорость'}).click();await expect(speed).toHaveText('1.1×');await expect(page.getByRole('button',{name:'Увеличить скорость'})).toBeEnabled();
+ expect(await page.evaluate(()=>((Reflect.get(window,'__pitchVideoRates') as number[]).slice(-2)).map(n=>Math.round(n*10)))).toEqual([11,11]);
+ await expect.poll(async()=>Math.abs(await frequency()-493.883),{timeout:3000}).toBeLessThan(15);
+ await expect(page.getByText('● REC',{exact:true})).toBeVisible();expect(await page.evaluate(()=>[Reflect.get(window,'__pitchVideoStarts'),Reflect.get(window,'__pitchVideoStops'),(Reflect.get(window,'__pitchVideoTrack') as MediaStreamTrack).readyState])).toEqual([1,0,'live']);
+ await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();expect(api.media).toBe(2);
+ expect(await page.evaluate(()=>[Reflect.get(window,'__pitchVideoStarts'),Reflect.get(window,'__pitchVideoStops')])).toEqual([1,1]);
+});
