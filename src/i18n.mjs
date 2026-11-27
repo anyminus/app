@@ -2385,6 +2385,16 @@ const dictionary={
   "Song page remains visible on slow networks.",
   "Songseite bleibt bei langsamer Verbindung sichtbar.",
   "La página de la canción se muestra incluso con una conexión lenta."
+ ],
+ "CarPlay: примерная задержка, не измерение. Уточните вручную — значение запомнится для этого режима.": [
+  "CarPlay: estimated delay, not measured. Adjust manually; the value is saved for this mode.",
+  "CarPlay: geschätzte, nicht gemessene Verzögerung. Manuell anpassen; der Wert wird für diesen Modus gespeichert.",
+  "CarPlay: retardo estimado, no medido. Ajústalo manualmente; se guardará para este modo."
+ ],
+ "Отдельная компенсация задержки для режима CarPlay.": [
+  "Separate latency compensation for CarPlay mode.",
+  "Separater Latenzausgleich für CarPlay.",
+  "Compensación de latencia independiente para CarPlay."
  ]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}

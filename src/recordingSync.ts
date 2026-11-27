@@ -1,26 +1,34 @@
 import {t as trUi} from './i18n.mjs';
+import {readAudioOutputMode,type AudioOutputMode} from './audioOutputMode';
 export type SyncMode='auto'|'manual'|'off';
 export type SyncSettings={mode:SyncMode;manualMs:number};
-export type AudioDiagnostics={micLabel:string;inputMs:number|null;baseMs:number|null;outputMs:number|null;sampleRate:number|null;micRate:number|null;channels:number|null;sinkId:string|null};
+export type AudioDiagnostics={micLabel:string;inputMs:number|null;baseMs:number|null;outputMs:number|null;sampleRate:number|null;micRate:number|null;channels:number|null;sinkId:string|null;outputMode?:AudioOutputMode};
 export const defaultSync:SyncSettings={mode:'auto',manualMs:150};
 const validMs=(value:unknown)=>typeof value==='number'&&Number.isFinite(value)&&value>=0?Math.round(value*1000):null;
 export function boundedDelay(ms:number){return Number.isFinite(ms)?Math.max(0,Math.min(500,Math.round(ms/10)*10)):0;}
-export function readAudioDiagnostics(ctx:AudioContext|null,track?:MediaStreamTrack):AudioDiagnostics{
+export function readAudioDiagnostics(ctx:AudioContext|null,track?:MediaStreamTrack,outputMode:AudioOutputMode='standard'):AudioDiagnostics{
  let s:MediaTrackSettings&{latency?:number}={};try{s=track?.getSettings()??{};}catch{}
  const sink=(ctx as (AudioContext&{sinkId?:unknown})|null)?.sinkId;
- return {micLabel:track?.label||trUi('Не определён'),inputMs:validMs(s.latency),baseMs:validMs(ctx?.baseLatency),outputMs:validMs(ctx?.outputLatency),sampleRate:ctx?.sampleRate??null,micRate:s.sampleRate??null,channels:s.channelCount??null,sinkId:typeof sink==='string'&&sink!==''&&sink!=='default'&&sink!=='communications'?sink:null};
+ return {outputMode,micLabel:track?.label||trUi('Не определён'),inputMs:validMs(s.latency),baseMs:validMs(ctx?.baseLatency),outputMs:validMs(ctx?.outputLatency),sampleRate:ctx?.sampleRate??null,micRate:s.sampleRate??null,channels:s.channelCount??null,sinkId:typeof sink==='string'&&sink!==''&&sink!=='default'&&sink!=='communications'?sink:null};
 }
+export const defaultCarPlayDelay=300;
+export function usesCarPlayEstimate(info:AudioDiagnostics){return info.outputMode==='carplay'&&(info.outputMs===null||info.outputMs<40);}
 export function resolveDelay(settings:SyncSettings,info:AudioDiagnostics){
  if(settings.mode==='off')return 0;
  if(settings.mode==='manual')return boundedDelay(settings.manualMs);
  // A known output estimate is necessary; neither mic type nor device name
  // proves that headphones are in use. Ignore very small estimates.
+ // Explicitly selected compatibility mode is not proof of physical CarPlay.
+ // A tiny/missing estimate in this mode may omit transport latency; use the
+ // user's saved calibration, never present it as a measured route delay.
+ if(usesCarPlayEstimate(info))return boundedDelay(settings.manualMs);
  if(info.outputMs===null||info.outputMs===0)return 0;
  const total=info.outputMs+(info.baseMs??0)+(info.inputMs??0);
  return total<40?0:boundedDelay(total);
 }
-export function loadSync():SyncSettings{try{const s=JSON.parse(localStorage.getItem('anyminus.video.sync.v1')??'null');if(s&&['auto','manual','off'].includes(s.mode)&&typeof s.manualMs==='number'&&Number.isFinite(s.manualMs))return {mode:s.mode,manualMs:boundedDelay(s.manualMs)};}catch{}return {...defaultSync};}
-export function saveSync(settings:SyncSettings){try{localStorage.setItem('anyminus.video.sync.v1',JSON.stringify(settings));}catch{}}
+const syncKey=(mode:AudioOutputMode)=>mode==='carplay'?'anyminus.video.sync.carplay.v1':'anyminus.video.sync.v1';
+export function loadSync(mode=readAudioOutputMode()):SyncSettings{try{const s=JSON.parse(localStorage.getItem(syncKey(mode))??'null');if(s&&['auto','manual','off'].includes(s.mode)&&typeof s.manualMs==='number'&&Number.isFinite(s.manualMs))return {mode:s.mode,manualMs:boundedDelay(s.manualMs)};}catch{}return {...defaultSync,manualMs:mode==='carplay'?defaultCarPlayDelay:defaultSync.manualMs};}
+export function saveSync(settings:SyncSettings,mode=readAudioOutputMode()){try{localStorage.setItem(syncKey(mode),JSON.stringify(settings));}catch{}}
 export type ClockSample={time:number;position:number;revision:number};
 export function delayedClock(history:ClockSample[],sample:ClockSample,delayMs:number){
  if(!delayMs){history.length=0;return sample;}

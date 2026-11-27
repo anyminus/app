@@ -120,7 +120,7 @@ export class RemoteAudio {
  }
  pause(){this.playEpoch++;if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
  async seek(t:number){const resume=this.running;this.pause();this.offset=Math.max(0,Math.min(t,this.duration));if(resume&&this.offset<this.duration)await this.play();}
- recordingDiagnostics(track?:MediaStreamTrack){return readAudioDiagnostics(this.context,track);}
+ recordingDiagnostics(track?:MediaStreamTrack){return readAudioDiagnostics(this.context,track,this.outputMode);}
  async createRecordingMix(microphone:MediaStream,settings:SyncSettings=defaultSync,levels:RecordingLevels=defaultRecordingLevels){
  if(!this.context||this.capturing||this.buffers.length!==2||!microphone.getAudioTracks().some(t=>t.readyState==='live'))throw Error(trUi('Аудиовыход не готов к записи'));
  // The camera permission can interrupt Safari's old playback context. Recover

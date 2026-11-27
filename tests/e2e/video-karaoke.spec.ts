@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {mockApi} from './fixture';
-import {delayedClock,resolveDelay,type ClockSample,type AudioDiagnostics} from '../../src/recordingSync';
+import {delayedClock,resolveDelay,usesCarPlayEstimate,type ClockSample,type AudioDiagnostics} from '../../src/recordingSync';
 test.use({launchOptions:{args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']},permissions:['camera','microphone']});
 test('local video capture stays above lyrics and exports a file',async({page})=>{
  await page.setViewportSize({width:390,height:844});
@@ -444,4 +444,34 @@ for(const kind of ['plain','missing','disabled'] as const)test('video branding i
  await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__brandRows') as string[])).toEqual(expect.arrayContaining(['Test song one','Test artist','AnyMinus']));
  expect(await page.evaluate(()=>Reflect.get(window,'__brandRows') as string[])).not.toContain('Timed lyric only');expect(await page.evaluate(()=>Reflect.get(window,'__brandRows') as string[])).not.toContain('Plain lyric only');
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+});
+
+test('CarPlay auto uses the stored estimate only when output latency is missing or tiny',()=>{
+ const info:AudioDiagnostics={micLabel:'Test mic',inputMs:0,baseMs:3,outputMs:0,sampleRate:48000,micRate:48000,channels:1,sinkId:null,outputMode:'carplay'};
+ const settings={mode:'auto' as const,manualMs:300};
+ expect(usesCarPlayEstimate(info)).toBe(true);expect(resolveDelay(settings,info)).toBe(300);expect(resolveDelay(settings,{...info,outputMs:null})).toBe(300);expect(resolveDelay(settings,{...info,outputMs:15})).toBe(300);
+ expect(resolveDelay(settings,{...info,outputMs:200})).toBe(200);
+ expect(resolveDelay({...settings,manualMs:420},info)).toBe(420);
+ expect(resolveDelay({...settings,mode:'off'},info)).toBe(0);
+ expect(resolveDelay({...settings,mode:'manual',manualMs:150},info)).toBe(150);
+ expect(resolveDelay(settings,{...info,outputMode:'standard'})).toBe(0);
+});
+test('CarPlay zero reported latency applies separate auto estimate to recording only',async({page})=>{
+ await page.addInitScript(()=>{
+ localStorage.setItem('anyminus:audio-output-mode','carplay');
+ localStorage.setItem('anyminus.video.sync.v1',JSON.stringify({mode:'manual',manualMs:100}));
+ Object.defineProperty(AudioContext.prototype,'outputLatency',{configurable:true,get:()=>0});Object.defineProperty(AudioContext.prototype,'baseLatency',{configurable:true,get:()=>.003});
+ const connect=AudioNode.prototype.connect;Reflect.set(window,'__carplayDelayEdges',[]);
+ AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(args[0] instanceof AudioNode)(Reflect.get(window,'__carplayDelayEdges') as [AudioNode,AudioNode][]).push([this,args[0]]);return result} as typeof connect;
+ });
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();const panel=page.getByRole('region',{name:'Настройки звука видеозаписи'});
+ await expect(panel.locator('output')).toHaveText('300 мс');await expect(panel.getByText(/CarPlay: примерная задержка/)).toBeVisible();
+ await panel.getByRole('button',{name:'Вручную',exact:true}).click();await panel.getByRole('button',{name:'400',exact:true}).click();await panel.getByRole('button',{name:'Авто',exact:true}).click();await expect(panel.locator('output')).toHaveText('400 мс');
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('anyminus.video.sync.v1')!))).toEqual({mode:'manual',manualMs:100});
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('anyminus.video.sync.carplay.v1')!))).toEqual({mode:'auto',manualMs:400});
+ await panel.getByRole('button',{name:'Закрыть настройки звука'}).click();await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();await expect(page.getByText('Компенсация: 400 мс')).toBeVisible();
+ const graph=await page.evaluate(()=>{const edges=Reflect.get(window,'__carplayDelayEdges') as [AudioNode,AudioNode][];const link=edges.find(([,to])=>to instanceof DelayNode);if(!link)return null;const [bus,delay]=link;return {delay:(delay as DelayNode).delayTime.value,live:edges.some(([from,to])=>from===bus&&to===bus.context.destination),direct:edges.some(([from,to])=>from===delay&&to===delay.context.destination)}});
+ expect(graph).not.toBeNull();expect(graph!.delay).toBeCloseTo(.4,3);expect(graph).toMatchObject({live:true,direct:false});
+ await page.waitForTimeout(1000);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });

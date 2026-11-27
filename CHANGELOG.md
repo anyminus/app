@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.54
+- Use a separate CarPlay recording compensation profile; when reported output latency is missing or below 40 ms, use a configurable initial estimate of 300 ms. Keep playback audio unchanged. Repair two 0.5.53 browser test fixtures.
+
 ## 0.5.53
 - Render a usable song placeholder immediately for cold shared links, keep it on metadata errors, add a 30-second overall lookup deadline and a 4-second ready-catalog scan limit before direct metadata fallback.
 
