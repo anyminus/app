@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.11
+- Optionally share the current song timestamp, independently of mixer, pitch and playback speed.
+
 ## 0.5.10
 - Explain that users can leave a preparing song and receive a readiness notice in the open app; register a local watcher when reopening a pending track.
 

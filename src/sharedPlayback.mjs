@@ -18,10 +18,14 @@ export function readSharedPlayback(params){
  if(!/^\d{1,3}$/.test(music)||!/^\d{1,3}$/.test(vocals)||! /^-?\d{1,2}$/.test(pitch)||! /^\d(?:\.\d)?$/.test(speed)||!(mm==='0'||mm==='1')||!(vm==='0'||vm==='1'))return null;
  return validateSharedPlayback({music:Number(music),vocals:Number(vocals),pitch:Number(pitch),speed:Number(speed),musicMuted:mm==='1',vocalsMuted:vm==='1'});
 }
-/** @param {string} id @param {PlaybackSettings|null} [settings] */
-export function sharedTrackPath(id,settings=null){
+/** Whole source-media seconds, independent of playback speed. @param {unknown} value @returns {number|null} */
+export function validateSharedTime(value){return typeof value==='number'&&Number.isInteger(value)&&value>=0&&value<=900?value:null;}
+/** @param {URLSearchParams} params */
+export function readSharedTime(params){const values=params.getAll('t');if(values.length!==1||!/^\d{1,3}$/.test(values[0]))return null;return validateSharedTime(Number(values[0]));}
+/** @param {string} id @param {PlaybackSettings|null} [settings] @param {number|null} [time] */
+export function sharedTrackPath(id,settings=null,time=null){
  const path='/track/'+encodeURIComponent(id),s=validateSharedPlayback(settings);
- if(!s)return path;
- const q=new URLSearchParams({music:String(s.music),vocals:String(s.vocals),musicMuted:s.musicMuted?'1':'0',vocalsMuted:s.vocalsMuted?'1':'0',pitch:String(s.pitch),speed:s.speed.toFixed(1)});
- return path+'?'+q;
+ const q=new URLSearchParams(s?{music:String(s.music),vocals:String(s.vocals),musicMuted:s.musicMuted?'1':'0',vocalsMuted:s.vocalsMuted?'1':'0',pitch:String(s.pitch),speed:s.speed.toFixed(1)}:undefined);
+ const start=validateSharedTime(time);if(start!==null)q.set('t',String(start));
+ return q.size?path+'?'+q:path;
 }

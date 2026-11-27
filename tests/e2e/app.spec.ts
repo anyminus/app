@@ -66,3 +66,16 @@ test('optional playback settings travel in the song link without overwriting rec
  expect(await page.evaluate(()=>localStorage.getItem('anyminus:music'))).toBe('70');expect(await page.evaluate(()=>localStorage.getItem('anyminus:vocals'))).toBe('15');
  await page.evaluate(()=>{location.hash='#/track/101'});await expect(page.getByRole('slider',{name:'Музыка',exact:true})).toHaveValue('70');await expect(page.getByRole('slider',{name:'Голос артиста',exact:true})).toHaveValue('15');await expect(page.getByLabel('Тональность в полутонах')).toHaveText('0');await expect(page.getByLabel('Скорость воспроизведения')).toHaveText('1.0×');
 });
+
+
+test('share time is separately optional and opens both stems at the captured source position',async({page})=>{
+ await mockApi(page);await page.goto('/#/track/101?t=3');const slider=page.getByRole('slider',{name:'Позиция песни'});
+ await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();await slider.fill('3.3');await expect.poll(async()=>Number(await slider.inputValue())).toBeCloseTo(3.3,1);
+ await page.getByRole('button',{name:'Поделиться песней',exact:true}).click();const sheet=page.getByRole('dialog',{name:'Поделиться песней'}),time=sheet.getByRole('checkbox',{name:/Передать таймкод песни/}),settings=sheet.getByRole('checkbox',{name:/Передать настройки воспроизведения/}),link=sheet.getByRole('textbox',{name:'Ссылка для отправки'});
+ await expect(time).not.toBeChecked();await expect(settings).not.toBeChecked();await expect(sheet.getByText('Начать воспроизведение с 0:03')).toBeVisible();await expect(link).toHaveValue(/#\/track\/101$/);
+ await time.check();await expect(link).toHaveValue(/#\/track\/101\?t=3$/);await settings.check();await expect(link).toHaveValue(/music=\d+&.*&t=3$/);await time.uncheck();await expect(link).not.toHaveValue(/[?&]t=/);await settings.uncheck();await expect(link).toHaveValue(/#\/track\/101$/);
+ await sheet.getByRole('button',{name:'Закрыть',exact:true}).click();
+ await page.evaluate(()=>{location.hash='#/track/101?t=5'});await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect.poll(async()=>Number(await slider.inputValue())).toBeGreaterThanOrEqual(4.9);
+ await page.getByRole('button',{name:'Пауза',exact:true}).click();expect(Number(await slider.inputValue())).toBeLessThan(8);
+ await page.evaluate(()=>{location.hash='#/track/101?t=900'});await expect(page.getByRole('heading',{name:'Выбрать другую песню исполнителя'})).toBeVisible();await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeVisible();
+});
