@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.10
+- Explain that users can leave a preparing song and receive a readiness notice in the open app; register a local watcher when reopening a pending track.
+
 ## 0.5.9
 - Move the favorite button beside Share in the karaoke transport, keeping Play centered.
 - Snap the last slider step to the actual track duration to show the end screen.
