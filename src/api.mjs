@@ -32,6 +32,8 @@ export function createDemoApi(origin,fetcher=fetch){
  telegramExchange:(code,state,verifier,signal)=>call('/v1/auth/telegram/exchange',{method:'POST',body:{code,state,verifier},signal}),
  metadata:(id,token,signal)=>call('/demo/track-metadata/'+encodeURIComponent(id),{token,signal}),
  lyrics:(id,durationMs,signal,telegramToken)=>call('/demo/lyrics',{query:{id,format:'LRC',durationMs},signal,token:telegramToken}),
+ /** @param {string[]} trackIds @param {string} token @param {AbortSignal} [signal] */
+ readyTicket:(trackIds,token,signal)=>call('/demo/notifications/ticket',{method:'POST',body:{trackIds},token,signal}),
  status:(providerTrackId,token,signal)=>call('/demo/karaoke/status',{query:{providerTrackId},token,signal}),
  statusByOperation:(operationId,token,signal)=>call('/demo/karaoke/status-by-operation',{query:{operationId},token,signal}),
  enqueue:(track,token,signal)=>{if(!token)throw Error('Требуется сессия');if(!/^\d{1,20}$/.test(track.providerTrackId)||!Number.isSafeInteger(track.durationMs)||track.durationMs<1000||track.durationMs>900000)throw Error('Некорректные метаданные песни');return call('/demo/karaoke',{method:'POST',body:{providerTrackId:track.providerTrackId,title:track.title,artist:track.artist,durationMs:track.durationMs},token,signal})},

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.0
+- Receive karaoke-ready hints via one hibernating Cloudflare WebSocket per waiting tab, confirm through the existing status API, reconnect automatically and keep polling fallback.
+
 ## 0.4.18
 - Notify users inside the open app when a requested karaoke becomes playable, with direct open action and a persistent list in Profile.
 - Use numeric tolerance for decoded audio duration in the intro regression.

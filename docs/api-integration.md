@@ -38,3 +38,6 @@ Every already-ready karaoke shows exactly one stored readiness label: LRC or uns
 
 ## 0.4.12 — home catalog shuffle
 Home uses a fresh random UUID seed for a new catalog traversal (including every browser reload). GET /demo/catalog?limit=100&seed=... sends it from the first page and keeps it for every continuation cursor. Existing core migration 0041 merges and deduplicates all ready demo/production rows before sorting by md5(seed||provider_track_id), so shuffle covers the full selection, not each page. Preserve server order, append distinct track IDs, stop repeated cursors and prevent concurrent pagination. New traversal on retry or returning to home. Artist and direct-track lookup remain unseeded; provider popularity/search unaffected. No database change. Browser regression verifies seed renewal and continuation with the same seed.
+
+## 0.5.0 foreground readiness channel
+POST /demo/notifications/ticket authenticated, body {trackIds:[numeric strings]}, 1–50. GET /demo/notifications/ws upgrade with protocols anyminus.ready.v1 and short-lived signed ticket; origin checked. Messages subscribed, karaoke.ready with trackId, pong. Browser treats event only as invalidation, reads /demo/karaoke/status and requires a verified pair. No client event publishing, no owner/PII exposed. Fallback polling and reconnect retain delivery through transient errors.
