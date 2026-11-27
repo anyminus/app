@@ -34,13 +34,17 @@ if(typeof pair!=='string'||!/^[0-9a-f-]{36}$/i.test(pair)){console.log('No verif
 console.log('Verified pair available; status='+String(status.data?.state??'unknown'));
 for(const authenticated of [false,true]){
  if(authenticated&&!token)continue;
- const playback=await call('/demo/catalog/playback',{method:'POST',headers:{'Content-Type':'application/json',...(authenticated?headers:{})},body:JSON.stringify({pairOperationId:pair,providerTrackId:id})});
- if(playback.status!==200||!playback.cookie)continue;
- const cookie=playback.cookie.split(';')[0];
+ const playback=await call('/demo/catalog/playback',{method:'POST',headers:{'Content-Type':'application/json',...(authenticated?headers:{})},body:JSON.stringify({pairOperationId:pair,providerTrackId:id,mediaTicket:true})});
+ if(playback.status!==200)continue;
+ const ticket=playback.data?.mediaTicket;
+ console.log('Opaque ticket present:',typeof ticket==='string');
+ const cookie=playback.cookie?.split(';')[0];
  for(const role of ['instrumental','vocals']){
   const path=playback.data?.[role];
   if(path!==('/demo/catalog/media/'+playback.data?.pairOperationId+'/'+role))continue;
-  await call(path,{headers:{Cookie:cookie,Range:'bytes=0-1023'}});
+  if(cookie)await call(path,{headers:{Cookie:cookie,Range:'bytes=0-1023'}});
+  if(typeof ticket==='string')await call(path,{headers:{'X-AnyMinus-Media-Ticket':ticket,Range:'bytes=0-1023'}});
+  else console.log('Server has not returned the new ticket yet');
  }
  break;
 }
