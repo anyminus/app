@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Compact song credits and readiness labels (0.5.88)
+Shared TrackRow clamps the artist-credit container to two lines while retaining individual artist links and a full-name title. The player header retains its one-line layout. A ready audio pair is necessary for a database badge; the stored `lyricsFormat` selects LRC (Karaoke in catalog), TEXT (Karaoke without timing), NONE (Karaoke without lyrics) or absent/null (Karaoke, lyrics unverified). Provider hints do not prove the stored text format. All lists share one badge, no added API requests or changes to creation or playback. Browser regressions cover status variants and mobile credits geometry.
+
 ## Readable artwork ambience (0.5.86)
 Artwork-background mode uses 12px blur, 1.08 overscale, 0.9 image opacity and theme-aware contrast scrims (.43 dark/.58 light). Pitch and tempo buttons use a 35% accent fill, 50% pressed, with theme text glyphs; play/pause and normal mode remain unchanged. The same styling is maintained in main and the face-mask preview. Browser regression checks the blur and actual button alpha.
 

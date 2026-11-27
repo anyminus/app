@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.88
+- Limit artist credits in all shared song rows to two lines with overflow ellipsis; preserve artist links and full hover title, leave player header unchanged. Show one stored karaoke status according to LRC/TEXT/NONE/unknown across all lists; do not claim timing when unknown. No extra API calls. Update translations and browser regressions.
+
 ## 0.5.87
 - Promote the iPhone-verified Pico/lploc notes mask to production. Enable by default, provide a compact checkbox in recording preview, retain live detection status, local worker and throttled fallback, and render into the existing recorded canvas. Add default/on-off and real-face capture regression tests. Fix stale 35px artwork blur assertion to match the intended 12px styling. Audio and backend unchanged.
 

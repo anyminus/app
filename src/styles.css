@@ -286,3 +286,9 @@ body.karaoke-open .tab-bar{display:none}
 .video-sync-settings .video-sync-modes button,.video-sync-settings .video-sync-presets button{min-height:32px;min-width:0;overflow-wrap:anywhere}
 .video-sync-settings .video-monitor-boost{min-height:34px}
 @media(max-height:440px) and (orientation:landscape){.video-sync-settings{max-height:32dvh}.video-capture-actions>button,.video-result-actions>button,.video-result-actions>a{min-height:30px}}
+
+/* Shared song rows: reserve at most two artist lines; player header is unchanged. */
+.track-row .track-artist-lines{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;max-height:2.6em;min-width:0;width:100%;font-size:13px;line-height:1.3;color:var(--muted);overflow-wrap:anywhere}
+.track-row .track-artist-lines .artist-credits,.track-row .track-artist-lines .artist-credits>span{display:inline;white-space:normal}
+.track-row .track-artist-lines .artist-link{display:inline;font:inherit;line-height:inherit;vertical-align:baseline;white-space:normal;overflow:visible;overflow-wrap:anywhere;max-width:100%}
+.track-database-status.database-plain{color:var(--lyrics-plain)}.track-database-status.database-missing{color:var(--lyrics-missing)}.track-database-status.database-unverified{color:var(--muted);font-weight:500}
