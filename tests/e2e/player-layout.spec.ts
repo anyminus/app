@@ -37,12 +37,12 @@ test('player heading keeps collaborating artists and punctuation on a single lin
 });
 
 test('stalled Web Audio clock after creating a song recovers on explicit play without new downloads',async({page})=>{
- await page.addInitScript(()=>{const Native=window.AudioContext;let count=0;class TestContext extends Native{constructor(options?:AudioContextOptions){super(options);if(++count===1)Object.defineProperty(this,'currentTime',{configurable:true,get:()=>0})}}Object.defineProperty(window,'AudioContext',{configurable:true,value:TestContext})});
+ await page.addInitScript(()=>{const Native=window.AudioContext;Reflect.set(window,'__freezeTestAudioClock',true);Reflect.set(window,'__testAudioContexts',0);class TestContext extends Native{constructor(options?:AudioContextOptions){super(options);Reflect.set(window,'__testAudioContexts',Number(Reflect.get(window,'__testAudioContexts'))+1);if(Reflect.get(window,'__freezeTestAudioClock'))Object.defineProperty(this,'currentTime',{configurable:true,get:()=>0})}}Object.defineProperty(window,'AudioContext',{configurable:true,value:TestContext})});
  const api=await mockApi(page);
  await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song');await page.getByRole('button',{name:'Test song two',exact:true}).click();await page.getByRole('button',{name:'Создать караоке'}).click();
  await expect(page.getByText('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.',{exact:true})).toBeVisible({timeout:15000});
  const play=page.getByRole('button',{name:'Воспроизвести',exact:true});await expect(play).toBeEnabled();expect(api.media).toBe(2);expect(api.enqueued).toBe(1);
- await play.click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect.poll(async()=>Number(await page.getByRole('slider',{name:'Позиция песни'}).inputValue())).toBeGreaterThan(.2);
+ const before=await page.evaluate(()=>Number(Reflect.get(window,'__testAudioContexts')));await page.evaluate(()=>Reflect.set(window,'__freezeTestAudioClock',false));await play.click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect.poll(async()=>Number(await page.getByRole('slider',{name:'Позиция песни'}).inputValue())).toBeGreaterThan(.2);expect(await page.evaluate(()=>Number(Reflect.get(window,'__testAudioContexts')))).toBe(before+1);
  expect(api.media).toBe(2);expect(api.enqueued).toBe(1);
 });
 

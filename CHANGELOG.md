@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.16
+- Repair Node ESM test loading of the package version and make the stalled-audio regression freeze every context created before explicit recovery; keep all assertions and the intro countdown.
+
 ## 0.4.15
 - Show a media-synchronized countdown to the first timed lyric for intros longer than 10 seconds; preserve pause, seeking and smooth lyric centering.
 
