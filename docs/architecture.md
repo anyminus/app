@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Artwork background control palette (0.5.80)
+When `.karaoke-cover-background-on` is active, both pitch and speed +/- buttons use `--accent` and `--on`, matching the main play/pause control in either theme. Pressed brightness feedback and disabled opacity remain; toggling the artwork off restores the regular palette. Covered in `tests/e2e/player-layout.spec.ts`.
+
 ## App viewport zoom policy (0.5.79)
 The app starts at 1x and declares minimum/maximum scale 1 and user-scalable=no in index.html. `src/zoomLock.ts` installs one global listener set before React mounts: cancel Safari pinch gestures, multi-touch movement, modified wheel and browser zoom keyboard shortcuts when cancelable. CSS defaults to pan-only touch action, preserves explicit drag/timeline behavior, and gives coarse-pointer text controls a minimum 16px font to avoid iOS focus zoom. Ordinary single-touch scroll, unmodified wheel and application lyric-size settings remain available. Browser menu zoom, preexisting browser zoom preferences and OS accessibility magnification cannot be reliably controlled by a web page. Regression: `tests/e2e/zoom-lock.spec.ts`; real iOS Safari acceptance is still required.
 

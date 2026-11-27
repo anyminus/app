@@ -9,6 +9,16 @@ test('karaoke fits the viewport, follows lyrics without page scroll, keeps contr
  const cover=page.locator('.karaoke-header .karaoke-cover .artwork'),heading=page.locator('.karaoke-heading');
  async function checkHeader(){const record=page.locator('.karaoke-header').getByRole('button',{name:'Записать видео',exact:true});await expect(record).toBeVisible();await expect(page.locator('.video-karaoke .video-karaoke-trigger')).toHaveCount(0);await fits(record);const r=await record.boundingBox(),headingBox=await heading.boundingBox();expect(r!.x).toBeGreaterThanOrEqual(headingBox!.x+headingBox!.width-1);await expect(cover).toBeVisible();await expect(cover.locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');await expect(heading.locator('.song-lyrics-status')).toHaveCount(0);const a=await cover.boundingBox(),b=await heading.boundingBox();expect(Math.abs(a!.height-b!.height)).toBeLessThan(1);expect(Math.abs(a!.width-a!.height)).toBeLessThan(1);expect(Math.abs(a!.y-b!.y)).toBeLessThan(1)}
  await checkHeader();
+ const adjustments=screen.locator('.karaoke-pitch .pitch-buttons button');
+ await expect(adjustments).toHaveCount(4);
+ const palette=(el:Element)=>{const s=getComputedStyle(el);return [s.backgroundColor,s.color]};
+ const defaultPalette=await adjustments.first().evaluate(palette);
+ const playPalette=await play.evaluate(palette);
+ expect(defaultPalette).not.toEqual(playPalette);
+ await cover.click();await expect(screen).toHaveClass(/karaoke-cover-background-on/);
+ for(const button of await adjustments.all())expect(await button.evaluate(palette)).toEqual(playPalette);
+ await cover.click();await expect(screen).not.toHaveClass(/karaoke-cover-background-on/);
+ for(const button of await adjustments.all())expect(await button.evaluate(palette)).toEqual(defaultPalette);
  await slider.fill('0.8');await expect.poll(()=>lyrics.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.evaluate(()=>window.scrollY)).toBe(0);await fits(play);
  await page.getByRole('button',{name:'Свернуть микшер',exact:true}).click();await expect(mixer).toHaveCount(0);await expect(page.getByRole('button',{name:'Показать микшер',exact:true})).toHaveAttribute('aria-expanded','false');await fits(play);await fits(slider);await fits(screen);await fits(hint);await fits(favorite);await checkHeader();
  await page.getByRole('button',{name:'Показать микшер',exact:true}).click();await fits(mixer);await checkHeader();

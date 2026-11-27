@@ -249,3 +249,7 @@ body.karaoke-open .tab-bar{display:none}
 :where(*){touch-action:pan-x pan-y}
 :where(input[type=range]){touch-action:none}
 @media (pointer:coarse){input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),textarea,select{font-size:16px!important}}
+
+/* Artwork background mode: pitch and speed controls share the main transport palette. */
+.karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button{background:var(--accent);color:var(--on)}
+.karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button:active:not(:disabled){filter:brightness(.88)}

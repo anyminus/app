@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.80
+- In artwork-background mode, use the play/pause accent and on-accent colors for all four pitch and tempo adjustment buttons. Preserve regular-mode styling, disabled state and pressed feedback. Add player layout palette regression.
+
 ## 0.5.79
 - Lock page-level zoom at the initial 1x viewport across routes using viewport caps, pan-only touch action, Safari gesture and modified wheel/keyboard guards. Keep ordinary scrolling and range dragging. Avoid mobile input-focus zoom with 16px controls. Browser/OS accessibility zoom is outside page control; physical Safari verification remains necessary.
 
