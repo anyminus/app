@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.14
+- Show the actual application version beside the ANYMINUS logo on the home screen and use package.json as the single source for the profile version.
+
 ## 0.4.13
 - Detect frozen Web Audio clocks at startup and during playback, show a truthful Play state, and rebuild the audio output on explicit retry without downloading stems again.
 

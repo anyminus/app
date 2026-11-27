@@ -37,3 +37,6 @@ test('shared link recovers from a transient auth gateway error',async({page})=>{
  await page.route(/^https:\/\/[^/]+\/demo\/auth$/,async route=>{if(route.request().method()==='OPTIONS'){await route.fallback();return}attempts++;if(attempts===1)await route.fulfill({status:502,json:{},headers:{'Access-Control-Allow-Origin':'*'}});else await route.fallback()});
  await page.goto('/#/track/101');await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:15000});expect(attempts).toBe(2);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
 });
+
+import {version as appVersion} from '../../package.json';
+test('home and profile display the package version',async({page})=>{await mockApi(page);await page.goto('/#/home');await expect(page.locator('.brand-header .app-version')).toHaveText('v'+appVersion);await page.getByRole('navigation').getByRole('button',{name:'Профиль',exact:true}).click();await expect(page.getByText('ANYMINUS '+appVersion,{exact:true})).toBeVisible()});
