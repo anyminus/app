@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.6
+- Clarify the optional playback share description: volume of audio tracks, pitch and speed.
+
 ## 0.5.5
 - Optionally share the current mixer, mute, pitch and tempo settings with a song link; apply the preset only to that song without changing personal preferences.
 
