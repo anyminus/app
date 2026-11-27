@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.5
+- Optionally share the current mixer, mute, pitch and tempo settings with a song link; apply the preset only to that song without changing personal preferences.
+
 ## 0.5.4
 - Add speed +/- control alongside pitch, independent pitch compensation, synchronized media position and intro countdown.
 

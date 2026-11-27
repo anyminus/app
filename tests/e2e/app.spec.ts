@@ -54,3 +54,15 @@ test('published release notice is global, does not reload automatically, and sup
  published=appVersion;await Promise.all([page.waitForEvent('load'),notice.getByRole('button',{name:'Обновить страницу'}).click()]);await expect(page).toHaveURL(/#\/track\/101$/);await expect(notice).toHaveCount(0);
 });
 test('built Pages artifact exposes exactly its packaged version',async({request})=>{const r=await request.get('/version.json');expect(r.ok()).toBeTruthy();expect(await r.json()).toEqual({schemaVersion:1,version:appVersion})});
+
+
+test('optional playback settings travel in the song link without overwriting recipient preferences',async({page})=>{
+ await mockApi(page);await page.addInitScript(()=>{if(!sessionStorage.getItem('share-preset-test')){localStorage.setItem('anyminus:music','70');localStorage.setItem('anyminus:vocals','15');sessionStorage.setItem('share-preset-test','1')}});
+ await page.goto('/#/track/101?music=85&vocals=23&musicMuted=0&vocalsMuted=1&pitch=-2&speed=1.2');
+ await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:15000});await expect(page.getByRole('slider',{name:'Музыка',exact:true})).toHaveValue('85');await expect(page.getByRole('button',{name:'Приглушить: Голос артиста'})).toHaveAttribute('aria-pressed','true');
+ await expect(page.getByLabel('Тональность в полутонах')).toHaveText('-2');await expect(page.getByLabel('Скорость воспроизведения')).toHaveText('1.2×');
+ await page.getByRole('button',{name:'Поделиться песней',exact:true}).click();const sheet=page.getByRole('dialog',{name:'Поделиться песней'}),checkbox=sheet.getByRole('checkbox',{name:/Передать настройки воспроизведения/}),link=sheet.getByRole('textbox',{name:'Ссылка для отправки'});
+ await expect(checkbox).not.toBeChecked();await expect(link).toHaveValue(/#\/track\/101$/);await checkbox.check();await expect(link).toHaveValue(/music=85&vocals=23&musicMuted=0&vocalsMuted=1&pitch=-2&speed=1\.2$/);await checkbox.uncheck();await expect(link).toHaveValue(/#\/track\/101$/);await sheet.getByRole('button',{name:'Закрыть',exact:true}).click();
+ expect(await page.evaluate(()=>localStorage.getItem('anyminus:music'))).toBe('70');expect(await page.evaluate(()=>localStorage.getItem('anyminus:vocals'))).toBe('15');
+ await page.evaluate(()=>{location.hash='#/track/101'});await expect(page.getByRole('slider',{name:'Музыка',exact:true})).toHaveValue('70');await expect(page.getByRole('slider',{name:'Голос артиста',exact:true})).toHaveValue('15');await expect(page.getByLabel('Тональность в полутонах')).toHaveText('0');await expect(page.getByLabel('Скорость воспроизведения')).toHaveText('1.0×');
+});

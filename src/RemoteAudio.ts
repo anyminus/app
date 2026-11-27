@@ -46,6 +46,18 @@ export class RemoteAudio {
   this.pitchNode=node;this.pitchGate=gate;this.pitchLatency=latency;
  }
  private clearPitch(){this.pitchNode?.disconnect();this.pitchNode?.port.close();this.pitchGate?.disconnect();this.pitchNode=null;this.pitchGate=null;this.pitchLatency=0}
+ // Apply a validated link preset in one operation before the first source starts.
+ async configureInitialPlayback(pitch:number,speed:number){
+  if(!Number.isInteger(pitch)||pitch< -6||pitch>6||!Number.isFinite(speed)||speed<.5||speed>1.5)throw Error('Некорректные настройки ссылки');
+  if(this.running||this.starting||this.pitchNode)throw Error('Аудиовыход уже запущен');
+  const ctx=this.context;if(!ctx||this.buffers.length!==2)throw Error('Аудио не загружено');
+  if(pitch!==0||speed!==1){
+   const prepared=await this.createPitch(ctx,this.compensatedPitch(pitch,speed));
+   if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}
+   this.attachPitch(ctx,prepared.node,prepared.latency);
+  }
+  this.semitones=pitch;this.rate=speed;
+ }
  async setPitch(value:number){
   if(!Number.isInteger(value)||value< -6||value>6)throw Error('Недопустимая тональность');
   if(value===this.semitones)return;
