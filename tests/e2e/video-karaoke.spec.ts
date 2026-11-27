@@ -231,7 +231,7 @@ test('video pitch and tempo use a continuous recording audio bus',async({page})=
  await page.addInitScript(()=>{
   const connect=AudioNode.prototype.connect,start=MediaRecorder.prototype.start,stop=MediaRecorder.prototype.stop,sourceStart=AudioBufferSourceNode.prototype.start;
   Reflect.set(window,'__pitchVideoStarts',0);Reflect.set(window,'__pitchVideoStops',0);Reflect.set(window,'__pitchVideoRates',[]);
-  AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(this instanceof GainNode&&args[0] instanceof DynamicsCompressorNode&&Math.abs(this.gain.value-.55)<.001){const analyser=this.context.createAnalyser();analyser.fftSize=8192;Reflect.apply(connect,this,[analyser]);Reflect.set(window,'__recordingMusicAnalyser',analyser);}return result} as typeof connect;
+  AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(this instanceof GainNode&&args[0] instanceof MediaStreamAudioDestinationNode&&Math.abs(this.gain.value-.55)<.001){const analyser=this.context.createAnalyser();analyser.fftSize=8192;Reflect.apply(connect,this,[analyser]);Reflect.set(window,'__recordingMusicAnalyser',analyser);}return result} as typeof connect;
   MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__pitchVideoStarts',Number(Reflect.get(window,'__pitchVideoStarts'))+1);Reflect.set(window,'__pitchVideoTrack',this.stream.getAudioTracks()[0]);return start.apply(this,args)};
   MediaRecorder.prototype.stop=function(){Reflect.set(window,'__pitchVideoStops',Number(Reflect.get(window,'__pitchVideoStops'))+1);return stop.call(this)};
   AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){(Reflect.get(window,'__pitchVideoRates') as number[]).push(this.playbackRate.value);return sourceStart.apply(this,args)};
@@ -253,4 +253,20 @@ test('video pitch and tempo use a continuous recording audio bus',async({page})=
  await expect(page.getByText('● REC',{exact:true})).toBeVisible();expect(await page.evaluate(()=>[Reflect.get(window,'__pitchVideoStarts'),Reflect.get(window,'__pitchVideoStops'),(Reflect.get(window,'__pitchVideoTrack') as MediaStreamTrack).readyState])).toEqual([1,0,'live']);
  await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();expect(api.media).toBe(2);
  expect(await page.evaluate(()=>[Reflect.get(window,'__pitchVideoStarts'),Reflect.get(window,'__pitchVideoStops')])).toEqual([1,1]);
+});
+
+test('karaoke microphone requests music-friendly audio and recording has independent gain paths',async({page})=>{
+ await page.addInitScript(()=>{
+ const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices),connect=AudioNode.prototype.connect;
+ Reflect.set(window,'__micConstraints',[]);Reflect.set(window,'__recordingGraph',[]);
+ Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async(c:MediaStreamConstraints)=>{const calls=Reflect.get(window,'__micConstraints') as unknown[];calls.push(c.audio);if(calls.length===1)throw new DOMException('camera constraints','OverconstrainedError');return get(c)}});
+ AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);const dest=args[0];if(dest instanceof AudioNode)(Reflect.get(window,'__recordingGraph') as [AudioNode,AudioNode][]).push([this,dest]);return result} as typeof connect;
+ });
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
+ const constraints={echoCancellation:false,noiseSuppression:false,autoGainControl:false};expect(await page.evaluate(()=>Reflect.get(window,'__micConstraints'))).toEqual([constraints,constraints]);
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ const graph=await page.evaluate(()=>{const edges=Reflect.get(window,'__recordingGraph') as [AudioNode,AudioNode][];const inputs=edges.filter(([,to])=>to instanceof MediaStreamAudioDestinationNode);const sources=inputs.map(([from])=>from);const upstream=sources.map(source=>edges.filter(([,to])=>to===source).map(([from])=>from));return {inputs:sources.length,gains:sources.map(s=>s instanceof GainNode?s.gain.value:0).sort(),independent:upstream.length===2&&upstream.every(a=>a.length===1&&a[0] instanceof DynamicsCompressorNode)&&upstream[0][0]!==upstream[1][0]};});
+ expect(graph.inputs).toBe(2);expect(graph.gains[0]).toBeCloseTo(.45,3);expect(graph.gains[1]).toBeCloseTo(.55,3);expect(graph.independent).toBe(true);
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });

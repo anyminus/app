@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.30
+- Request unprocessed microphone audio for video karaoke and separate accompaniment and vocal peak protection to prevent singing from ducking recorded music. Preserve raw-audio preferences during camera constraint fallback.
+
 ## 0.5.29
 - Restore pitch and tempo controls in video preview and recording. Route the processed accompaniment through a stable shared output bus to both playback and recording, retain the microphone signal and prevent asynchronous tempo changes from restarting stopped playback.
 

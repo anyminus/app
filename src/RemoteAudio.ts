@@ -126,11 +126,15 @@ export class RemoteAudio {
   if((this.semitones!==0||this.rate!==1)&&!this.pitchNode){const prepared=await this.createPitch(ctx,this.compensatedPitch());if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}this.attachPitch(ctx,prepared.node,prepared.latency)}
   if(!microphone.getAudioTracks().some(t=>t.readyState==='live'))throw Error('Микрофон отключён');
  }catch(e){if(this.context===ctx)this.markOutputStalled();throw e}finally{clearTimeout(timeout)}
- const destination=ctx.createMediaStreamDestination(),music=ctx.createGain(),voice=ctx.createGain(),mic=ctx.createMediaStreamSource(microphone),limiter=ctx.createDynamicsCompressor();
- music.gain.value=.55;voice.gain.value=.75;limiter.threshold.value=-6;limiter.ratio.value=8;
+ const destination=ctx.createMediaStreamDestination(),music=ctx.createGain(),voice=ctx.createGain(),mic=ctx.createMediaStreamSource(microphone);
+ // Independent peak protection: singing cannot trigger accompaniment gain reduction.
+ // Leave headroom when summing the two branches; never monitor the microphone.
+ const musicLimiter=ctx.createDynamicsCompressor(),voiceLimiter=ctx.createDynamicsCompressor();
+ for(const limiter of [musicLimiter,voiceLimiter]){limiter.threshold.value=-1;limiter.knee.value=0;limiter.ratio.value=20;limiter.attack.value=.003;limiter.release.value=.08;}
+ music.gain.value=.55;voice.gain.value=.45;
  const output=this.output!;
- output.connect(music);music.connect(limiter);mic.connect(voice);voice.connect(limiter);limiter.connect(destination);this.capturing=true;
- let closed=false;return {stream:destination.stream,close:()=>{if(closed)return;closed=true;this.capturing=false;try{output.disconnect(music)}catch{}music.disconnect();mic.disconnect();voice.disconnect();limiter.disconnect();destination.stream.getTracks().forEach(t=>t.stop());}};
+ output.connect(musicLimiter);musicLimiter.connect(music);music.connect(destination);mic.connect(voiceLimiter);voiceLimiter.connect(voice);voice.connect(destination);this.capturing=true;
+ let closed=false;return {stream:destination.stream,close:()=>{if(closed)return;closed=true;this.capturing=false;try{output.disconnect(musicLimiter)}catch{}musicLimiter.disconnect();music.disconnect();mic.disconnect();voiceLimiter.disconnect();voice.disconnect();destination.stream.getTracks().forEach(t=>t.stop());}};
  }
  dispose(){this.pause();const ctx=this.context;this.clearPitch();this.output?.disconnect();this.output=null;this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.rate=1;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
 }
