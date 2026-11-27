@@ -7,3 +7,6 @@ export function publishedUpgrade(current, manifest){
  for(let i=0;i<3;i++){if(remote[i]>local[i])return manifest.version;if(remote[i]<local[i])return null}
  return null;
 }
+
+/** @param {unknown} manifest @returns {string[]} */
+export function releaseHighlights(manifest){const data=/** @type {{highlights?:unknown}|null} */(manifest);return Array.isArray(data?.highlights)?data.highlights.filter(x=>typeof x==='string').map(x=>x.replace(/\s+/g,' ').trim().slice(0,100)).filter(Boolean).slice(0,2):[];}

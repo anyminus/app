@@ -44,16 +44,16 @@ test('home and profile display the package version',async({page})=>{await mockAp
 
 test('published release notice is global, does not reload automatically, and supports later or explicit reload',async({page})=>{
  await mockApi(page);let published=appVersion;let requests=0;
- await page.route(/\/version\.json(?:\?|$)/,r=>{requests++;return r.fulfill({json:{schemaVersion:1,version:published}})});
+ await page.route(/\/version\.json(?:\?|$)/,r=>{requests++;return r.fulfill({json:{schemaVersion:1,version:published,highlights:['Новый темп','Переход к артисту']}})});
  await page.goto('/#/home');const notice=page.getByRole('complementary',{name:'Уведомление об обновлении'});await expect.poll(()=>requests).toBeGreaterThan(0);await expect(notice).toHaveCount(0);
  await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
  published='999.1.0';await page.waitForTimeout(3100);await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
- await expect(notice).toContainText('v999.1.0');await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page).toHaveURL(/#\/track\/101$/);
+ await expect(notice).toContainText('v999.1.0');await expect(notice).toContainText('Новый темп');await expect(notice).toContainText('Переход к артисту');await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page).toHaveURL(/#\/track\/101$/);
  await notice.getByRole('button',{name:'Позже'}).click();await expect(notice).toHaveCount(0);
  published='999.2.0';await page.waitForTimeout(3100);await page.evaluate(()=>window.dispatchEvent(new Event('online')));await expect(notice).toContainText('v999.2.0');
  published=appVersion;await Promise.all([page.waitForEvent('load'),notice.getByRole('button',{name:'Обновить страницу'}).click()]);await expect(page).toHaveURL(/#\/track\/101$/);await expect(notice).toHaveCount(0);
 });
-test('built Pages artifact exposes exactly its packaged version',async({request})=>{const r=await request.get('/version.json');expect(r.ok()).toBeTruthy();expect(await r.json()).toEqual({schemaVersion:1,version:appVersion})});
+test('built Pages artifact exposes exactly its packaged version',async({request})=>{const r=await request.get('/version.json');expect(r.ok()).toBeTruthy();const manifest=await r.json();expect(manifest).toMatchObject({schemaVersion:1,version:appVersion});expect(manifest.highlights.length).toBeLessThanOrEqual(2)});
 
 
 test('optional playback settings travel in the song link without overwriting recipient preferences',async({page})=>{

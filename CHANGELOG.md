@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.8
+- Show up to two short release highlights in update notifications using version-matched deployment notes.
+
 ## 0.5.7
 - Extend playback speed to 2.0× and offer artist navigation at the end of a song.
 

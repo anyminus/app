@@ -52,3 +52,6 @@ The optional share preset helper explicitly says «Громкость аудио
 
 ## Speed range and end-of-song artist action (0.5.7)
 Owner confirmed 0.5–2.0x, step 0.1, default 1. Extend DSP speed guard, shared link validation and UI maximum together. Existing source-clock, countdown and pitch compensation remain unchanged. End screen replaces lyrics only at the end of source media while stopped; rewind or restart restores the original lyrics. Artist actions use existing canonical artist navigation and render each known artist separately, legacy fallback remains. Tests cover preset limit, end screen navigation and rewind. No backend changes for these controls. 2x quality requires device acceptance.
+
+## Release highlights (0.5.8)
+A version-matched release-notes.json supplies up to two short Russian highlights in version.json from the same successful Pages artifact. Future release authors must update notes.version and highlights for each release; a version mismatch safely emits an empty list, never stale highlights. Legacy manifests without notes fall back to generic copy. Notice validates plain strings and limits each to 100 characters, displays at most two, does not interrupt playback. Old clients need one refresh to render highlights. Unit and E2E checks updated.

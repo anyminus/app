@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
-import {publishedUpgrade} from './release-version.mjs';
+import {publishedUpgrade,releaseHighlights} from './release-version.mjs';
 /** Global foreground update notification, independent of route and karaoke watches. */
 export function useReleaseNotice(current:string){
- const [available,setAvailable]=useState<string|null>(null),[dismissed,setDismissed]=useState<string|null>(null);
+ const [available,setAvailable]=useState<{version:string;highlights:string[]}|null>(null),[dismissed,setDismissed]=useState<string|null>(null);
  useEffect(()=>{
   let stopped=false;let inFlight:AbortController|null=null;let last=0;
   async function check(){
@@ -13,7 +13,7 @@ export function useReleaseNotice(current:string){
     const r=await fetch(url,{cache:'no-store',credentials:'same-origin',redirect:'error',signal:c.signal});
     if(!r.ok||!r.headers.get('content-type')?.toLowerCase().includes('application/json'))return;
     const payload=await r.json();const next=publishedUpgrade(current,payload);
-    if(!stopped&&!c.signal.aborted&&next)setAvailable(old=>!old||publishedUpgrade(old,{schemaVersion:1,version:next})?next:old);
+    if(!stopped&&!c.signal.aborted&&next)setAvailable(old=>!old||publishedUpgrade(old.version,{schemaVersion:1,version:next})||old.version===next?{version:next,highlights:releaseHighlights(payload)}:old);
    }catch{/* Network/partial deployments do not interrupt playback or show a false notice. */}
    finally{clearTimeout(deadline);if(inFlight===c)inFlight=null}
   }
@@ -22,5 +22,5 @@ export function useReleaseNotice(current:string){
   document.addEventListener('visibilitychange',tick);window.addEventListener('focus',tick);window.addEventListener('online',tick);
   return()=>{stopped=true;inFlight?.abort();clearTimeout(first);clearInterval(timer);document.removeEventListener('visibilitychange',tick);window.removeEventListener('focus',tick);window.removeEventListener('online',tick)};
  },[current]);
- return {version:available!==dismissed?available:null,dismiss:()=>setDismissed(available),reload:()=>window.location.reload()};
+ return {version:available?.version!==dismissed?available?.version??null:null,highlights:available?.highlights??[],dismiss:()=>setDismissed(available?.version??null),reload:()=>window.location.reload()};
 }
