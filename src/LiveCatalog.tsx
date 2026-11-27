@@ -4,7 +4,7 @@ import {normalizeJob,mediaUrl,providerLyricsHint} from './api.mjs';
 import {api,origin,coverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
 import {useSystemMedia} from './useSystemMedia';
-import {normalizeStoredLyrics,retryLyricsStatus,lyricScrollEase} from './lyrics.mjs';
+import {normalizeStoredLyrics,retryLyricsStatus,lyricScrollEase,introCountdown} from './lyrics.mjs';
 import {Mixer,Artwork,IconButton,ArtistLinks,KaraokeReadyStatus,ProviderLyricsStatus} from './components';
 import {effectiveVolume} from './mixer.mjs';
 import {formatTime} from './model.mjs';
@@ -69,6 +69,8 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  useEffect(()=>{audio.current?.setVolumes(effectiveVolume(mixer.music,mixer.musicMuted),effectiveVolume(mixer.vocals,mixer.vocalsMuted))},[mixer.music,mixer.vocals,mixer.musicMuted,mixer.vocalsMuted]);
  useEffect(()=>{if(!playing)return;let last=audio.current?.position??0,lastAdvance=performance.now();const t=setInterval(()=>{const a=audio.current;if(!a)return;const now=performance.now(),position=a.position;setPosition(position);if(a.interrupted){a.markOutputStalled();setPlaying(false);setError('Воспроизведение прервано системой. Нажмите воспроизведение ещё раз.');}else if(position>=a.length){a.pause();setPlaying(false)}else if(document.hidden||Math.abs(position-last)>.005){last=position;lastAdvance=now}else if(now-lastAdvance>1800){a.markOutputStalled();setPlaying(false);setError('Аудиовыход остановился. Нажмите воспроизведение ещё раз.');}},80);return()=>clearInterval(t)},[playing]);
  let active=-1;for(let i=0;i<lyrics.length;i++)if(lyrics[i].startMs<=position*1000)active=i;
+ const longIntro=lyrics.length>0&&lyrics[0].startMs>10000;
+ const introRemaining=playerReady?introCountdown(lyrics[0]?.startMs,position):null;
 
  const lyricRef=useRef<HTMLDivElement>(null);const [focus,setFocus]=useState(false);
  // Lock the page itself. Only the independent lyrics viewport may scroll.
@@ -78,7 +80,8 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  function centerLine(smooth:boolean){
    stopLyricMotion();
    const viewport=lyricRef.current,line=viewport?.querySelector<HTMLElement>('[data-active="true"]');
-   if(!viewport||!line)return;
+   if(!viewport)return;
+   if(!line){if(longIntro)viewport.scrollTop=0;return;}
    // Measure the unscaled button, not the transformed text. Wrapped lines keep stable geometry.
    const delta=line.getBoundingClientRect().top-viewport.getBoundingClientRect().top+(line.offsetHeight-viewport.clientHeight)/2;
    const target=Math.max(0,Math.min(viewport.scrollHeight-viewport.clientHeight,viewport.scrollTop+delta));
@@ -123,7 +126,8 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  <IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart size={21} fill={liked?'currentColor':'none'}/></IconButton>
  <button className="icon-button karaoke-focus-toggle" type="button" aria-label={focus?'Показать плеер':'Только текст'} aria-pressed={focus} title={focus?'Обычный режим':'Полноэкранный текст'} onClick={()=>setFocus(v=>!v)}>{focus?<Minimize2 size={21}/>:<Maximize2 size={21}/>}</button>
  </header>
- <div className={'karaoke-lyrics'+(lyrics.length?' timed':'')} ref={lyricRef} aria-label="Текст песни" style={{'--lyric-size':font+'px'} as React.CSSProperties}>
+ <div className={'karaoke-lyrics'+(lyrics.length?' timed':'')+(longIntro?' has-long-intro':'')} ref={lyricRef} aria-label="Текст песни" style={{'--lyric-size':font+'px'} as React.CSSProperties}>
+ {longIntro&&<div className="karaoke-intro-spacer">{introRemaining!==null&&<div className="karaoke-intro-countdown" role="timer" aria-label="До начала текста"><span className="intro-label">До начала текста</span><strong>{formatTime(introRemaining)}</strong><span className="intro-hint">Приготовьтесь петь</span></div>}</div>}
  {lyrics.length?lyrics.map((l,i)=><button type="button" className={'lyric '+(i===active?'current':i<active?'past':'future')} data-active={i===active} aria-current={i===active?'true':undefined} key={i} onClick={()=>void seek(l.startMs/1000)}><span className="lyric-text">{l.text}</span></button>):plainLyrics?<><p className="metadata">Текст без синхронизации</p><p className="plain-lyrics">{plainLyrics}</p></>:<div className="karaoke-lyrics-empty"><p className="metadata" role="status">{!playerReady?(error&&!loadingAudio?'Не удалось загрузить дорожки':'Загружаем дорожки…'):lyricState||'Загрузка текста…'}</p>{!playerReady&&error&&!loadingAudio&&<button className="secondary" onClick={()=>void openPlayer()}>Повторить загрузку дорожек</button>}{playerReady&&canSubscribe&&<><button className="secondary lyric-subscribe" aria-pressed={lyricsSubscribed} onClick={onToggleLyricsSubscription}><Bell size={18}/>{lyricsSubscribed?'Вы подписаны · отменить':'Подписаться на обновление'}</button><p className="metadata lyric-subscribe-note">{lyricsSubscribed?'Сообщим в ANYMINUS, когда текст появится. Проверка при открытом сайте.':'Уведомим в ANYMINUS, когда текст будет доступен.'}</p></>}{playerReady&&lyricState&&lyricState!=='Текст отсутствует в базе'&&<button className="text-button" disabled={lyricLoading} onClick={()=>setLyricRetry(n=>n+1)}>Повторить загрузку текста</button>}</div>}
  </div>
  <div className="karaoke-dock">

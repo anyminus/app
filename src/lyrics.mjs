@@ -9,3 +9,8 @@ export function retryLyricsStatus(status){return status===0||status===408||statu
 // Normalized critically damped spring-like curve. No overshoot, bounded 0..1.
 /** @param {number} progress */
 export function lyricScrollEase(progress){const t=Math.max(0,Math.min(1,progress));const curve=x=>1-(1+7*x)*Math.exp(-7*x);return t===0?0:t===1?1:curve(t)/curve(1)}
+
+// Only long intros with a validated source timestamp qualify. Countdown follows
+// the audio position, not wall time; ceil avoids a visible zero before singing.
+/** @param {number|undefined} firstStartMs @param {number} positionSeconds */
+export function introCountdown(firstStartMs,positionSeconds){if(typeof firstStartMs!=='number'||!Number.isFinite(firstStartMs)||firstStartMs<=10000||!Number.isFinite(positionSeconds))return null;const remaining=firstStartMs-Math.max(0,positionSeconds)*1000;return remaining>0?Math.ceil(remaining/1000):null}

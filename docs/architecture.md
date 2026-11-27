@@ -16,3 +16,6 @@ Reported iPhone/Safari newly-created karaoke can show Pause and remain at 0:00 w
 
 ## Visible release version (0.4.14)
 The home brand header displays a compact muted vX.Y.Z beside ANYMINUS. Home and profile both import version from package.json, avoiding manually maintained duplicate release strings. Vite bundles the value; no backend request. Browser regression verifies both surfaces.
+
+## Long intro countdown (0.4.15)
+Show «До начала текста» with mm:ss remaining when the first verified timed LRC line starts strictly later than 10 seconds. Use existing player media position with ceil to seconds; no separate timer, pause freezes, seek recomputes, first line activation removes countdown, rewind restores it. No countdown for plain/missing/short-intro lyrics. Render in the existing 42% lead spacer without changing row geometry or the first-line centering animation; reset to intro on backward seek when auto-follow is enabled. Theme accent and responsive layout. No backend changes. Unit and browser regression added.

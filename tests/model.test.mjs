@@ -50,3 +50,6 @@ test('catalog lyrics format accepts only explicit TEXT, LRC or NONE',()=>{const 
 
 import {providerLyricsHint} from '../src/api.mjs';
 test('provider lyric capability is separate and unknown is not absent',()=>{assert.equal(providerLyricsHint({lyricsSyncAvailable:false,lyricsTextAvailable:true}),'TEXT');assert.equal(providerLyricsHint({lyricsSyncAvailable:false,lyricsTextAvailable:false}),'NONE');assert.equal(providerLyricsHint({lyricsSyncAvailable:false,lyricsTextAvailable:false,lyricsAvailable:true}),undefined);assert.equal(providerLyricsHint({lyricsTextAvailable:false}),undefined);assert.equal(providerLyricsHint({lyricsSyncAvailable:true}),'LRC')});
+
+import {introCountdown} from '../src/lyrics.mjs';
+test('long intro countdown uses source timestamp and media position',()=>{assert.equal(introCountdown(undefined,0),null);assert.equal(introCountdown(10000,0),null);assert.equal(introCountdown(10001,0),11);assert.equal(introCountdown(30000,0),30);assert.equal(introCountdown(30000,24.25),6);assert.equal(introCountdown(30000,29.99),1);assert.equal(introCountdown(30000,30),null);assert.equal(introCountdown(30000,31),null);assert.equal(introCountdown(30000,5),25);assert.equal(introCountdown(30000,NaN),null)});

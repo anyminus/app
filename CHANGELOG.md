@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.15
+- Show a media-synchronized countdown to the first timed lyric for intros longer than 10 seconds; preserve pause, seeking and smooth lyric centering.
+
 ## 0.4.14
 - Show the actual application version beside the ANYMINUS logo on the home screen and use package.json as the single source for the profile version.
 
