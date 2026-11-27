@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.77
+- Reduce cover blur from 90px to 35px and lighten the contrast scrim. Transparent karaoke mixer/pitch/tempo cards. Move the existing recording trigger to a compact header portal, preserving recording controls and errors below the header.
+
 ## 0.5.76
 - Add Greek (el) to the complete UI dictionary and device/manual language selection. Keep song metadata and lyrics unchanged.
 
