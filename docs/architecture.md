@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Local search history (0.5.83)
+Global search history is stored in `anyminus:search-history-v1` (localStorage), separate from playback history. `useCatalog` calls a stable optional observer when its existing debounced search is dispatched, not for every keystroke or for home/artist loading. `src/searchHistory.mjs` validates trimmed 2–200 character queries, deduplicates case-insensitively, caps at 20 most recent entries. Below the search field, history is shown for queries shorter than two characters; clicking an entry fills the same input and runs the existing search path. Individual deletion and clear-all are local; the history collection is not sent to the API. All five UI languages supported. Model and e2e regressions cover ordering, replay, persistence and deletion.
+
 ## Compact two-line recording trigger (0.5.82)
 Supersedes the 100–140px width from 0.5.81: the header recording button uses a content-sized three-column grid (camera / min-content label / beta). The localized two-word label wraps at the word boundary, without splitting words, leaving more room for the song heading at all viewport widths. The 40px minimum height and recording behavior are unchanged. Header tests check two lines and width below 100px in Russian.
 

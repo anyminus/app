@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.83
+- Add local recent search history below the global search input when no valid query is entered. Save only dispatched debounced searches, cap at 20 unique case-insensitive entries, replay on tap, remove individually or clear all. No new server request or server-side history storage. Add translations and model/browser tests.
+
 ## 0.5.82
 - Make the player header recording trigger content-sized with a two-line localized label. Retain the camera, beta marker and existing click target height. Extend header regression for two-line Russian text and compact width.
 

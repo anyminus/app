@@ -255,3 +255,6 @@ body.karaoke-open .tab-bar{display:none}
 /* Artwork background mode: pitch and speed controls share the main transport palette. */
 .karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button{background:var(--accent);color:var(--on)}
 .karaoke-cover-background-on .karaoke-pitch>.pitch-buttons>button:active:not(:disabled){filter:brightness(.88)}
+
+/* Local recent queries, shown before a new valid search. */
+.search-history{display:grid;gap:4px;min-width:0}.search-history .section-header{margin:0 0 4px}.search-history .text-button{min-height:44px;padding:0 4px}.search-history ul{list-style:none;margin:0;padding:0}.search-history li{display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--border);min-width:0}.search-history-query{display:flex;align-items:center;gap:12px;min-width:0;flex:1;min-height:48px;text-align:left;color:var(--text);padding:5px 0}.search-history-query svg,.search-history-remove{color:var(--muted)}.search-history-query span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.search-history-remove{flex:none}
