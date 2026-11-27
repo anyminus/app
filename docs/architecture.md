@@ -209,3 +209,7 @@ Owner requested multilingual UI, automatic phone/browser language and persistent
 
 ## Artwork fast CDN (0.5.47)
 Production probe in 0.5.45 and 0.5.46 returned `other_yandex_host` for four tracks. Core e28a9a0b92884a52ec93dd355211e9fc8673d799 adds the exact publicly used avatars-fast.yandex.net CDN in both Workers and preserves its validated host. Client accepts the same hostname; malicious lookalikes still rejected. Both Worker deployments and live image probe are required to confirm recovery; actual rejected raw hostname remains unconfirmed. Fix TS1003 in localized SortableTrackList default parameter. No other feature changes. Tests and new deployment pending.
+
+
+## Language preference type fix (0.5.48)
+App CI 46041769839 failed with TS2322 because the stored preference could be inferred as string|null. Explicitly guard the localStorage result before returning it. Missing/invalid settings resolve to auto. Core CI and both Workers Builds checks passed; previous live artwork probe preceded Python Worker build completion. New probe required.

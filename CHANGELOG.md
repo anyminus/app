@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.48
+- Fix nullable stored language preference TypeScript build error.
+
 ## 0.5.47
 - Allow the exact fast Yandex artwork CDN host in the client; correct the localization compile syntax in SortableTrackList.
 

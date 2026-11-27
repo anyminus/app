@@ -2269,7 +2269,7 @@ const dictionary={
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}
 export function detectLanguage(values){for(const value of values??[]){const code=String(value).toLowerCase().split(/[-_]/)[0];if(supportedLanguage(code))return code;}return 'en';}
-export function readLanguagePreference(){try{const value=localStorage.getItem(languageKey);return supportedLanguage(value)?value:'auto';}catch{return 'auto';}}
+export function readLanguagePreference(){try{const value=localStorage.getItem(languageKey);return typeof value==='string'&&supportedLanguage(value)?value:'auto';}catch{return 'auto';}}
 export function effectiveLanguage(preference,values){return supportedLanguage(preference)?preference:detectLanguage(values);}
 let current=typeof window==='undefined'?'ru':effectiveLanguage(readLanguagePreference(),navigator.languages?.length?navigator.languages:[navigator.language]);
 export function setLanguagePreference(preference){if(preference!=='auto'&&!supportedLanguage(preference))return;try{if(preference==='auto')localStorage.removeItem(languageKey);else localStorage.setItem(languageKey,preference);}catch{}applyLanguage(preference);}
