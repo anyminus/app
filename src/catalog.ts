@@ -6,7 +6,7 @@ export const origin=apiOrigin(import.meta.env.VITE_DEMO_API_ORIGIN||'https://any
 export const api=createDemoApi(origin);
 export const coverFor=(id:string,provided?:string|null)=>trackArtworkUrl(origin,id,provided);
 export type ArtistCredit={author_id:string;name:string};
-export type LiveTrack={lyricsFormat?:'TEXT'|'LRC'|'NONE';providerTrackId:string;title:string;artist:string;artistCredits?:ArtistCredit[];durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
+export type LiveTrack={providerLyricsFormat?:'TEXT'|'LRC'|'NONE';lyricsFormat?:'TEXT'|'LRC'|'NONE';providerTrackId:string;title:string;artist:string;artistCredits?:ArtistCredit[];durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
 export function isTrackId(id:unknown):id is string{return typeof id==='string'&&/^\d{1,20}$/.test(id)}
 export function useCatalog(query:string|null,artist:string|null=null,authorId?:string){
  const [items,setItems]=useState<LiveTrack[]>([]),[cursor,setCursor]=useState<string|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[retry,setRetry]=useState(0);

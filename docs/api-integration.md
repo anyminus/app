@@ -24,3 +24,6 @@ Optional `lyricsFormat: TEXT | LRC` on verified ready catalog and ready artist p
 
 ## 0.4.7 song detail
 The ready label is shared between list rows and the song/player heading. A new request shows normal audio creation progress plus neutral lyrics-format checking; a verified ready status from the create/poll API supplies `lyricsFormat` and the player immediately shows the corresponding color/label. Actual stored lyrics may refine it, temporary HTTP failures never switch to NONE. No additional provider query, enqueue or playback changes. Unknown ready format keeps generic readiness.
+
+## 0.4.8 preview before creation
+`providerLyricsFormat` describes reported provider capability independently from `lyricsFormat` (stored ready pair). Uncreated list rows and song detail show timed/plain/missing labels with the established palette. Opening a song with unknown capability performs a bounded, read-only metadata lookup before enabling Create; failure leaves a neutral unknown label. Never enqueue for checking; no prohibition on deliberate creation. Ready songs use verified stored status. No DB migration.
