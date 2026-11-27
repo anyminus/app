@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.11
+- Use one status per ready karaoke row; keep only «Караоке готово» for timed tracks and preserve plain/missing labels. Provider-format labels remain on uncreated songs.
+
 ## 0.4.10
 - Show only «Караоке без текста» on verified ready karaoke without lyrics; remove duplicate red availability line in popular/search lists.
 

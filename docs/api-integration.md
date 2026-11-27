@@ -32,3 +32,6 @@ Search and popular results always show a text-availability label, including a ne
 
 ## 0.4.10 — deduplicate missing-lyrics status
 For an already-ready karaoke with verified `lyricsFormat: NONE`, render only «Караоке без текста» (red); do not render the redundant «Текст отсутствует» below it in popular or search lists. Uncreated tracks with provider NONE still show «Текст отсутствует». Timed and plain labeling unchanged. Shared TrackRow regression test covers the ready vs uncreated distinction. No backend change.
+
+## 0.4.11 — single status on ready tracks
+Every already-ready karaoke shows exactly one stored readiness label: LRC or unspecified => «Караоке готово», TEXT => «Текст без таймкодов», NONE => «Караоке без текста». Do not add the provider-format label to any ready row, including popular/search lists. For tracks not yet created, preserve the provider-format or unknown label. Shared TrackRow regression verifies single timed and missing labels. No API changes.
