@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.52
+- Always record the composited canvas with song title, artist and AnyMinus watermark, including plain/missing lyrics and when timed lyrics are disabled. Do not silently export raw unbranded video.
+
 ## 0.5.51
 - Correct autoplay regression fixture to use distinct immutable media pair IDs per song; verify separate downloads for distinct pairs and cache reuse on reopening the first song. No audio runtime changes.
 

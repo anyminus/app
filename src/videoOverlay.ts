@@ -61,6 +61,9 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
  singleLine(metadata.title,titleSize,750,template.header.titleColor,template.header.align,headerTop);
  singleLine(metadata.artist,artistSize,500,template.header.artistColor,template.header.align,headerTop+titleSize*1.25+gap/2);
  const markY=h-margin-markSize*1.2,bottom=Math.min(markY-gap,h*(1-template.lyrics.safeBottom));
+ // Branding is independent of lyrics. With no timed rows, shade only the
+ // watermark area instead of dimming the lower half of the camera image.
+ if(!lines.length){const shade=ctx.createLinearGradient(0,Math.max(0,markY-margin*2),0,h);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(1,'rgba(0,0,0,.55)');ctx.fillStyle=shade;ctx.fillRect(0,Math.max(0,markY-margin*2),w,h);singleLine(template.watermark.text,markSize,650,template.watermark.color,template.watermark.align,markY);return true;}
  const activeSize=Math.max(1,Math.round(unit*template.lyrics.currentSize)),nextSize=Math.max(1,Math.round(unit*template.lyrics.nextSize));
  const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
  const line=(i:number,size:number,weight:number)=>{

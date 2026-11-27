@@ -95,7 +95,7 @@ test('timed lyrics are drawn into the captured video canvas and follow a seek',a
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Alpha',exact:true})).toBeVisible();
  await page.getByRole('button',{name:/Записать видео/}).click();
  const checkbox=page.getByRole('checkbox',{name:'Текст на видео'});await expect(checkbox).toBeChecked();
- await checkbox.uncheck();await expect(page.locator('canvas.video-overlay')).not.toHaveClass(/visible/);await checkbox.check();await page.getByRole('button',{name:'Alpha',exact:true}).click();
+ await checkbox.uncheck();await expect(page.locator('canvas.video-overlay')).toHaveClass(/visible/);await page.evaluate(()=>{(Reflect.get(window,'__overlayText') as string[]).length=0;});await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toEqual(expect.arrayContaining(['Test song one','Test artist','AnyMinus']));expect(await page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).not.toContain('Alpha');await checkbox.check();await page.getByRole('button',{name:'Alpha',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toEqual(expect.arrayContaining(['Alpha','Test song one','Test artist','AnyMinus']));
  await expect.poll(()=>page.evaluate(()=>{const p=Reflect.get(window,'__overlayPositions');if(!p.Alpha||!p.Bravo)return 100;const u=p.Alpha.unit;const nominal=(Math.round(u*.066)+Math.round(u*.0504))*1.24+Math.max(1,Math.round(u*.016));return Math.abs((p.Bravo.center-p.Alpha.center)/nominal-.6);})).toBeLessThan(.02);
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect.poll(async()=>await page.getByText('● REC',{exact:true}).isVisible()?'recording':(await page.locator('.video-karaoke-error,.karaoke-error').allTextContents()).join(' | ')||'starting',{timeout:10000}).toBe('recording');
@@ -136,10 +136,9 @@ test('unsupported recorder leaves normal karaoke available without requesting ca
  await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeEnabled();
  expect(await page.evaluate(()=>Reflect.get(window,'__cameraCalls'))).toBe(0);
 });
-test('Android camera fallback and raw recording when canvas is unsupported',async({page})=>{
+test('Android camera constraints fallback preserves branded canvas recording',async({page})=>{
  await page.addInitScript(()=>{
  Object.defineProperty(navigator,'userAgent',{configurable:true,value:'Mozilla/5.0 (Linux; Android 14) Chrome/134.0.0.0 Mobile Safari/537.36'});
- Object.defineProperty(HTMLCanvasElement.prototype,'captureStream',{configurable:true,value:undefined});
  const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);Reflect.set(window,'__cameraCalls',0);
  Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async(c:MediaStreamConstraints)=>{const count=Number(Reflect.get(window,'__cameraCalls'))+1;Reflect.set(window,'__cameraCalls',count);if(count===1)throw new DOMException('unsupported constraints','OverconstrainedError');return get(c)}});
  const start=MediaRecorder.prototype.start;MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__androidMime',this.mimeType);return start.apply(this,args)};
@@ -147,7 +146,7 @@ test('Android camera fallback and raw recording when canvas is unsupported',asyn
  await mockApi(page);
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Android line',startMs:0,endMs:5000,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Android line',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
- await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('checkbox',{name:'Текст на видео'})).toBeDisabled();await expect(page.getByText('Наложение не поддерживается',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('checkbox',{name:'Текст на видео'})).toBeChecked();await expect(page.locator('canvas.video-overlay')).toHaveClass(/visible/);
  expect(await page.evaluate(()=>Reflect.get(window,'__cameraCalls'))).toBe(2);
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>Reflect.get(window,'__androidMime'))).toMatch(/video\/webm/);
@@ -427,4 +426,22 @@ test('compact recording settings keep compensation above collapsed diagnostics o
  expect(geometry.gap).toBeLessThan(54);expect(geometry.modeBottom).toBeLessThanOrEqual(geometry.panelBottom);expect(geometry.scroll).toBe(0);
  await expect(music).toHaveCSS('--progress','55%');await expect(voice).toHaveCSS('--progress','100%');await music.fill('32');await expect(music).toHaveCSS('--progress','32%');
  await panel.getByRole('button',{name:'Вручную',exact:true}).click();await expect(panel.getByRole('slider',{name:'Компенсация задержки в миллисекундах'})).toBeInViewport({ratio:1});
+});
+
+test('missing canvas support prevents unbranded export without requesting camera',async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(HTMLCanvasElement.prototype,'captureStream',{configurable:true,value:undefined});Reflect.set(window,'__cameraCalls',0);Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async()=>{Reflect.set(window,'__cameraCalls',1);throw Error('Unexpected camera request')}})});
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:/Записать видео/})).toBeDisabled();await expect(page.getByText('Браузер не поддерживает запись видео с оформлением.')).toBeVisible();expect(await page.evaluate(()=>Reflect.get(window,'__cameraCalls'))).toBe(0);
+});
+for(const kind of ['plain','missing','disabled'] as const)test('video branding is always captured: '+kind,async({page})=>{
+ await page.addInitScript(()=>{const fill=CanvasRenderingContext2D.prototype.fillText,capture=HTMLCanvasElement.prototype.captureStream,start=MediaRecorder.prototype.start;Reflect.set(window,'__brandRows',[]);CanvasRenderingContext2D.prototype.fillText=function(...args:Parameters<CanvasRenderingContext2D['fillText']>){if(this.canvas.classList.contains('video-overlay')&&document.querySelector('.video-karaoke-rec')){const rows=Reflect.get(window,'__brandRows') as string[];rows.push(args[0]);if(rows.length>300)rows.shift();}return fill.apply(this,args)};HTMLCanvasElement.prototype.captureStream=function(rate?:number){const stream=capture.call(this,rate);if(this.classList.contains('video-overlay'))Reflect.set(window,'__brandTrack',stream.getVideoTracks()[0]);return stream};MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__brandRecorded',this.stream.getVideoTracks()[0]===Reflect.get(window,'__brandTrack'));return start.apply(this,args)}});
+ await mockApi(page);
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:kind==='plain'?{state:'available',format:'TEXT',text:'Plain lyric only'}:kind==='missing'?{state:'missing',format:'NONE'}:{state:'available',format:'LRC',timing:'line',lines:[{text:'Timed lyric only',startMs:0,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();if(kind==='disabled')await expect(page.getByRole('button',{name:'Timed lyric only',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();const check=page.getByRole('checkbox',{name:'Текст на видео'});if(kind==='disabled')await check.uncheck();else await expect(check).toBeDisabled();
+ await expect(page.locator('canvas.video-overlay')).toHaveClass(/visible/);await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>Reflect.get(window,'__brandRecorded'))).toBe(true);
+ await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__brandRows') as string[])).toEqual(expect.arrayContaining(['Test song one','Test artist','AnyMinus']));
+ expect(await page.evaluate(()=>Reflect.get(window,'__brandRows') as string[])).not.toContain('Timed lyric only');expect(await page.evaluate(()=>Reflect.get(window,'__brandRows') as string[])).not.toContain('Plain lyric only');
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });

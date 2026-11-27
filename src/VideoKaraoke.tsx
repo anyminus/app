@@ -4,6 +4,7 @@ import {Video,Square,Download,X,Share2,Settings2,Play,Music2,MicVocal} from 'luc
 import {RemoteAudio,playbackSession} from './RemoteAudio';
 import {loadSync,saveSync,resolveDelay,boundedDelay,delayedClock,loadRecordingLevels,saveRecordingLevels,boundedLevel,type RecordingLevels,type SyncSettings,type SyncMode,type AudioDiagnostics,type ClockSample} from './recordingSync';
 import {drawKaraokeFrame,overlaySupported,resetVideoMotion,type TimedLine} from './videoOverlay';
+const noVideoLyrics:readonly TimedLine[]=[];
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
 export type VideoTransport={toggle:()=>void};
 type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];seekRevision:RefObject<number>;playing:boolean;title:string;artist:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
@@ -82,11 +83,12 @@ export function VideoKaraoke(props:Props){
  useEffect(()=>{let live=true;setOutputName(trUi('Не определён браузером'));const id=diagnostics?.sinkId;if(id&&syncOpen){void navigator.mediaDevices?.enumerateDevices?.().then(devices=>{if(live)setOutputName(devices.find(device=>device.kind==='audiooutput'&&device.deviceId===id)?.label||trUi('Системное устройство'));}).catch(()=>{});}return()=>{live=false};},[diagnostics?.sinkId,syncOpen]);
  const videoOnlyPreview=useRef<MediaStream|null>(null);
  const [sharing,setSharing]=useState(false),[shareHint,setShareHint]=useState('');const shareBusy=useRef(false),shareAttempt=useRef(0);
- const [includeLyrics,setIncludeLyrics]=useState(true),[recordOverlay,setRecordOverlay]=useState(false);const [overlayFailed,setOverlayFailed]=useState(false),[unsupported,setUnsupported]=useState(false);const apple=appleMobile(),missingMP4=apple&&!mp4Available();const supported=basicSupport()&&!unsupported&&!missingMP4;
+ const [includeLyrics,setIncludeLyrics]=useState(true);const recordLyrics=useRef(false);const [unsupported,setUnsupported]=useState(false);const apple=appleMobile(),missingMP4=apple&&!mp4Available(),missingCanvas=!overlaySupported();const supported=basicSupport()&&!unsupported&&!missingMP4&&!missingCanvas;
  const previewResult=useRef<HTMLVideoElement|null>(null);const canvas=useRef<HTMLCanvasElement|null>(null),canvasStream=useRef<MediaStream|null>(null);
  const finishTimer=useRef<number|undefined>(undefined),finalizing=useRef(false),captureUsed=useRef(false);
- const canOverlay=overlaySupported()&&!overlayFailed&&props.lyrics.length>0;
- const showOverlay=phase==='preview'?includeLyrics&&canOverlay:recordOverlay;
+ const canIncludeLyrics=props.lyrics.length>0;
+ const showOverlay=!missingCanvas;
+ const visibleLyrics=(p:Props,previewPhase:boolean)=>(previewPhase?includeLyrics:recordLyrics.current)?p.lyrics:noVideoLyrics;
  const profile=useRef<CaptureProfile>(standardProfile);
  const latest=useRef(props);latest.current=props;
  const mounted=useRef(false),generation=useRef(0),camera=useRef<MediaStream|null>(null),preview=useRef<HTMLVideoElement|null>(null),recorder=useRef<MediaRecorder|null>(null),mix=useRef<Awaited<ReturnType<RemoteAudio['createRecordingMix']>>|null>(null),url=useRef(''),chunks=useRef<Blob[]>([]),bytes=useRef(0),stopReason=useRef(''),starting=useRef(false);
@@ -101,7 +103,7 @@ export function VideoKaraoke(props:Props){
   r.ondataavailable=null;r.onstop=null;r.onerror=null;
   const type=(chunks.current.find(b=>b.type)?.type||r.mimeType||'').split(';')[0].trim().toLowerCase(),parts=chunks.current;chunks.current=[];bytes.current=0;
   latest.current.onStop();release();if(!mounted.current)return;
-  setRecordOverlay(false);latest.current.onMode(false);setError(stopReason.current);
+  recordLyrics.current=false;latest.current.onMode(false);setError(stopReason.current);
   if(!parts.length){setPhase('idle');setError(timedOut?trUi('Браузер не завершил запись. Начните новый дубль.'):stopReason.current||trUi('Видео не записалось. Попробуйте снова.'));return;}
   if(type!=='video/mp4'&&type!=='video/webm'){setPhase('idle');setError(trUi('Не удалось определить формат записанного видео.'));return;}
   if(timedOut)setError(trUi('Сохранена доступная часть записи. Браузер не завершил файл — он может не открываться. Можно начать новый дубль.'));
@@ -119,7 +121,7 @@ export function VideoKaraoke(props:Props){
   finishTimer.current=window.setTimeout(()=>{if(recorder.current!==r)return;stop();complete(r,true);},5000+tail);
   if(tail>0)tailTimer.current=window.setTimeout(stop,tail+40);else stop();
  }
- function cancel(){if(recorder.current){finish(trUi('Запись остановлена.'));return;}clearTimeout(finishTimer.current);finalizing.current=false;setRecordOverlay(false);generation.current++;starting.current=false;release();latest.current.onMode(false);setPhase('idle');}
+ function cancel(){if(recorder.current){finish(trUi('Запись остановлена.'));return;}clearTimeout(finishTimer.current);finalizing.current=false;recordLyrics.current=false;generation.current++;starting.current=false;release();latest.current.onMode(false);setPhase('idle');}
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;clearTimeout(finishTimer.current);clearTimeout(tailTimer.current);const r=recorder.current;recorder.current=null;if(r){r.ondataavailable=null;r.onstop=null;r.onerror=null;try{if(r.state!=='inactive')r.stop();}catch{}}release();if(url.current)URL.revokeObjectURL(url.current);}},[]);
  useImperativeHandle(props.ref,()=>({toggle:()=>{if(phase==='preview')void start();else if(phase==='recording')finish();}}));
  useLayoutEffect(()=>{latest.current.onTransportReady(phase==='preview'||phase==='recording');},[phase]);
@@ -129,9 +131,9 @@ export function VideoKaraoke(props:Props){
   if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing')){resetVideoMotion(canvas.current);return;}
   let raf=0,nextFrame=0;const period=1000/profile.current.fps;const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   // Keep an absolute cadence instead of accumulating rAF quantization error.
-  function tick(now:number){if(now+1>=nextFrame){nextFrame=nextFrame===0?now+period:nextFrame+Math.max(1,Math.floor((now+1-nextFrame)/period)+1)*period;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{const sample=delayedClock(clockHistory.current,{time:now,position:p.audio.current?.position??0,revision:p.seekRevision.current},phase==='preview'?0:recordDelay.current);drawKaraokeFrame(cv,vid,p.lyrics,sample.position,{title:p.title,artist:p.artist},undefined,sample.revision,now,(p.playing||phase==='finishing')&&!reduced.matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
+  function tick(now:number){if(now+1>=nextFrame){nextFrame=nextFrame===0?now+period:nextFrame+Math.max(1,Math.floor((now+1-nextFrame)/period)+1)*period;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{const sample=delayedClock(clockHistory.current,{time:now,position:p.audio.current?.position??0,revision:p.seekRevision.current},phase==='preview'?0:recordDelay.current);drawKaraokeFrame(cv,vid,visibleLyrics(p,phase==='preview'),sample.position,{title:p.title,artist:p.artist},undefined,sample.revision,now,(p.playing||phase==='finishing')&&!reduced.matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
   raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
- },[showOverlay,phase]);
+ },[showOverlay,phase,includeLyrics]);
  useEffect(()=>{const hidden=()=>{if(!document.hidden)return;if(recorder.current)finish(trUi('Запись остановлена: приложение свернули.'));else if(camera.current){cancel();setError(trUi('Камера отключена: приложение свернули.'));}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);
  async function enable(){
   setError('');setMicProcessingWarning(false);setSyncOpen(false);setDiagnostics(null);setAppliedDelay(0);clearResult();if(!supported){setError(trUi('Ваш телефон или браузер не поддерживает видеокараоке. Откройте AnyMinus в актуальном Chrome или Safari.'));return;}
@@ -155,34 +157,34 @@ export function VideoKaraoke(props:Props){
    else if(name==='NotAllowedError'||name==='SecurityError')setError(trUi('Разрешите доступ к камере и микрофону.'));else if(name==='NotReadableError'||name==='AbortError')setError(trUi('Камера или микрофон заняты либо недоступны. Закройте другие приложения и повторите.'));else setError(trUi('Не удалось включить камеру или микрофон. Попробуйте открыть сайт в Chrome или Safari.'));}
  }
  async function start(){
-  if(props.disabled||!camera.current||!props.audio.current||recorder.current||starting.current)return;starting.current=true;const id=generation.current;const source=camera.current;const withText=includeLyrics&&canOverlay;setRecordOverlay(withText);setError('');setPhase('starting');chunks.current=[];bytes.current=0;stopReason.current='';
+  if(props.disabled||!camera.current||!props.audio.current||recorder.current||starting.current)return;starting.current=true;const id=generation.current;const source=camera.current;recordLyrics.current=includeLyrics&&canIncludeLyrics;setError('');setPhase('starting');chunks.current=[];bytes.current=0;stopReason.current='';
   try{
    if(apple&&captureUsed.current)props.audio.current.markOutputStalled(false);
    const prepared=await props.audio.current.createRecordingMix(source,syncSettings,levels);
    if(!mounted.current||generation.current!==id||camera.current!==source){prepared.close();return;}mix.current=prepared;captureUsed.current=true;recordDelay.current=prepared.delayMs;clockHistory.current=[];setAppliedDelay(prepared.delayMs);setDiagnostics(prepared.diagnostics);setSyncOpen(false);
-   let videoTracks=source.getVideoTracks();
-   if(withText){
+   let videoTracks:MediaStreamTrack[];
+   {
     const cv=canvas.current,vid=preview.current;
     if(!cv||!vid)throw Error(trUi('Предпросмотр камеры недоступен.'));
     // Permission resolution is not proof that a decoded camera frame exists.
     const deadline=performance.now()+2500;
-    while(!drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false)){
+    while(!drawKaraokeFrame(cv,vid,visibleLyrics(latest.current,false),props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false)){
      if(!mounted.current||generation.current!==id||camera.current!==source)return;
      if(performance.now()>=deadline)throw Error(trUi('Камера не передала первый кадр. Повторите запуск записи.'));
      await new Promise<void>(resolve=>window.setTimeout(resolve,50));
     }
     if(!mounted.current||generation.current!==id||camera.current!==source)return;
-    try{canvasStream.current=cv.captureStream(profile.current.fps);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false);}
-    catch{releaseCanvas();setOverlayFailed(true);setIncludeLyrics(false);throw Error(trUi('Наложение текста недоступно в этом браузере. Можно записать видео без текста.'));}
+    try{canvasStream.current=cv.captureStream(profile.current.fps);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,visibleLyrics(latest.current,false),props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false);}
+    catch{releaseCanvas();throw Error(trUi('Не удалось создать видеопоток с оформлением. Повторите запись.'));}
     for(const track of videoTracks)track.addEventListener('ended',()=>{if(mounted.current&&recorder.current?.state==='recording')finish(trUi('Видеопоток с текстом прерван.'));},{once:true});
    }
    const stream=new MediaStream([...videoTracks,...prepared.stream.getAudioTracks()]);
-   let r:MediaRecorder;try{r=startRecorder(stream,withText,profile.current);}catch(e){if(withText){setOverlayFailed(true);setIncludeLyrics(false);throw Error(apple?trUi('Запись MP4 с текстом недоступна. Попробуйте обычную видеозапись без текста.'):trUi('Не удалось запустить запись с текстом. Попробуйте обычную видеозапись.'));}if(apple){cancel();setUnsupported(true);setError(trUi('На этом iPhone/iPad не удалось запустить запись MP4. Видеокараоке недоступно в текущем браузере.'));return;}throw e;}recorder.current=r;
+   let r:MediaRecorder;try{r=startRecorder(stream,true,profile.current);}catch(e){if(apple){cancel();setUnsupported(true);setError(trUi('На этом iPhone/iPad не удалось запустить запись MP4. Видеокараоке недоступно в текущем браузере.'));return;}throw e;}recorder.current=r;
    r.ondataavailable=e=>{if(recorder.current===r&&e.data.size){chunks.current.push(e.data);bytes.current+=e.data.size;if(bytes.current>=180*1024*1024&&r.state==='recording')finish(trUi('Достигнут предел размера записи.'));}};
    r.onerror=e=>{const detail=(e as Event&{error?:DOMException}).error;stopReason.current=trUi('Ошибка записи видео')+(detail?': '+detail.name+' — '+detail.message:'.');finish(stopReason.current);};
    r.onstop=()=>complete(r);
    const ok=await props.onStart();if(!mounted.current||recorder.current!==r||finalizing.current)return;if(!ok||r.state!=='recording'){finish(trUi('Не удалось запустить музыку. Начните новый дубль.'));return;}setPhase('recording');
-   }catch(e){if(!mounted.current||generation.current!==id)return;const r=recorder.current;if(r){finish(trUi('Не удалось начать запись.'));return;}recorder.current=null;releaseCanvas();mix.current?.close();mix.current=null;recordDelay.current=0;clockHistory.current=[];setRecordOverlay(false);setPhase('preview');setError(e instanceof Error?e.name+': '+e.message:trUi('Не удалось начать запись. Повторите попытку.'));}finally{if(generation.current===id)starting.current=false;}
+   }catch(e){if(!mounted.current||generation.current!==id)return;const r=recorder.current;if(r){finish(trUi('Не удалось начать запись.'));return;}recorder.current=null;releaseCanvas();mix.current?.close();mix.current=null;recordDelay.current=0;clockHistory.current=[];recordLyrics.current=false;setPhase('preview');setError(e instanceof Error?e.name+': '+e.message:trUi('Не удалось начать запись. Повторите попытку.'));}finally{if(generation.current===id)starting.current=false;}
  }
  async function share(){
   if(!result||shareBusy.current)return;
@@ -195,10 +197,10 @@ export function VideoKaraoke(props:Props){
  }
  const active=phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing';
  return <div className="video-karaoke" aria-label={trUi("Видеокараоке")}>
-  {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||!supported} onClick={()=>void enable()}><Video size={16}/>{trUi("Записать видео ")}<span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">{missingMP4?trUi('В этом браузере iPhone/iPad недоступна запись MP4. Видеокараоке отключено.'):trUi('Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.')}</p>}</>}
+  {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||!supported} onClick={()=>void enable()}><Video size={16}/>{trUi("Записать видео ")}<span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">{missingMP4?trUi('В этом браузере iPhone/iPad недоступна запись MP4. Видеокараоке отключено.'):missingCanvas?trUi('Браузер не поддерживает запись видео с оформлением.'):trUi('Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.')}</p>}</>}
   {phase==='permission'&&<div className="video-karaoke-actions"><span role="status">{trUi("Разрешите камеру и микрофон…")}</span><button type="button" onClick={cancel}>{trUi("Отмена")}</button></div>}
   {active&&<div className="video-karaoke-panel"><div className="video-karaoke-preview" style={frameStyle}><video ref={preview} autoPlay muted playsInline onLoadedMetadata={e=>updateCameraRatio(e.currentTarget)} onResize={e=>updateCameraRatio(e.currentTarget)} aria-label={trUi("Предпросмотр камеры")}/><canvas ref={canvas} className={showOverlay?'video-overlay visible':'video-overlay'} aria-label={trUi("Текст в видео")} aria-hidden={!showOverlay}/>{phase==='recording'&&<span className="video-karaoke-rec">● REC</span>}</div><div className="video-karaoke-actions">
-   {phase==='preview'?<><button type="button" className="video-karaoke-start" disabled={props.disabled} onClick={()=>void start()}><Video size={16}/>{trUi("Начать запись")}</button><label className="video-overlay-option"><input type="checkbox" checked={includeLyrics&&canOverlay} disabled={!canOverlay} onChange={e=>setIncludeLyrics(e.target.checked)}/>{trUi("Текст на видео")}</label><span>{!canOverlay?(overlayFailed||!overlaySupported()?trUi('Наложение не поддерживается'):trUi('Нужен синхронный текст')):trUi('Лучше в наушниках')}</span><button type="button" onClick={()=>{refreshDiagnostics();setSyncOpen(o=>!o)}} aria-expanded={syncOpen} aria-controls="video-sync-settings"><Settings2 size={14}/>{trUi("Настройки звука")}</button><button type="button" onClick={cancel}><X size={14}/>{trUi("Отмена")}</button></>:phase==='finishing'?<><span role="status">{trUi("Сохраняем видео…")}</span><button type="button" onClick={()=>{const r=recorder.current;if(r){try{if(r.state!=='inactive')r.stop();}catch{}complete(r,true)}}}>{trUi("Завершить принудительно")}</button></>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>{trUi("Остановить")}</button><span role="status">{phase==='starting'?trUi('Запуск…'):trUi('Идёт запись · локально')}</span>{phase==='recording'&&appliedDelay>0&&<span>{trUi("Компенсация: ")}{appliedDelay}{trUi(" мс")}</span>}{phase==='recording'&&<button type="button" aria-expanded={syncOpen} aria-controls="video-sync-settings" onClick={()=>setSyncOpen(o=>!o)}><Settings2 size={14}/>{trUi("Настройки звука")}</button>}</>}
+   {phase==='preview'?<><button type="button" className="video-karaoke-start" disabled={props.disabled} onClick={()=>void start()}><Video size={16}/>{trUi("Начать запись")}</button><label className="video-overlay-option"><input type="checkbox" checked={includeLyrics&&canIncludeLyrics} disabled={!canIncludeLyrics} onChange={e=>setIncludeLyrics(e.target.checked)}/>{trUi("Текст на видео")}</label><span>{!canIncludeLyrics?trUi('Без таймкодов: название, артист и логотип сохраняются.'):trUi('Лучше в наушниках')}</span><button type="button" onClick={()=>{refreshDiagnostics();setSyncOpen(o=>!o)}} aria-expanded={syncOpen} aria-controls="video-sync-settings"><Settings2 size={14}/>{trUi("Настройки звука")}</button><button type="button" onClick={cancel}><X size={14}/>{trUi("Отмена")}</button></>:phase==='finishing'?<><span role="status">{trUi("Сохраняем видео…")}</span><button type="button" onClick={()=>{const r=recorder.current;if(r){try{if(r.state!=='inactive')r.stop();}catch{}complete(r,true)}}}>{trUi("Завершить принудительно")}</button></>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>{trUi("Остановить")}</button><span role="status">{phase==='starting'?trUi('Запуск…'):trUi('Идёт запись · локально')}</span>{phase==='recording'&&appliedDelay>0&&<span>{trUi("Компенсация: ")}{appliedDelay}{trUi(" мс")}</span>}{phase==='recording'&&<button type="button" aria-expanded={syncOpen} aria-controls="video-sync-settings" onClick={()=>setSyncOpen(o=>!o)}><Settings2 size={14}/>{trUi("Настройки звука")}</button>}</>}
   </div></div>}
   {(phase==='preview'||phase==='recording')&&syncOpen&&<section id="video-sync-settings" className="video-sync-settings" aria-label={trUi("Настройки звука видеозаписи")}>
    <div className="video-sync-heading"><strong>{trUi("Настройки звука")}</strong><button type="button" onClick={()=>setSyncOpen(false)} aria-label={trUi("Закрыть настройки звука")}><X size={15}/></button></div>

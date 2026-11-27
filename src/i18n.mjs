@@ -2350,6 +2350,21 @@ const dictionary={
   "Audio track cache with resume after page reload.",
   "Audiospur-Cache mit Fortsetzung nach Neuladen.",
   "Caché de pistas con reanudación tras recargar la página."
+ ],
+ "Не удалось создать видеопоток с оформлением. Повторите запись.": [
+  "Could not create the branded video stream. Retry recording.",
+  "Videostream mit Gestaltung konnte nicht erstellt werden. Aufnahme wiederholen.",
+  "No se pudo crear el vídeo con diseño. Reintenta la grabación."
+ ],
+ "Без таймкодов: название, артист и логотип сохраняются.": [
+  "No timed lyrics: title, artist and watermark remain.",
+  "Ohne Zeitmarken: Titel, Künstler und Wasserzeichen bleiben erhalten.",
+  "Sin marcas de tiempo: se mantienen título, artista y marca de agua."
+ ],
+ "Браузер не поддерживает запись видео с оформлением.": [
+  "This browser cannot record branded video.",
+  "Dieser Browser unterstützt keine Videoaufnahme mit Gestaltung.",
+  "Este navegador no admite grabar vídeo con diseño."
  ]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}
