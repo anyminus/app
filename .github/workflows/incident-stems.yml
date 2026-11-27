@@ -1,0 +1,19 @@
+name: Track stem incident diagnostic
+on:
+  push:
+    branches: [incident/track-108591168]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/probe-track-stems.mjs
+        env:
+          VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
