@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.41
+- Fall back to the stable public artwork proxy if a validated provider cover fails; show closed diagnostic stage/detail in CI smoke. Fix original-player media test fixture to serve byte ranges like the production endpoint.
+
 ## 0.5.40
 - Persistent original-song mini player above bottom navigation, playable from uncreated track covers and detail screen; independent of route, with play/pause, seeking, close and exclusive karaoke playback.
 

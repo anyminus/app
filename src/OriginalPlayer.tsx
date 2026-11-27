@@ -26,7 +26,7 @@ export function OriginalAudio({player:p}:{player:OriginalPlayer}){
 export function OriginalMiniPlayer({player:p,onOpen}:{player:OriginalPlayer;onOpen:(track:LiveTrack)=>void}){
  const t=p.track;if(!t)return null;
  return <section className="original-mini" aria-label="Плеер оригинала">
-  <div className="original-mini-row"><button type="button" className="original-mini-song" onClick={()=>onOpen(t)} aria-label={'Открыть песню: '+t.title}><Artwork title={t.title} color="#7961bd" src={coverFor(t.providerTrackId,t.coverUrl)}/><span><strong>{t.title}</strong><small>{t.artist}</small></span></button>
+  <div className="original-mini-row"><button type="button" className="original-mini-song" onClick={()=>onOpen(t)} aria-label={'Открыть песню: '+t.title}><Artwork title={t.title} color="#7961bd" src={coverFor(t.providerTrackId,t.coverUrl)} trackId={t.providerTrackId}/><span><strong>{t.title}</strong><small>{t.artist}</small></span></button>
   <button type="button" className="original-mini-skip" aria-label="Оригинал: назад 10 секунд" onClick={()=>p.seek(p.position-10)}><SkipBack size={17}/></button>
   <button type="button" className="original-mini-play" aria-label={p.playing||p.waiting?'Пауза оригинала':'Воспроизвести оригинал'} onClick={()=>p.playing||p.waiting?p.pause():void p.play()}>{p.waiting?<LoaderCircle size={20} className="original-spin"/>:p.playing?<Pause size={21} fill="currentColor"/>:<Play size={21} fill="currentColor"/>}</button>
   <button type="button" className="original-mini-skip" aria-label="Оригинал: вперёд 10 секунд" onClick={()=>p.seek(p.position+10)}><SkipForward size={17}/></button>

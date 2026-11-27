@@ -38,3 +38,10 @@ test('catalog and search use supplied artwork URL; missing metadata retries stab
   await expect(rows.nth(1).locator('.cover-slot')).toHaveAttribute('data-cover-state','unavailable');await expect(rows.nth(1).locator('img')).toHaveCount(0);await expect(rows.nth(1).locator('.artwork svg')).toBeVisible();
  }
 });
+
+test('provider CDN cover uses stable server fallback if the image fails',async({page})=>{
+ const api=await mockApi(page);const direct='https://avatars.yandex.net/get-music-content/123/example/200x200';
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'101',title:'Fallback cover',artist:'Artist',durationSeconds:8,pairOperationId:'00000000-0000-4000-8000-000000000001',coverUrl:direct}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
+ let attempts=0;await page.route(direct,r=>{attempts++;return r.fulfill({status:404})});
+ await page.goto('/');const row=page.locator('.track-row').first();await expect(row.locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');await expect(row.locator('img')).toHaveAttribute('src',/\/demo\/artwork\/101$/);expect(attempts).toBe(1);expect(api.covers).toContain('/demo/artwork/101');
+});
