@@ -1,0 +1,21 @@
+import {test,expect} from '@playwright/test';
+import {mockApi,songs} from './fixture';
+test('original player persists on routes, replaces tracks, closes and yields to karaoke',async({page})=>{
+ const api=await mockApi(page);
+ const originalIds:string[]=[];const wav=Buffer.alloc(44+384000);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(24000,24);wav.writeUInt32LE(48000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(384000,40);
+ const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, HEAD, OPTIONS','Access-Control-Allow-Headers':'range, authorization, content-type'};
+ await page.route(/^https:\/\/[^/]+\/demo\/audio\/\d+$/,async r=>{if(r.request().method()==='OPTIONS'){await r.fulfill({status:204,headers});return}originalIds.push(r.request().url().split('/').at(-1)!);await r.fulfill({body:wav,contentType:'audio/wav',headers})});
+ await page.route(/^https:\/\/[^/]+\/demo\/search\?/,r=>r.fulfill({json:{items:[{providerTrackId:'201',title:'Original first',artist:'Original artist',durationMs:8000,lyricsSyncAvailable:true},{providerTrackId:'202',title:'Original second',artist:'Original artist',durationMs:8000,lyricsSyncAvailable:true}]},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/karaoke\/status\?/,r=>{const id=new URL(r.request().url()).searchParams.get('providerTrackId');return id==='201'||id==='202'?r.fulfill({...(r.request().method()==='OPTIONS'?{status:204}:{json:{state:'none'}}),headers:{...headers,'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}):r.fallback()});
+ await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'Поиск'}).click();
+ await page.getByRole('textbox',{name:'Поиск песни'}).fill('Original');
+ const first=page.getByRole('button',{name:'Слушать оригинал: Original first',exact:true});await first.click();
+ const mini=page.getByRole('region',{name:'Плеер оригинала'});await expect(mini).toBeVisible();await expect(mini.getByRole('button',{name:'Пауза оригинала',exact:true})).toBeVisible();await expect.poll(()=>page.locator('audio').evaluate(el=>(el as HTMLAudioElement).currentTime)).toBeGreaterThan(0);
+ const nav=await page.getByRole('navigation').boundingBox(),box=await mini.boundingBox();expect(box!.y+box!.height).toBeLessThanOrEqual(nav!.y+2);
+ await page.getByRole('button',{name:'Original first',exact:true}).click();await expect(page.getByRole('heading',{name:'Original first'})).toBeVisible();await expect(mini).toBeVisible();
+ await page.getByRole('navigation').getByRole('button',{name:'Главная'}).click();await expect(mini).toBeVisible();await expect(mini.getByText('Original first',{exact:true})).toBeVisible();
+ await mini.getByRole('button',{name:'Пауза оригинала',exact:true}).click();await mini.getByRole('slider',{name:'Позиция оригинала'}).fill('3');await expect.poll(()=>page.locator('audio').evaluate(el=>(el as HTMLAudioElement).currentTime)).toBeCloseTo(3,1);
+ await page.getByRole('navigation').getByRole('button',{name:'Поиск'}).click();await page.getByRole('button',{name:'Слушать оригинал: Original second',exact:true}).click();await expect(mini.getByText('Original second',{exact:true})).toBeVisible();await expect.poll(()=>originalIds).toContain('202');
+ await mini.getByRole('button',{name:'Закрыть плеер оригинала'}).click();await expect(mini).toHaveCount(0);await expect.poll(()=>page.locator('audio').evaluate(el=>el.hasAttribute('src'))).toBe(false);
+ await page.getByRole('button',{name:'Слушать оригинал: Original first',exact:true}).click();await expect(mini).toBeVisible();await page.getByRole('navigation').getByRole('button',{name:'Главная'}).click();await page.getByRole('button',{name:songs[0].title,exact:true}).click();await expect(page.getByRole('region',{name:'Плеер караоке'})).toBeVisible();await expect(mini).toHaveCount(0);await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.enqueued).toBe(0);expect(api.media).toBe(2);
+});

@@ -41,3 +41,7 @@ Home uses a fresh random UUID seed for a new catalog traversal (including every 
 
 ## 0.5.0 foreground readiness channel
 POST /demo/notifications/ticket authenticated, body {trackIds:[numeric strings]}, 1–50. GET /demo/notifications/ws upgrade with protocols anyminus.ready.v1 and short-lived signed ticket; origin checked. Messages subscribed, karaoke.ready with trackId, pong. Browser treats event only as invalidation, reads /demo/karaoke/status and requires a verified pair. No client event publishing, no owner/PII exposed. Fallback polling and reconnect retain delivery through transient errors.
+
+
+### Original song audition (0.5.40)
+The existing demo worker serves GET/HEAD /demo/audio/{providerTrackId} for allowed origins, with HTTP Range passthrough and MP3 media type. The client uses a single HTMLAudioElement with anonymous CORS, validates decimal IDs, and never obtains upstream signed URLs. This is separate from prepared karaoke media and does not call POST /demo/karaoke. Original playback may fail if the provider denies the track or the origin/stream is unavailable.

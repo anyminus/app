@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.40
+- Persistent original-song mini player above bottom navigation, playable from uncreated track covers and detail screen; independent of route, with play/pause, seeking, close and exclusive karaoke playback.
+
 ## 0.5.39
 - Make the immediate canvas seek regression explicitly use compensation Off; add deterministic delayed-clock seek boundary and automatic compensation tests. Keep recording settings and runtime unchanged.
 
