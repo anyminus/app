@@ -323,3 +323,7 @@ Owner requested no status captions on the home ready catalog except «Текст
 
 ## Optional cover ambience in karaoke player (0.5.75)
 Owner requested tap-to-toggle full-height proportional cover backdrop with 90% blur. CSS blur takes a length, not percent: chosen 90px strong blur, object-fit:cover with 100% player height/width (player uses 100vh/100dvh), slight overscan prevents edge bleed, theme-specific scrim maintains readability. Reuse the actually loaded thumbnail URL (including existing fallback), no canvas or new upstream permissions. Noninteractive isolated layer behind all controls, transparent dock only while active. No cover means unchanged normal background. Reset on track change; no recording canvas changes. E2E tests cover toggle, image validity, bounds, landscape and mixer mode, no extra media/enqueue, unavailable cover. CI pending.
+
+
+## Greek localization (0.5.76)
+Greek (el, Ελληνικά) supported for automatic device language (including el-GR/el-CY) and manual profile preference. All 495 existing dictionary keys have Greek translations, including player, recording, queue, settings and errors; existing Russian/English/German/Spanish strings unchanged. Song names, artist metadata and lyrics are not translated. Unit and browser regression tests cover Greek auto/manual selection, persistence and player labels. No server changes. CI pending.

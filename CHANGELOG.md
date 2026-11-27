@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.76
+- Add Greek (el) to the complete UI dictionary and device/manual language selection. Keep song metadata and lyrics unchanged.
+
 ## 0.5.75
 - Toggle full-player cover background by tapping the header artwork. Preserve image aspect ratio, apply strong blur and theme-aware contrast scrim; keep playback, mixer and recording unchanged.
 
