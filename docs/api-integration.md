@@ -12,3 +12,6 @@ Main Search uses GET /demo/search with query length 2–200, limit 20, 650ms deb
 
 ## 0.4.2 artist continuation and artwork
 GET /demo/artists/popular?name=… returns canonical artistId and optional nextCursor. Continue with artistId and cursor (20/40/60/80); 20 entries per page, up to the genuine provider-ranked list (max 100). Preserve order and prior pages on error; no generic-search substitute. Missing cover metadata uses stable /demo/artwork/:id; truly unavailable images retain a placeholder. Live acceptance requires both backend deployments, HTTP 200 and valid image bytes, not just mocked tests.
+
+## 0.4.3 artist identities
+New artist hashes use `#/artist/<encoded name>?author_id=<numeric SDK Artist.id>`. ID-qualified popularity requests use `artistId` from page one; share links preserve it. Search/popularity/metadata carry `artistCredits`, and missing legacy ready credits are looked up by track IDs (up to 20 at a time). Same-name artists with different IDs are not merged on ID-qualified routes; unresolved legacy names remain supported. No database schema change. Live acceptance pending.

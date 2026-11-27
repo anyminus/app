@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.3
+- Artist deep links carry the verified Yandex `author_id` alongside the display name. Each credited artist has its own link; legacy catalog tracks resolve IDs lazily. ID-qualified ready lists require provider-verified membership; name-only legacy routes remain compatible.
+
 ## 0.4.2
 - Fix TypeScript inference for optional artist ID and cursor parameters (CI TS2345); retain the unpublished release version.
 - Add explicit continuation to provider-ranked artist songs; 20 per page, preserve order, deduplicate, retry failed pages without clearing earlier tracks. No general-search substitution.

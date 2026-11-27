@@ -1,13 +1,14 @@
 import {useEffect,useRef,useState} from 'react';
-import {apiOrigin,createDemoApi,normalizeTracks,normalizeJob,ApiError} from './api.mjs';
+import {apiOrigin,createDemoApi,normalizeTracks,normalizeArtistCredits,normalizeJob,ApiError} from './api.mjs';
 import {trackArtworkUrl} from './artwork.mjs';
 import {matchesArtist} from './model.mjs';
 export const origin=apiOrigin(import.meta.env.VITE_DEMO_API_ORIGIN||'https://anyminus-demo-search-dev.demo-search.workers.dev')!;
 export const api=createDemoApi(origin);
 export const coverFor=(id:string,provided?:string|null)=>trackArtworkUrl(origin,id,provided);
-export type LiveTrack={providerTrackId:string;title:string;artist:string;durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
+export type ArtistCredit={author_id:string;name:string};
+export type LiveTrack={providerTrackId:string;title:string;artist:string;artistCredits?:ArtistCredit[];durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
 export function isTrackId(id:unknown):id is string{return typeof id==='string'&&/^\d{1,20}$/.test(id)}
-export function useCatalog(query:string|null,artist:string|null=null){
+export function useCatalog(query:string|null,artist:string|null=null,authorId?:string){
  const [items,setItems]=useState<LiveTrack[]>([]),[cursor,setCursor]=useState<string|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[retry,setRetry]=useState(0);
  const ctrl=useRef<AbortController|null>(null);
  // Follow every catalog cursor automatically and publish matching tracks as each page arrives.
@@ -19,17 +20,28 @@ export function useCatalog(query:string|null,artist:string|null=null){
    const page=await api.catalog(next,signal);
    if(signal.aborted)throw signal.reason;
    const matches=(normalizeTracks(page,true) as LiveTrack[]).filter(t=>{
-    if(!t.pairOperationId||!matchesArtist(t.artist,artist)||ids.has(t.providerTrackId))return false;
+    if(!t.pairOperationId||ids.has(t.providerTrackId)||!(authorId&&t.artistCredits?.length?t.artistCredits.some(a=>a.author_id===authorId):matchesArtist(t.artist,artist)))return false;
     ids.add(t.providerTrackId);return true;
    });
-   if(matches.length)setItems(old=>[...old,...matches]);
+   if(authorId){
+    const missing=matches.filter(t=>!t.artistCredits?.length);
+    const credits=new Map<string,ArtistCredit[]>();
+    for(let i=0;i<missing.length;i+=20){
+     const batch=missing.slice(i,i+20).map(t=>t.providerTrackId);
+     const payload=await api.trackArtists(batch,signal);
+     if(signal.aborted)throw signal.reason;
+     for(const row of Array.isArray(payload?.items)?payload.items:[])if(batch.includes(row?.providerTrackId))credits.set(row.providerTrackId,normalizeArtistCredits(row.artistCredits));
+    }
+    const verified=matches.map(t=>({...t,artistCredits:t.artistCredits?.length?t.artistCredits:credits.get(t.providerTrackId)})).filter(t=>t.artistCredits?.some(a=>a.author_id===authorId));
+    if(verified.length)setItems(old=>[...old,...verified]);
+   }else if(matches.length)setItems(old=>[...old,...matches]);
    const candidate=page.nextCursor;
    if(candidate===null||candidate===undefined)break;
    if(typeof candidate!=='string'||!isTrackId(candidate)||seen.has(candidate))throw Error('Некорректная пагинация каталога');
    seen.add(candidate);next=candidate;
   }while(true);
  }
- useEffect(()=>{const c=new AbortController();ctrl.current=c;setItems([]);setCursor(null);setError('');if(artist===null&&query!==null&&query.trim().length<2){setLoading(false);return()=>{c.abort();ctrl.current?.abort()}}setLoading(true);const t=window.setTimeout(async()=>{try{if(artist!==null){await loadArtist(c.signal);return}const r=query===null?await api.catalog(null,c.signal):await api.search(query,c.signal);if(!c.signal.aborted){setItems(normalizeTracks(r,query===null));setCursor(query===null&&typeof r.nextCursor==='string'?r.nextCursor:null);}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}},artist!==null||query===null?0:650);return()=>{clearTimeout(t);c.abort();ctrl.current?.abort()}},[query,artist,retry]);
+ useEffect(()=>{const c=new AbortController();ctrl.current=c;setItems([]);setCursor(null);setError('');if(artist===null&&query!==null&&query.trim().length<2){setLoading(false);return()=>{c.abort();ctrl.current?.abort()}}setLoading(true);const t=window.setTimeout(async()=>{try{if(artist!==null){await loadArtist(c.signal);return}const r=query===null?await api.catalog(null,c.signal):await api.search(query,c.signal);if(!c.signal.aborted){setItems(normalizeTracks(r,query===null));setCursor(query===null&&typeof r.nextCursor==='string'?r.nextCursor:null);}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}},artist!==null||query===null?0:650);return()=>{clearTimeout(t);c.abort();ctrl.current?.abort()}},[query,artist,authorId,retry]);
  async function more(){if(artist!==null||query!==null||!cursor||loading)return;const c=new AbortController();ctrl.current=c;setLoading(true);setError('');try{const r=await api.catalog(cursor,c.signal);if(!c.signal.aborted){setItems(old=>{const seen=new Set(old.map(t=>t.providerTrackId));return [...old,...(normalizeTracks(r,true) as LiveTrack[]).filter(t=>!seen.has(t.providerTrackId))]});setCursor(typeof r.nextCursor==='string'?r.nextCursor:null)}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}}
  return {items,cursor,error,loading,retry:()=>setRetry(v=>v+1),more};
 }
@@ -94,7 +106,7 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
  // Separate SDK-backed list. Never infer popularity from general search or ready catalog.
  type ArtistPopularResult={name:string|null;artistId:string|null;items:LiveTrack[];cursor:string|null;error:string;loading:boolean};
  const emptyArtist=(name:string|null,loading=false):ArtistPopularResult=>({name,artistId:null,items:[],cursor:null,error:'',loading});
- export function useArtistPopular(name:string|null){
+ export function useArtistPopular(name:string|null,authorId?:string){
   const [result,setResult]=useState<ArtistPopularResult>(emptyArtist(null));
   const active=useRef<AbortController|null>(null),busy=useRef(false);
   async function load(c:AbortController,artistName:string,previous:ArtistPopularResult){
@@ -103,8 +115,8 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
    const deadline=window.setTimeout(()=>{if(active.current===c&&!c.signal.aborted){c.abort();busy.current=false;setResult({...previous,error:'Время ожидания популярных песен истекло',loading:false})}},20000);
    try{
     const cursor=previous.cursor;
-    const payload=cursor?await api.artistPopular(artistName,c.signal,previous.artistId??undefined,cursor):await api.artistPopular(artistName,c.signal);
-    if(!isTrackId(payload.artistId)||(previous.artistId&&previous.artistId!==payload.artistId))throw Error('Некорректный ответ артиста');
+    const payload=await api.artistPopular(artistName,c.signal,previous.artistId??authorId,cursor??undefined);
+    if(!isTrackId(payload.artistId)||((previous.artistId??authorId)&&(previous.artistId??authorId)!==payload.artistId))throw Error('Некорректный ответ артиста');
     const seen=new Set(previous.items.map(t=>t.providerTrackId));
     const items=(normalizeTracks(payload) as LiveTrack[]).filter(t=>{if(seen.has(t.providerTrackId))return false;seen.add(t.providerTrackId);return true});
     const next=payload.nextCursor;
@@ -120,8 +132,8 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
    const c=new AbortController();active.current=c;setResult(emptyArtist(name,true));
    const timer=window.setTimeout(()=>void load(c,name,emptyArtist(name)),0);
    return()=>{clearTimeout(timer);active.current?.abort();busy.current=false};
-  },[name]);
-  const current=result.name===name?result:emptyArtist(name,name!==null);
+  },[name,authorId]);
+  const current=result.name===name&&(!authorId||!result.artistId||result.artistId===authorId)?result:emptyArtist(name,name!==null);
   function more(){if(!name||busy.current||current.loading||!current.cursor)return;const c=new AbortController();active.current=c;void load(c,name,current)}
   function retry(){if(!name||busy.current||current.loading)return;const c=new AbortController();active.current=c;void load(c,name,current)}
   return {...current,more,retry};

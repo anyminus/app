@@ -5,12 +5,12 @@ import {api,origin,coverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
 import {useSystemMedia} from './useSystemMedia';
 import {normalizeStoredLyrics,retryLyricsStatus} from './lyrics.mjs';
-import {Mixer,Artwork,IconButton} from './components';
+import {Mixer,Artwork,IconButton,ArtistLinks} from './components';
 import {effectiveVolume} from './mixer.mjs';
 import {formatTime} from './model.mjs';
 type Job={state:string;pairOperationId:string|null;retryable:boolean};
 type Line={text:string;startMs:number;endMs:number|null};
-type Props={telegramAuthorized:boolean;telegramBusy:boolean;telegramError:string;getTelegramToken:()=>string|null;onTelegramLogin:()=>void;onTelegramLogout:()=>void;lyricsSubscribed:boolean;onToggleLyricsSubscription:()=>void;onLyricsAvailable:()=>void;onBack:()=>void;track:LiveTrack;takeLaunch:(id:string)=>{id:string;audio:RemoteAudio|null}|null;onReady:(pair:string)=>void;liked:boolean;onLike:()=>void;onShare:()=>void;onArtist:()=>void;onPlayed:()=>void;font:number;autoScroll:boolean;music:number;vocals:number;musicMuted:boolean;vocalsMuted:boolean;onMusic:(n:number)=>void;onVocals:(n:number)=>void;onToggleMusic:()=>void;onToggleVocals:()=>void};
+type Props={telegramAuthorized:boolean;telegramBusy:boolean;telegramError:string;getTelegramToken:()=>string|null;onTelegramLogin:()=>void;onTelegramLogout:()=>void;lyricsSubscribed:boolean;onToggleLyricsSubscription:()=>void;onLyricsAvailable:()=>void;onBack:()=>void;track:LiveTrack;takeLaunch:(id:string)=>{id:string;audio:RemoteAudio|null}|null;onReady:(pair:string)=>void;liked:boolean;onLike:()=>void;onShare:()=>void;onArtist:(credit?:{author_id:string;name:string})=>void;onPlayed:()=>void;font:number;autoScroll:boolean;music:number;vocals:number;musicMuted:boolean;vocalsMuted:boolean;onMusic:(n:number)=>void;onVocals:(n:number)=>void;onToggleMusic:()=>void;onToggleVocals:()=>void};
 // Temporary owner-approved DEV rollback; restore after verified browser login.
 const TELEGRAM_CREATION_REQUIRED=false;
 const statusText:Record<string,string>={none:'Караоке ещё не создано',queued:'В очереди',running:'Обработка дорожек',ready:'Караоке готово',failed:'Обработка не удалась'};
@@ -82,7 +82,7 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  <header className="karaoke-header">
  <IconButton label="Назад" onClick={onBack}><ArrowLeft/></IconButton>
  <div className="karaoke-cover"><Artwork title={selected.title} color="#7961bd" src={coverFor(selected.providerTrackId,selected.coverUrl)}/></div>
- <div className="karaoke-heading"><h1 title={selected.title}>{selected.title}</h1>{selected.metadataUnavailable?<span className="metadata">Уточняем название и исполнителя…</span>:<button className="artist-link" onClick={onArtist} title={selected.artist}>{selected.artist}</button>}</div>
+ <div className="karaoke-heading"><h1 title={selected.title}>{selected.title}</h1>{selected.metadataUnavailable?<span className="metadata">Уточняем название и исполнителя…</span>:<ArtistLinks artist={selected.artist} credits={selected.artistCredits} onArtist={onArtist}/>}</div>
  <IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart size={21} fill={liked?'currentColor':'none'}/></IconButton>
  <button className="icon-button karaoke-focus-toggle" type="button" aria-label={focus?'Показать плеер':'Только текст'} aria-pressed={focus} title={focus?'Обычный режим':'Полноэкранный текст'} onClick={()=>setFocus(v=>!v)}>{focus?<Minimize2 size={21}/>:<Maximize2 size={21}/>}</button>
  </header>
@@ -99,7 +99,7 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  </section>;
  return <>
  <header className="screen-header"><IconButton label="Назад" onClick={onBack}><ArrowLeft/></IconButton><strong>Песня</strong><IconButton label="Поделиться песней" onClick={onShare}><Share2/></IconButton></header>
- <Artwork title={selected.title} color="#7961bd" large src={coverFor(selected.providerTrackId,selected.coverUrl)}/><div className="detail-title"><div><h1>{selected.title}</h1><button className="artist-link accent" onClick={onArtist}>{selected.artist}</button></div><IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart fill={liked?'currentColor':'none'}/></IconButton></div><p className="metadata">{selected.durationMs?formatTime(selected.durationMs/1000):'—'}</p>{job&&<p className="metadata" role="status">{statusText[job.state]}</p>}
+ <Artwork title={selected.title} color="#7961bd" large src={coverFor(selected.providerTrackId,selected.coverUrl)}/><div className="detail-title"><div><h1>{selected.title}</h1><ArtistLinks artist={selected.artist} credits={selected.artistCredits} onArtist={onArtist} accent/></div><IconButton label={liked?'Убрать из любимого':'В любимое'} active={liked} onClick={onLike}><Heart fill={liked?'currentColor':'none'}/></IconButton></div><p className="metadata">{selected.durationMs?formatTime(selected.durationMs/1000):'—'}</p>{job&&<p className="metadata" role="status">{statusText[job.state]}</p>}
  {!job?<>{error&&!busy?<button className="secondary" onClick={()=>{warmAudio();void getStatus()}}><RefreshCw size={18}/>Повторить загрузку</button>:<div className="karaoke-checking" role="status"><span className="karaoke-spinner" aria-hidden="true"/>Проверяем наличие караоке…</div>}</>:job.state==='queued'||job.state==='running'?<><div className="karaoke-checking"><span className="karaoke-spinner" aria-hidden="true"/>Караоке готовится…</div>{error&&<button className="secondary" disabled={busy} onClick={()=>{warmAudio();void getStatus()}}><RefreshCw size={18}/>Повторить загрузку</button>}</>:job.state==='failed'&&!job.retryable?<p className="metadata">Повторное создание пока недоступно.</p>:(!TELEGRAM_CREATION_REQUIRED||telegramAuthorized)?<button className="primary" disabled={busy} onClick={()=>void enqueue()}><MicVocal/>{busy?'Запрос…':job.state==='failed'?'Повторить создание':'Создать караоке'}</button>:<div className="telegram-login-panel"><p className="metadata">Для создания караоке войдите через Telegram.</p><button className="telegram-login" disabled={telegramBusy} onClick={onTelegramLogin}><Send size={20}/>{telegramBusy?'Вход…':'Войти через Telegram'}</button>{telegramError&&<p role="alert" className="live-error">{telegramError}</p>}</div>}
  {error&&<p role="alert" className="live-error">{error}</p>}
 
