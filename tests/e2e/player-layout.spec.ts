@@ -35,3 +35,13 @@ test('player heading keeps collaborating artists and punctuation on a single lin
  for(const width of [390,320,540]){await page.setViewportSize({width,height:664});const first=await artists.getByRole('button',{name:'Kai Angel',exact:true}).boundingBox();const second=await artists.getByRole('button',{name:'9mice',exact:true}).boundingBox();expect(first&&second).toBeTruthy();expect(Math.abs(first!.y-second!.y)).toBeLessThan(2);expect(second!.x).toBeGreaterThan(first!.x);await expect(artists).toHaveCSS('white-space','nowrap');}
  await artists.getByRole('button',{name:'9mice',exact:true}).click();await expect(page).toHaveURL(/#\/artist\/9mice\?author_id=13739916$/);
 });
+
+test('stalled Web Audio clock after creating a song recovers on explicit play without new downloads',async({page})=>{
+ await page.addInitScript(()=>{const Native=window.AudioContext;let count=0;class TestContext extends Native{constructor(options?:AudioContextOptions){super(options);if(++count===1)Object.defineProperty(this,'currentTime',{configurable:true,get:()=>0})}}Object.defineProperty(window,'AudioContext',{configurable:true,value:TestContext})});
+ const api=await mockApi(page);
+ await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Test song');await page.getByRole('button',{name:'Test song two',exact:true}).click();await page.getByRole('button',{name:'Создать караоке'}).click();
+ await expect(page.getByText('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.',{exact:true})).toBeVisible({timeout:15000});
+ const play=page.getByRole('button',{name:'Воспроизвести',exact:true});await expect(play).toBeEnabled();expect(api.media).toBe(2);expect(api.enqueued).toBe(1);
+ await play.click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect.poll(async()=>Number(await page.getByRole('slider',{name:'Позиция песни'}).inputValue())).toBeGreaterThan(.2);
+ expect(api.media).toBe(2);expect(api.enqueued).toBe(1);
+});

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.13
+- Detect frozen Web Audio clocks at startup and during playback, show a truthful Play state, and rebuild the audio output on explicit retry without downloading stems again.
+
 ## 0.4.12
 - Shuffle the entire ready catalog on the home page on each reload using the existing server-side seeded order; reuse the seed across pagination and prevent duplicate results.
 
