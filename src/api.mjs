@@ -39,6 +39,7 @@ export function createDemoApi(origin,fetcher=fetch){
  statusByOperation:(operationId,token,signal)=>call('/demo/karaoke/status-by-operation',{query:{operationId},token,signal}),
  enqueue:(track,token,signal)=>{if(!token)throw Error(trUi('Требуется сессия'));if(!/^\d{1,20}$/.test(track.providerTrackId)||!Number.isSafeInteger(track.durationMs)||track.durationMs<1000||track.durationMs>900000)throw Error(trUi('Некорректные метаданные песни'));return call('/demo/karaoke',{method:'POST',body:{providerTrackId:track.providerTrackId,title:track.title,artist:track.artist,durationMs:track.durationMs},token,signal})},
  playback:(pairId,providerTrackId,token,signal)=>call('/demo/catalog/playback',{method:'POST',body:{pairOperationId:pairId,providerTrackId,mediaTicket:true},token,signal,credentials:'include'}),
+ /** @param {string} pairId @param {string|undefined} token @param {AbortSignal|undefined} signal @param {string} [mediaTicket] */
  storedLyrics:(pairId,token,signal,mediaTicket=undefined)=>call('/demo/catalog/media/'+encodeURIComponent(pairId)+'/lyrics',{token,signal,credentials:'include',headers:mediaTicket?{'X-AnyMinus-Media-Ticket':mediaTicket}:{}}),
  artwork:(id)=>/^\d{1,20}$/.test(id)?origin+'/demo/artwork/'+id:null
  };

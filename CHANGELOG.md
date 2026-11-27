@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.59
+- Fix TypeScript inference for the optional media ticket argument in stored lyrics; keep cookie-independent download regression.
+- Constrain pitch/speed panels and stepper buttons with explicit shrinkable grid tracks and reset native button padding. Test seven viewport sizes and four label lengths.
+
 ## 0.5.58
 - Opt into opaque short-lived playback tickets for cold browser sessions, pass only in media request headers, renew on download retry; preserve cookie compatibility and cached bytes. Add cookie-independent regression.
 

@@ -140,3 +140,19 @@ test('instrumental countdown appears only for gaps over ten seconds and uses act
  await third.click();await expect(third).toHaveAttribute('aria-current','true');await slider.fill('32');await expect(timer).toHaveCount(0);
  await slider.fill('5');await expect(timer).toHaveText('10');await expect(timer).toBeInViewport();
 });
+
+
+test('pitch and speed stepper buttons stay inside their own panels across viewport widths and labels',async({page})=>{
+ await mockApi(page);await page.goto('/#/track/101');await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:15000});
+ for(const size of [{width:320,height:568},{width:360,height:640},{width:375,height:667},{width:390,height:664},{width:430,height:932},{width:540,height:800},{width:667,height:375}]){
+  await page.setViewportSize(size);
+  for(const label of ['PITCH','TONALITÄT','TONALIDAD','ТОНАЛЬНОСТЬ']){
+   const panels=page.locator('.karaoke-mix-tools > .karaoke-pitch');await expect(panels).toHaveCount(2);
+   await panels.first().locator('.mixer-title').evaluate((el,value)=>{el.textContent=value},label);
+   for(const panel of await panels.all()){
+    const box=await panel.boundingBox();const buttons=await panel.locator('.pitch-buttons > button').all();const left=await buttons[0].boundingBox(),right=await buttons[1].boundingBox();
+    expect(box&&left&&right).toBeTruthy();expect(left!.x).toBeGreaterThanOrEqual(box!.x-1);expect(right!.x+right!.width).toBeLessThanOrEqual(box!.x+box!.width+1);expect(left!.x+left!.width).toBeLessThanOrEqual(right!.x+1);expect(Math.abs(left!.y-right!.y)).toBeLessThan(2);expect(Math.abs(left!.width-right!.width)).toBeLessThan(2);
+   }
+  }
+ }
+});

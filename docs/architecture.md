@@ -253,3 +253,7 @@ Owner reports track 108591168 stopped working. Main 0.5.56 CI/deploy succeeded; 
 
 ## Cookie-independent playback (0.5.58)
 New Telegram recipients cannot load any song while established users can. Production probe for 108591168 found both 4,154,140-byte objects accessible with the signed cookie. Hypothesis: third-party cookie denial plus existing clients' local stem cache. Frontend asks for optional opaque short-lived ticket, keeps it in memory only and sends X-AnyMinus-Media-Ticket on stem and lyrics fetches. Ticket is not persisted, never included in URL or cache key. Refresh replaces it when the verified pair and media URLs remain unchanged. Cookie fallback remains for older servers; actual iPhone acceptance and server deployment verification required.
+
+
+## Responsive stepper / CI correction (0.5.59)
+Owner screenshot: plus/minus overflow the pitch/speed cards on a narrow iPhone Safari viewport. Reset native button sizing and padding, explicitly shrink both nested grid tracks, wrap localized titles, constrain mixer input widths. Preserve existing portrait/landscape layout breakpoints and test panel containment and equal buttons across seven viewport sizes and four label lengths. CI 46054369680 failed TS2345 because JS optional default inferred undefined; annotate storedLyrics mediaTicket as optional string. No security changes. Physical Safari and current CI pending.
