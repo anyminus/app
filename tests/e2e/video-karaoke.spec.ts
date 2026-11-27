@@ -101,3 +101,21 @@ test('timed lyrics are drawn into the captured video canvas and follow a seek',a
  await page.waitForTimeout(600);await page.getByRole('button',{name:'Остановить',exact:true}).click();const save=page.getByRole('link',{name:'Сохранить видео'});await expect(save).toBeVisible();
  expect(await page.evaluate(()=>(Reflect.get(window,'__overlayTrack') as MediaStreamTrack).readyState)).toBe('ended');const href=await save.getAttribute('href');expect(await page.evaluate(async u=>(await (await fetch(u!)).blob()).size,href)).toBeGreaterThan(1000);expect(api.media).toBe(2);
 });
+
+test('opening camera retains playing position and recording resumes both stems from that offset',async({page})=>{
+ await page.addInitScript(()=>{const original=AudioBufferSourceNode.prototype.start;const offsets:number[]=[];Reflect.set(window,'__recordingOffsets',offsets);AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){offsets.push(args[1]??0);return original.apply(this,args)}});
+ const api=await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ const slider=page.getByRole('slider',{name:'Позиция песни'});const position=async()=>Number(await slider.inputValue());
+ await expect.poll(position).toBeGreaterThan(1.5);
+ const before=await position();await page.getByRole('button',{name:/Записать видео/}).click();
+ await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();await expect(slider).toBeEnabled();
+ const held=await position();expect(held).toBeGreaterThanOrEqual(before-.15);expect(held).toBeLessThan(before+1.5);
+ await page.waitForTimeout(400);expect(await position()).toBe(held);
+ const overlay=page.getByRole('checkbox',{name:'Текст на видео'});if(await overlay.isEnabled())await overlay.uncheck();
+ await page.evaluate(()=>{(Reflect.get(window,'__recordingOffsets') as number[]).length=0;});
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ const offsets=await page.evaluate(()=>Reflect.get(window,'__recordingOffsets') as number[]);
+ expect(offsets).toHaveLength(2);for(const offset of offsets)expect(Math.abs(offset-held)).toBeLessThan(.15);
+ await expect.poll(position).toBeGreaterThan(held+.1);await page.getByRole('button',{name:'Остановить',exact:true}).click();
+ await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();expect(api.media).toBe(2);
+});

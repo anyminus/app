@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.19
+- Preserve the exact song position when opening the camera; recording starts from that position or a subsequently selected lyric/timeline position.
+- Fix TypeScript null narrowing in the lyric compositor that blocked the 0.5.18 build.
+
 ## 0.5.18
 - Optional timed lyric overlay in video karaoke: current and upcoming lines rendered into the camera preview and saved video itself; retain raw-camera recording when switched off or unsupported.
 
