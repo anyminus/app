@@ -1,4 +1,4 @@
-import {useEffect,useImperativeHandle,useRef,useState,type RefObject,type Ref} from 'react';
+import {useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type RefObject,type Ref} from 'react';
 import {Video,Square,Download,X,Share2} from 'lucide-react';
 import {RemoteAudio,playbackSession} from './RemoteAudio';
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
@@ -15,7 +15,7 @@ export function VideoKaraoke(props:Props){
  function cancel(){generation.current++;starting.current=false;release();latest.current.onMode(false);setPhase('idle');}
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;const r=recorder.current;if(r){r.ondataavailable=null;r.onstop=null;r.onerror=null;if(r.state!=='inactive')r.stop();}release();if(url.current)URL.revokeObjectURL(url.current);}},[]);
  useImperativeHandle(props.ref,()=>({toggle:()=>{if(phase==='preview')void start();else if(phase==='recording')finish();}}));
- useEffect(()=>{latest.current.onTransportReady(phase==='preview'||phase==='recording');},[phase]);
+ useLayoutEffect(()=>{latest.current.onTransportReady(phase==='preview'||phase==='recording');},[phase]);
  useEffect(()=>{if(preview.current&&camera.current)preview.current.srcObject=camera.current;},[phase]);
  useEffect(()=>{if(phase==='recording'&&!props.playing)finish();},[phase,props.playing]);
  useEffect(()=>{const hidden=()=>{if(!document.hidden)return;if(recorder.current?.state==='recording')finish('Запись остановлена: приложение свернули.');else if(camera.current){cancel();setError('Камера отключена: приложение свернули.');}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);
@@ -54,7 +54,7 @@ export function VideoKaraoke(props:Props){
   {phase==='idle'&&<button className="video-karaoke-trigger" type="button" disabled={props.disabled} onClick={()=>void enable()}><Video size={16}/>Записать видео <span>β</span></button>}
   {phase==='permission'&&<div className="video-karaoke-actions"><span role="status">Разрешите камеру и микрофон…</span><button type="button" onClick={cancel}>Отмена</button></div>}
   {active&&<div className="video-karaoke-panel"><div className="video-karaoke-preview"><video ref={preview} autoPlay muted playsInline aria-label="Предпросмотр камеры"/>{phase==='recording'&&<span className="video-karaoke-rec">● REC</span>}</div><div className="video-karaoke-actions">
-   {phase==='preview'?<><button type="button" className="video-karaoke-start" onClick={()=>void start()}><Video size={16}/>Начать запись</button><span>С начала песни · лучше в наушниках</span><button type="button" onClick={cancel}><X size={14}/>Отмена</button></>:phase==='finishing'?<span role="status">Сохраняем видео…</span>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>Остановить</button><span role="status">{phase==='starting'?'Запуск…':'Идёт запись · локально'}</span></>}
+   {phase==='preview'?<><button type="button" className="video-karaoke-start" onClick={()=>void start()}><Video size={16}/>Начать запись</button><span>С выбранной позиции · лучше в наушниках</span><button type="button" onClick={cancel}><X size={14}/>Отмена</button></>:phase==='finishing'?<span role="status">Сохраняем видео…</span>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>Остановить</button><span role="status">{phase==='starting'?'Запуск…':'Идёт запись · локально'}</span></>}
   </div></div>}
   {phase==='result'&&result&&<div className="video-karaoke-panel"><video className="video-karaoke-result" src={result.url} controls playsInline preload="metadata" aria-label="Записанное видео"/><div className="video-karaoke-actions"><a href={result.url} download={result.file.name}><Download size={16}/>Сохранить видео</a>{navigator.canShare?.({files:[result.file]})&&<button type="button" onClick={()=>void share()}><Share2 size={15}/>Поделиться</button>}<button type="button" onClick={()=>{clearResult();setPhase('idle');setError('')}}><X size={14}/>Закрыть</button><span>Видео не отправляется на сервер</span></div></div>}
   {error&&<p className="video-karaoke-error" role="alert">{error}</p>}

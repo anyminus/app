@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.17
+- Allow timeline, ±10-second controls and timed lyric jumps before and during video recording; retain the same recording stream across seeks and protect against playback restarting after stop.
+
 ## 0.5.16
 - Restore the main Play/Pause action in camera mode; recover an interrupted or previously failed Web Audio context before connecting the microphone, retaining loaded stems and playback settings.
 

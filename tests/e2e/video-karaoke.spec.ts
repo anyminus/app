@@ -15,7 +15,7 @@ test('local video capture stays above lyrics and exports a file',async({page})=>
  expect(top!.height).toBeLessThanOrEqual(100);expect(top!.y+top!.height).toBeLessThanOrEqual(lyrics!.y);
  const play=page.getByRole('button',{name:'Воспроизвести',exact:true});await expect(play).toBeEnabled();await play.click();
  await expect(page.getByText('● REC',{exact:true})).toBeVisible();
- await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeDisabled();
+ await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled();
  await page.waitForTimeout(1300);
  await page.getByRole('button',{name:'Остановить',exact:true}).click();
  const save=page.getByRole('link',{name:'Сохранить видео'});
@@ -50,4 +50,31 @@ test('video recording recovers after initial audio start fails',async({page})=>{
  await page.getByRole('button',{name:'Пауза',exact:true}).click();
  await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
  expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});
+
+test('video recording survives timeline, lyric and ten-second jumps',async({page})=>{
+ await page.addInitScript(()=>{const start=MediaRecorder.prototype.start,stop=MediaRecorder.prototype.stop;Reflect.set(window,'__videoStarts',0);Reflect.set(window,'__videoStops',0);MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__videoStarts',Number(Reflect.get(window,'__videoStarts'))+1);return start.apply(this,args)};MediaRecorder.prototype.stop=function(){Reflect.set(window,'__videoStops',Number(Reflect.get(window,'__videoStops'))+1);return stop.call(this)}});
+ await mockApi(page);
+ const pair='00000000-0000-4000-8000-000000000001',duration=30,bytes=duration*48000,wav=Buffer.alloc(44+bytes);
+ wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(24000,24);wav.writeUInt32LE(48000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(bytes,40);
+ for(let i=0;i<duration*24000;i++)wav.writeInt16LE(Math.round(8000*Math.sin(2*Math.PI*440*i/24000)),44+i*2);
+ let media=0;
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/playback$/,r=>r.request().method()==='OPTIONS'?r.fallback():r.fulfill({json:{pairOperationId:pair,durationSeconds:duration,instrumental:'/demo/catalog/media/'+pair+'/instrumental',vocals:'/demo/catalog/media/'+pair+'/vocals'},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/(instrumental|vocals)$/,r=>{media++;return r.fulfill({body:wav,contentType:'audio/wav',headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}})});
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'First verse',startMs:0,endMs:5000,startOrigin:'source'},{text:'Second verse',startMs:5000,endMs:20000,startOrigin:'source'},{text:'Final verse',startMs:20000,endMs:29000,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();
+ const slider=page.getByRole('slider',{name:'Позиция песни'}),second=page.getByRole('button',{name:'Second verse',exact:true}),rec=page.getByText('● REC',{exact:true});
+ await expect(slider).toBeEnabled();await second.click();await expect(slider).toHaveValue('5');
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(rec).toBeVisible();
+ const position=async()=>Number(await slider.inputValue());
+ await expect.poll(position).toBeGreaterThan(5);
+ await page.getByRole('button',{name:'Вперёд 10 секунд',exact:true}).click();await expect.poll(position).toBeGreaterThan(15);
+ await page.getByRole('button',{name:'Назад 10 секунд',exact:true}).click();await expect.poll(position).toBeLessThan(10);
+ await slider.press('Home');await expect.poll(position).toBeLessThan(2);
+ await second.click();await expect(second).toHaveAttribute('aria-current','true');await expect.poll(position).toBeGreaterThan(5);await expect(rec).toBeVisible();
+ expect(await page.evaluate(()=>[Reflect.get(window,'__videoStarts'),Reflect.get(window,'__videoStops')])).toEqual([1,0]);
+ await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+ expect(await page.evaluate(()=>[Reflect.get(window,'__videoStarts'),Reflect.get(window,'__videoStops')])).toEqual([1,1]);expect(media).toBe(2);
+ await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeVisible();
 });

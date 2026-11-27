@@ -2,7 +2,7 @@ import type {StretchNode} from 'signalsmith-stretch';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
 export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session&&session.type!==type)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
 export class RemoteAudio {
- private context:AudioContext|null=null;private capturing=false;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
+ private context:AudioContext|null=null;private capturing=false;private playEpoch=0;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
  get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start)*this.rate:this.offset));}
  get length(){return this.duration;}
  get pitch(){return this.semitones;}
@@ -100,17 +100,18 @@ export class RemoteAudio {
  private async waitForClock(ctx:AudioContext){const deadline=performance.now()+1800;while(this.context===ctx&&this.running){if(ctx.state==='running'&&ctx.currentTime>this.start+.02)return;if(performance.now()>=deadline)break;await new Promise<void>(resolve=>window.setTimeout(resolve,60))}if(this.context!==ctx||!this.running)return;throw Error('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.');}
  async play(userInitiated=false){if(this.starting)return this.starting;if(!this.context||this.buffers.length!==2)throw Error('Аудио не загружено');playbackSession(this.capturing?'play-and-record':'playback');
  if(userInitiated&&(this.needsRecovery||this.interrupted||String(this.context.state)==='interrupted')){if(this.capturing)throw Error('Аудиовыход прерван. Повторите запись.');this.rebuildOutput();}
- const ctx=this.context!;
+ const ctx=this.context!,epoch=this.playEpoch;
  const start=async()=>{let timeout:number|undefined;try{await Promise.race([ctx.resume(),new Promise<never>((_,reject)=>{timeout=window.setTimeout(()=>reject(Error('Браузер заблокировал звук. Нажмите воспроизведение ещё раз.')),4000)})]);}finally{clearTimeout(timeout)}
+ if(epoch!==this.playEpoch)return;
  if(this.context!==ctx||ctx.state!=='running')throw Error('Аудиовыход недоступен. Нажмите воспроизведение ещё раз.');
  if(this.running)return;if(this.offset>=this.duration)this.offset=0;
- if((this.semitones!==0||this.rate!==1)&&!this.pitchNode){const prepared=await this.createPitch(ctx,this.compensatedPitch());if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}this.attachPitch(ctx,prepared.node,prepared.latency)}
+ if((this.semitones!==0||this.rate!==1)&&!this.pitchNode){const prepared=await this.createPitch(ctx,this.compensatedPitch());if(this.context!==ctx||epoch!==this.playEpoch){prepared.node.disconnect();prepared.node.port.close();if(epoch!==this.playEpoch)return;throw Error('Аудиовыход изменился')}this.attachPitch(ctx,prepared.node,prepared.latency)}
  const inputStart=ctx.currentTime+.04;this.start=inputStart+this.pitchLatency;
  if(this.pitchGate){this.pitchGate.gain.cancelScheduledValues(ctx.currentTime);this.pitchGate.gain.setValueAtTime(0,ctx.currentTime);this.pitchGate.gain.setValueAtTime(1,this.start)}
  this.sources=this.buffers.map((buffer,i)=>{const source=ctx.createBufferSource();source.buffer=buffer;source.playbackRate.value=this.rate;source.connect(this.gains[i]);source.start(inputStart,this.offset);return source});this.running=true;await this.waitForClock(ctx);};
- const pending=start();this.starting=pending;try{await pending}catch(e){if(this.context===ctx)this.markOutputStalled();throw e}finally{if(this.starting===pending)this.starting=null}
+ const pending=start();this.starting=pending;try{await pending}catch(e){if(epoch!==this.playEpoch)return;if(this.context===ctx)this.markOutputStalled();throw e}finally{if(this.starting===pending)this.starting=null}
  }
- pause(){if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
+ pause(){this.playEpoch++;if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
  async seek(t:number){const resume=this.running;this.pause();this.offset=Math.max(0,Math.min(t,this.duration));if(resume&&this.offset<this.duration)await this.play();}
  async createRecordingMix(microphone:MediaStream){
  if(!this.context||this.capturing||this.buffers.length!==2||!microphone.getAudioTracks().some(t=>t.readyState==='live'))throw Error('Аудиовыход не готов к записи');
