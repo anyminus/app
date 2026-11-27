@@ -289,3 +289,7 @@ Owner requires three explicit user-facing labels for checked ready songs. Use ex
 
 ## Artist artwork and CDN compatibility (0.5.67)
 Dedicated /demo/artist-artwork/<canonical ID> route and independent cache; lazy photo in artist profile, ready tab does not need popular list. Use explicit route author ID, verified popular ID, or uniquely matching catalog artist credit; no guessing from ambiguous names and no album-as-portrait. Stable track API fallback continues to work without cookies. Provider alias normalization uses only existing fixed allowed CDN destinations; no new browser allowlist needed. Real SDK host and cache population pending production verification. Fixed contradictory missing lyrics E2E count. 
+
+
+## Stale readiness after catalog deletion (0.5.68)
+2026-11-28: reported Новогодняя / Дискотека Авария appeared as ready with unknown text on popular tab. Read-only DB query finds no matching title in demo ready assets or production tracks. Root code issue: list row and remember merged cached pair ID with a fresh null pair. Mark fresh catalog/search/artist-popular observations explicitly; absence of a verified ready pair must not inherit stale cached readiness or stored text; preserve favorites, history, provider hints and metadata-only merge behavior. Unknown on upstream failure is not a confirmed absence of provider lyrics. Tests cover cached deleted pair, fresh popular/search, retained favorite. No DB or R2 mutation. Deployment pending.

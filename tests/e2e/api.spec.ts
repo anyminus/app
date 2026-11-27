@@ -169,3 +169,17 @@ test('ready WebSocket hint immediately confirms only subscribed track and opens 
 
 
 test('authoritative unknown format clears stale cached status and never claims timed lyrics',async({page})=>{await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';await page.addInitScript(({pair})=>{localStorage.setItem('anyminus:real-track-cache',JSON.stringify({'101':{providerTrackId:'101',title:'Previously cached',artist:'Artist',durationMs:8000,pairOperationId:pair,lyricsFormat:'NONE'}}))},{pair});await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'101',title:'Previously cached',artist:'Artist',durationSeconds:8,pairOperationId:pair,lyricsFormat:null}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));await page.goto('/');const row=page.locator('.track-row').filter({hasText:'Previously cached'});await expect(row.getByText('Формат текста уточняется',{exact:true})).toBeVisible();await expect(row.getByText('Текст отсутствует',{exact:true})).toHaveCount(0);await expect(row.getByText('Текст с таймкодами',{exact:true})).toHaveCount(0)});
+
+test('fresh popular and search results cannot resurrect a deleted cached karaoke pair',async({page})=>{
+ await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';
+ await page.addInitScript(({pair})=>{localStorage.setItem('anyminus:real-track-cache',JSON.stringify({'999':{providerTrackId:'999',title:'Deleted karaoke',artist:'Test',durationMs:8000,pairOperationId:pair,lyricsFormat:null}}));localStorage.setItem('anyminus:real-favorites',JSON.stringify(['999']))},{pair});
+ const result={providerTrackId:'999',title:'Deleted karaoke',artist:'Test',durationMs:8000,providerLyricsFormat:'NONE',karaokeStatus:{state:'unknown'}};
+ const headers={'Access-Control-Allow-Origin':'*'};
+ await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>r.fulfill({json:{artistId:'42',name:'Test',items:[result],nextCursor:null},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,r=>r.fulfill({json:{items:[result],nextCursor:null},headers}));
+ await page.goto('/#/artist/Test?author_id=42');await page.getByRole('button',{name:'Популярные песни'}).click();
+ const row=page.locator('.track-row').filter({hasText:'Deleted karaoke'});await expect(row.getByText('Текст отсутствует',{exact:true})).toBeVisible();await expect(row.getByText('Формат текста уточняется',{exact:true})).toHaveCount(0);await expect(row.getByRole('button',{name:'Слушать оригинал: Deleted karaoke'})).toBeVisible();
+ await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('anyminus:real-track-cache')!)['999'].pairOperationId)).toBeNull();
+ await expect(row.getByRole('button',{name:'Убрать из любимого'})).toBeVisible();
+ await page.getByRole('navigation').getByRole('button',{name:'Поиск'}).click();await page.getByRole('textbox',{name:'Поиск песни'}).fill('Deleted karaoke');await expect(row.getByText('Текст отсутствует',{exact:true})).toBeVisible();await expect(row.getByRole('button',{name:'Слушать оригинал: Deleted karaoke'})).toBeVisible();
+});

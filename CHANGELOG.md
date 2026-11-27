@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.68
+- Treat fresh list readiness as authoritative for display and local cache; never resurrect an old pair ID from cached metadata when a current search/popular response lacks a ready pair. Preserve favorites and provider hints. Add stale deleted-pair regression.
+
 ## 0.5.67
 - Render artist portraits on ready artist pages by canonical ID using independent public API route. Preserve track artwork fallback; server normalizes provider aliases to a pinned public CDN. Fix conflicting missing-lyrics assertion that blocked 0.5.66 deployment.
 
