@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.64
+- Render a three-second intro countdown in the actual recording canvas when the first timed lyric starts after 3s. Use compensated media position and playback rate; respect lyrics opt-out and snap the first lyric into its active position. Add boundary and recorded-canvas tests.
+
 ## 0.5.63
 - Remove redundant header focus toggle. Keep the existing microphone button as the single mixer/focus control, including video mode behavior. Update focus regression to use the remaining button and verify expanded state.
 

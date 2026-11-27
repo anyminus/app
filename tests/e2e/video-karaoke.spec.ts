@@ -501,3 +501,28 @@ test('optional listening boost stays outside recording mix and restores normal o
  await page.getByRole('button',{name:'Закрыть настройки звука'}).click();await page.waitForTimeout(1000);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();expect(await graph()).toMatchObject({boost:false,direct:true,inputs:[]});
  await page.getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();await expect(check).toBeChecked();
 });
+
+
+test('recorded canvas counts down 3 2 1 before the first timed lyric and not afterwards',async({page})=>{
+ await page.addInitScript(()=>{
+  localStorage.setItem('anyminus.video.sync.v1',JSON.stringify({mode:'off',manualMs:150}));
+  const fill=CanvasRenderingContext2D.prototype.fillText,start=MediaRecorder.prototype.start,capture=HTMLCanvasElement.prototype.captureStream;
+  Reflect.set(window,'__introCanvasTrack',null);Reflect.set(window,'__introRecording',false);Reflect.set(window,'__introFrames',[]);
+  HTMLCanvasElement.prototype.captureStream=function(rate?:number){const stream=capture.call(this,rate);if(this.classList.contains('video-overlay'))Reflect.set(window,'__introCanvasTrack',stream.getVideoTracks()[0]);return stream;};
+  MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){if(this.stream.getVideoTracks()[0]===Reflect.get(window,'__introCanvasTrack'))Reflect.set(window,'__introRecording',true);return start.apply(this,args);};
+  CanvasRenderingContext2D.prototype.fillText=function(...args:Parameters<CanvasRenderingContext2D['fillText']>){if(this.canvas.classList.contains('video-overlay')&&Reflect.get(window,'__introRecording')&&this.globalAlpha>0){const list=Reflect.get(window,'__introFrames') as string[];list.push(args[0]);}return fill.apply(this,args);};
+ });
+ await mockApi(page);
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Alpha',startMs:5000,endMs:6500,startOrigin:'source'},{text:'Bravo',startMs:6500,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.goto('/#/track/101');await expect(page.getByRole('button',{name:'Alpha',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('slider',{name:'Позиция песни'}).fill('0');await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ const frames=()=>page.evaluate(()=>Reflect.get(window,'__introFrames') as string[]);
+ await expect.poll(async()=> (await frames()).includes('3'),{timeout:5000}).toBe(true);
+ await expect.poll(async()=> (await frames()).includes('2'),{timeout:3000}).toBe(true);
+ await expect.poll(async()=> (await frames()).includes('1'),{timeout:3000}).toBe(true);
+ const sequence=(await frames()).filter(v=>['3','2','1'].includes(v));expect([...new Set(sequence)]).toEqual(['3','2','1']);
+ await expect(page.getByRole('button',{name:'Alpha',exact:true})).toHaveAttribute('aria-current','true',{timeout:3000});
+ await page.evaluate(()=>{(Reflect.get(window,'__introFrames') as string[]).length=0;});
+ await expect.poll(async()=> (await frames()).includes('Alpha')).toBe(true);expect((await frames()).some(v=>['3','2','1'].includes(v))).toBe(false);
+ await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+});

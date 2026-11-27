@@ -28,3 +28,12 @@ export function interludeCountdown(lines,active,positionSeconds,rate=1){
  if(now<end||now>=start)return null;
  return Math.ceil((start-now)/1000/(Number.isFinite(rate)&&rate>0?rate:1));
 }
+
+/** Last three real seconds before the first timed lyric, for recorded video only.
+ * @param {number|undefined} firstStartMs @param {number} positionSeconds @param {number} [rate]
+ */
+export function videoIntroCountdown(firstStartMs,positionSeconds,rate=1){
+ if(typeof firstStartMs!=='number'||!Number.isFinite(firstStartMs)||firstStartMs<=3000||!Number.isFinite(positionSeconds))return null;
+ const remaining=(firstStartMs/1000-Math.max(0,positionSeconds))/(Number.isFinite(rate)&&rate>0?rate:1);
+ return remaining>0&&remaining<=3?Math.ceil(remaining):null;
+}

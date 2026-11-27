@@ -133,7 +133,7 @@ export function VideoKaraoke(props:Props){
   if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing')){resetVideoMotion(canvas.current);return;}
   let raf=0,nextFrame=0;const period=1000/profile.current.fps;const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   // Keep an absolute cadence instead of accumulating rAF quantization error.
-  function tick(now:number){if(now+1>=nextFrame){nextFrame=nextFrame===0?now+period:nextFrame+Math.max(1,Math.floor((now+1-nextFrame)/period)+1)*period;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{const sample=delayedClock(clockHistory.current,{time:now,position:p.audio.current?.position??0,revision:p.seekRevision.current},phase==='preview'?0:recordDelay.current);drawKaraokeFrame(cv,vid,visibleLyrics(p,phase==='preview'),sample.position,{title:p.title,artist:p.artist},undefined,sample.revision,now,(p.playing||phase==='finishing')&&!reduced.matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
+  function tick(now:number){if(now+1>=nextFrame){nextFrame=nextFrame===0?now+period:nextFrame+Math.max(1,Math.floor((now+1-nextFrame)/period)+1)*period;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{const sample=delayedClock(clockHistory.current,{time:now,position:p.audio.current?.position??0,revision:p.seekRevision.current},phase==='preview'?0:recordDelay.current);drawKaraokeFrame(cv,vid,visibleLyrics(p,phase==='preview'),sample.position,{title:p.title,artist:p.artist},undefined,sample.revision,now,(p.playing||phase==='finishing')&&!reduced.matches,p.audio.current?.speed??1);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
   raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
  },[showOverlay,phase,includeLyrics]);
  useEffect(()=>{const hidden=()=>{if(!document.hidden)return;if(recorder.current)finish(trUi('Запись остановлена: приложение свернули.'));else if(camera.current){cancel();setError(trUi('Камера отключена: приложение свернули.'));}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);
@@ -170,13 +170,13 @@ export function VideoKaraoke(props:Props){
     if(!cv||!vid)throw Error(trUi('Предпросмотр камеры недоступен.'));
     // Permission resolution is not proof that a decoded camera frame exists.
     const deadline=performance.now()+2500;
-    while(!drawKaraokeFrame(cv,vid,visibleLyrics(latest.current,false),props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false)){
+    while(!drawKaraokeFrame(cv,vid,visibleLyrics(latest.current,false),props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false,props.audio.current?.speed??1)){
      if(!mounted.current||generation.current!==id||camera.current!==source)return;
      if(performance.now()>=deadline)throw Error(trUi('Камера не передала первый кадр. Повторите запуск записи.'));
      await new Promise<void>(resolve=>window.setTimeout(resolve,50));
     }
     if(!mounted.current||generation.current!==id||camera.current!==source)return;
-    try{canvasStream.current=cv.captureStream(profile.current.fps);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,visibleLyrics(latest.current,false),props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false);}
+    try{canvasStream.current=cv.captureStream(profile.current.fps);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,visibleLyrics(latest.current,false),props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false,props.audio.current?.speed??1);}
     catch{releaseCanvas();throw Error(trUi('Не удалось создать видеопоток с оформлением. Повторите запись.'));}
     for(const track of videoTracks)track.addEventListener('ended',()=>{if(mounted.current&&recorder.current?.state==='recording')finish(trUi('Видеопоток с текстом прерван.'));},{once:true});
    }

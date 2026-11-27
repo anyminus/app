@@ -87,3 +87,9 @@ import {detectLanguage,effectiveLanguage,t} from '../src/i18n.mjs';
 test('locale detection and manual preference',()=>{assert.equal(detectLanguage(['de-AT','ru-RU']),'de');assert.equal(detectLanguage(['cs-CZ','es-MX']),'es');assert.equal(detectLanguage(['ja-JP']),'en');assert.equal(effectiveLanguage('ru',['de-DE']),'ru');assert.equal(effectiveLanguage('auto',['en-GB']),'en');assert.equal(t('Профиль','es'),'Perfil');assert.equal(t(' Профиль ','de'),' Profil ');assert.equal(t('untranslated song title','es'),'untranslated song title');});
 
 test('fast Yandex artwork CDN is accepted by exact hostname only',()=>{const origin='https://api.example.test',url='https://avatars-fast.yandex.net/get-music-content/123/example/200x200';assert.equal(trackArtworkUrl(origin,'123',url),url);assert.equal(trackArtworkUrl(origin,'123',url.replace('yandex.net','yandex.net.evil.example')),null);});
+
+import {videoIntroCountdown} from '../src/lyrics.mjs';
+test('recorded intro shows only 3, 2, 1 before an eligible first timestamp',()=>{
+ assert.equal(videoIntroCountdown(undefined,0),null);assert.equal(videoIntroCountdown(3000,0),null);assert.equal(videoIntroCountdown(2999,0),null);assert.equal(videoIntroCountdown(5000,1.999),null);assert.equal(videoIntroCountdown(5000,2),3);assert.equal(videoIntroCountdown(5000,3),2);assert.equal(videoIntroCountdown(5000,4),1);assert.equal(videoIntroCountdown(5000,4.999),1);assert.equal(videoIntroCountdown(5000,5),null);assert.equal(videoIntroCountdown(5000,6),null);assert.equal(videoIntroCountdown(5000,NaN),null);
+ assert.equal(videoIntroCountdown(10000,3.99,2),null);assert.equal(videoIntroCountdown(10000,4,2),3);assert.equal(videoIntroCountdown(10000,6,2),2);assert.equal(videoIntroCountdown(10000,8,2),1);assert.equal(videoIntroCountdown(10000,8.49,.5),null);assert.equal(videoIntroCountdown(10000,8.5,.5),3);assert.equal(videoIntroCountdown(10000,9.5,.5),1);
+});

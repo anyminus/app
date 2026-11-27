@@ -273,3 +273,7 @@ Owner approved title fit but requests equal panel widths. Use the existing wider
 
 ## Single mixer/focus control (0.5.63)
 Owner requests removal of the upper-right focus toggle because the bottom microphone button duplicates its function in ordinary playback. Remove header button, icons and obsolete CSS; retain bottom toggle, existing focus state, aria-expanded, lyric recentering and independent video-mode mixer behavior. Update viewport/focus regression to use the bottom control and assert the header toggle is absent. CI/device acceptance pending.
+
+
+## Recorded intro countdown (0.5.64)
+Owner requests 3–2–1 before the first timed line of every song whose first timestamp exceeds 3000ms. Render only in the video canvas (preview and captured output), active lyric style, keeping first lyric in the upcoming slot. Compute from existing compensated media position divided by current playback rate (three real seconds), no independent timer. No countdown for untimed/disabled lyrics, first start <=3000ms, earlier intro, or after first lyric; a seek recalculates from position. Snap first lyric on onset instead of animating from a non-lyric slot. Existing ordinary player countdown unchanged. Add pure boundary/tempo tests and actual MediaRecorder canvas regression. CI/device acceptance pending.

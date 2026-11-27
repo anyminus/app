@@ -1,3 +1,4 @@
+import {videoIntroCountdown} from './lyrics.mjs';
 import {classicVideoTemplate,type VideoTemplate} from './videoTemplate';
 export type VideoMetadata={title:string;artist:string};
 export type TimedLine={text:string;startMs:number;endMs:number|null};
@@ -27,7 +28,7 @@ const labelsByCanvas=new WeakMap<HTMLCanvasElement,Map<string,string>>();
 function cached<K,V>(cache:Map<K,V>,key:K,compute:()=>V){const hit=cache.get(key);if(hit!==undefined)return hit;const value=compute();if(cache.size>=256){const first=cache.keys().next();if(!first.done)cache.delete(first.value);}cache.set(key,value);return value;}
 export function resetVideoMotion(canvas:HTMLCanvasElement|null){if(canvas){motionByCanvas.delete(canvas);layoutsByCanvas.delete(canvas);labelsByCanvas.delete(canvas);}}
 function blendColor(a:string,b:string,t:number){if(!/^#[0-9a-f]{6}$/i.test(a)||!/^#[0-9a-f]{6}$/i.test(b))return t<.5?a:b;const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return 'rgb('+[16,8,0].map(shift=>Math.round(((x>>shift)&255)*(1-t)+((y>>shift)&255)*t)).join(',')+')';}
-export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement,lines:readonly TimedLine[],seconds:number,metadata:VideoMetadata,template:VideoTemplate=classicVideoTemplate,revision=0,now=performance.now(),animate=true){
+export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement,lines:readonly TimedLine[],seconds:number,metadata:VideoMetadata,template:VideoTemplate=classicVideoTemplate,revision=0,now=performance.now(),animate=true,rate=1){
  if(video.readyState<2||!video.videoWidth||!video.videoHeight)return false;
  const scale=Math.min(1,1280/Math.max(video.videoWidth,video.videoHeight));
  const w=Math.max(2,Math.round(video.videoWidth*scale/2)*2),h=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
@@ -39,7 +40,7 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
  const duration=Math.max(0,template.lyrics.transitionMs);
  if(!motion||motion.lines!==lines||motion.revision!==revision||seconds<motion.seconds-.05||seconds-motion.seconds>Math.max(.25,(now-motion.now)/1000*2.5+.15)||!animate||duration===0){
   motion={lines,index,previous:index,started:now,revision,seconds,now};motionByCanvas.set(canvas,motion);
- }else if(motion.index!==index){motion.previous=index===motion.index+1?motion.index:index;motion.index=index;motion.started=now;}
+ }else if(motion.index!==index){motion.previous=index===0&&lines[0]?.startMs>3000?index:index===motion.index+1?motion.index:index;motion.index=index;motion.started=now;}
  motion.seconds=seconds;motion.now=now;
  const elapsed=Math.min(1,Math.max(0,(now-motion.started)/Math.max(1,duration)));
  const progress=motion.previous===index?1:elapsed*elapsed*(3-2*elapsed);
@@ -75,7 +76,8 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
  const nominalStep=(activeSize+nextSize)*1.24+gap;
  const minimumStep=(a:ReturnType<typeof layout>,b:ReturnType<typeof layout>)=>(height(a)+height(b))/2+gap*.6;
  const pairStep=(a:ReturnType<typeof layout>,b:ReturnType<typeof layout>)=>Math.max(nominalStep*template.lyrics.spacingScale,minimumStep(a,b));
- const currentLine=line(index,activeSize,750),nextLine=line(index+1,nextSize,550);
+ const countdown=index<0?videoIntroCountdown(lines[0]?.startMs,seconds,rate):null;
+ const currentLine=countdown===null?line(index,activeSize,750):cached(layouts,JSON.stringify(['video-intro-countdown',countdown,width,activeSize,template.fontFamily]),()=>layout(ctx,String(countdown),width,activeSize,750,template.fontFamily)),nextLine=line(index+1,nextSize,550);
  const previousLine=line(index-1,activeSize,750),previousNext=line(index,nextSize,550);
  const step=pairStep(currentLine,nextLine),oldStep=pairStep(previousLine,previousNext);
  const nextCenter=bottom-nextSize*1.24,activeCenter=nextCenter-step;
