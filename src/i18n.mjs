@@ -2395,6 +2395,26 @@ const dictionary={
   "Separate latency compensation for CarPlay mode.",
   "Separater Latenzausgleich für CarPlay.",
   "Compensación de latencia independiente para CarPlay."
+ ],
+ "Компенсировать приглушение музыки": [
+  "Compensate for music ducking",
+  "Musikabsenkung ausgleichen",
+  "Compensar atenuación de música"
+ ],
+ "Усиление только при прослушивании во время записи. Системное снижение громкости может сохраниться.": [
+  "Boosts listening volume during recording only. System ducking may still occur.",
+  "Verstärkt nur die Wiedergabe während der Aufnahme. Systemabsenkung kann bestehen bleiben.",
+  "Amplifica solo la escucha durante la grabación. La atenuación del sistema puede continuar."
+ ],
+ "Не удалось изменить усиление прослушивания.": [
+  "Could not change listening boost.",
+  "Wiedergabeverstärkung konnte nicht geändert werden.",
+  "No se pudo cambiar la amplificación de escucha."
+ ],
+ "Компенсация приглушения музыки при видеозаписи.": [
+  "Optional listening boost during video recording.",
+  "Optionale Wiedergabeverstärkung bei Videoaufnahme.",
+  "Amplificación opcional de escucha durante la grabación de vídeo."
  ]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}

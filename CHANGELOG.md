@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.55
+- Add an opt-in +3 dB listening-only boost during video recording with separate peak protection, live toggle and local preference. Recorded mix and normal playback stay unchanged.
+
 ## 0.5.54
 - Use a separate CarPlay recording compensation profile; when reported output latency is missing or below 40 ms, use a configurable initial estimate of 300 ms. Keep playback audio unchanged. Repair two 0.5.53 browser test fixtures.
 

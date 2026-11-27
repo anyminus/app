@@ -50,3 +50,8 @@ export function recordingGains(levels:RecordingLevels){
 }
 export function loadRecordingLevels():RecordingLevels{try{const v=JSON.parse(localStorage.getItem('anyminus.video.levels.v1')??'null');if(v)return {music:boundedLevel(v.music,55),voice:boundedLevel(v.voice,100)};}catch{}return {...defaultRecordingLevels};}
 export function saveRecordingLevels(value:RecordingLevels){try{localStorage.setItem('anyminus.video.levels.v1',JSON.stringify(value));}catch{}}
+
+export const monitorBoostGain=Math.pow(10,3/20);
+const monitorBoostKey='anyminus.video.monitor-boost.v1';
+export function loadMonitorBoost(){try{return localStorage.getItem(monitorBoostKey)==='true'}catch{return false}}
+export function saveMonitorBoost(value:boolean){try{localStorage.setItem(monitorBoostKey,String(value))}catch{}}

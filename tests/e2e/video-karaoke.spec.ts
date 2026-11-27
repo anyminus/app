@@ -475,3 +475,29 @@ test('CarPlay zero reported latency applies separate auto estimate to recording 
  expect(graph).not.toBeNull();expect(graph!.delay).toBeCloseTo(.4,3);expect(graph).toMatchObject({live:true,direct:false});
  await page.waitForTimeout(1000);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });
+
+test('optional listening boost stays outside recording mix and restores normal output',async({page})=>{
+ await page.addInitScript(()=>{
+ const connect=AudioNode.prototype.connect,disconnect=AudioNode.prototype.disconnect;
+ Reflect.set(window,'__boostEdges',[]);
+ AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(args[0] instanceof AudioNode)(Reflect.get(window,'__boostEdges') as [AudioNode,AudioNode][]).push([this,args[0]]);return result} as typeof connect;
+ AudioNode.prototype.disconnect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(disconnect,this,args),edges=Reflect.get(window,'__boostEdges') as [AudioNode,AudioNode][];for(let j=edges.length-1;j>=0;j--)if(edges[j][0]===this&&(!args.length||edges[j][1]===args[0]))edges.splice(j,1);return result} as typeof disconnect;
+ });
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();
+ const check=page.getByRole('checkbox',{name:/Компенсировать приглушение музыки/});
+ await expect(check).not.toBeChecked();await check.check();expect(await page.evaluate(()=>localStorage.getItem('anyminus.video.monitor-boost.v1'))).toBe('true');
+ await page.getByRole('button',{name:'Закрыть настройки звука'}).click();await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ const graph=()=>page.evaluate(()=>{
+ const edges=Reflect.get(window,'__boostEdges') as [AudioNode,AudioNode][];
+ const boost=edges.find(([from,to])=>from instanceof GainNode&&Math.abs(from.gain.value-Math.pow(10,3/20))<.001&&to instanceof DynamicsCompressorNode);
+ const bus=boost&&edges.find(([,to])=>to===boost[0])?.[0];
+ const inputs=edges.filter(([,to])=>to instanceof MediaStreamAudioDestinationNode).map(([from])=>(from as GainNode).gain.value).sort((a,b)=>a-b);
+ return {boost:!!boost,protected:!!boost&&edges.some(([from,to])=>from===boost[1]&&to===from.context.destination),direct:bus?edges.some(([from,to])=>from===bus&&to===bus.context.destination):edges.some(([from,to])=>from instanceof GainNode&&from.gain.value===1&&to===from.context.destination),unity:bus instanceof GainNode?bus.gain.value:1,inputs};
+ });
+ const boosted=await graph();expect(boosted).toMatchObject({boost:true,protected:true,direct:false,unity:1});expect(boosted.inputs[0]).toBeCloseTo(55/155,3);expect(boosted.inputs[1]).toBeCloseTo(100/155,3);
+ await page.getByRole('button',{name:'Настройки звука',exact:true}).click();await check.uncheck();expect(await graph()).toMatchObject({boost:false,direct:true,inputs:boosted.inputs});
+ await check.check();expect(await graph()).toMatchObject({boost:true,direct:false,inputs:boosted.inputs});
+ await page.getByRole('button',{name:'Закрыть настройки звука'}).click();await page.waitForTimeout(1000);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();expect(await graph()).toMatchObject({boost:false,direct:true,inputs:[]});
+ await page.getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();await expect(check).toBeChecked();
+});
