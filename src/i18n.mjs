@@ -1,6 +1,9 @@
 export const languages=[{code:'ru',name:'Русский'},{code:'en',name:'English'},{code:'de',name:'Deutsch'},{code:'es',name:'Español'},{code:'el',name:'Ελληνικά'}];
 export const languageKey='anyminus:language';
 const dictionary={
+ "Маска: поиск лица…": ["Mask: looking for face…","Maske: Gesichtssuche…","Máscara: buscando rostro…","Μάσκα: αναζήτηση προσώπου…"],
+ "Маска: глаза найдены": ["Mask: eyes detected","Maske: Augen erkannt","Máscara: ojos detectados","Μάσκα: εντοπίστηκαν μάτια"],
+ "Маска: лицо найдено (приближённо)": ["Mask: face detected (approximate)","Maske: Gesicht erkannt (ungefähr)","Máscara: rostro detectado (aprox.)","Μάσκα: εντοπίστηκε πρόσωπο (κατά προσέγγιση)"],
  "Маска: ноты": ["Mask: notes","Maske: Noten","Máscara: notas","Μάσκα: νότες"],
  "Загрузка маски…": ["Loading mask…","Maske wird geladen…","Cargando máscara…","Φόρτωση μάσκας…"],
  "Маска недоступна. Запись без маски.": ["Mask unavailable. Recording without mask.","Maske nicht verfügbar. Aufnahme ohne Maske.","Máscara no disponible. Grabación sin máscara.","Η μάσκα δεν είναι διαθέσιμη. Εγγραφή χωρίς μάσκα."],

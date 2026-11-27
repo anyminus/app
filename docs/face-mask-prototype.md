@@ -5,3 +5,6 @@ Implementation: classic randomized decision trees (not neural networks). Pico.js
 Upstream code and model repositories: see src/vendor/NOTICES.md.
 Acceptance: Safari iPhone, choose mask, move/tilt head, move closer, briefly leave frame; record 30–60 seconds, inspect saved MP4, compare audio quality, sync, thermal load to mask-off. Test poor lighting and eyeglasses. Strong turns and eye occlusion are limitations; notes are decorative, not an anonymization guarantee. Verify preview and export, lyrics on/off, failure fallback and worker cleanup.
 Pages: this branch never deploys to the root. The main workflow combines production with the preview at https://anyminus.github.io/app/prototype/face-masks/. See [Pages previews](pages-previews.md).
+
+## Second iteration: mask not visible on iPhone
+Padded and denser face search at 480px, lower score threshold, approximate eye anchors when pupil localization fails. Local 320px fallback at 4 Hz when worker fails. Live status distinguishes loading, searching, eye localization, approximate tracking and failure. E2E uses a public upstream sample image to verify actual detector output and notes drawn on the recorded canvas. User screenshots are not committed. iPhone acceptance remains required.
