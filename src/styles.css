@@ -235,3 +235,5 @@ body.karaoke-open .tab-bar{display:none}
 .artist-profile-art .cover-slot{position:absolute;inset:0;border-radius:18px;overflow:hidden}.artist-profile-art:has(.cover-slot[data-cover-state="loaded"]){opacity:.92;mask-image:linear-gradient(to left,black 58%,transparent);-webkit-mask-image:linear-gradient(to left,black 58%,transparent)}.artist-profile-art .cover-image{object-fit:cover}.artist-profile-art:has(.cover-slot[data-cover-state="loaded"]) svg{visibility:hidden}.artist-profile .eyebrow,.artist-profile h1,.artist-profile .artist-summary{position:relative;z-index:1;text-shadow:0 1px 8px #171020b3}
 
 .track-queue-action{padding:5px 0;margin:-5px 0;text-align:left;min-height:22px;touch-action:manipulation}.track-queue-action:hover{text-decoration:underline}.track-queue-state{color:var(--muted)}.track-queue-error{font-size:10px;color:var(--lyrics-missing);line-height:1.3}
+
+.track-database-status{font-size:10px;line-height:1.1;color:var(--accent);font-weight:650}

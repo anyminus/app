@@ -346,10 +346,10 @@ const dictionary={
   "Karaoke-Benachrichtigungen",
   "Avisos de karaoke"
  ],
- "Караоке готово": [
-  "Karaoke ready",
-  "Karaoke bereit",
-  "Karaoke listo"
+ "Караоке в базе": [
+  "Karaoke in catalog",
+  "Karaoke im Katalog",
+  "Karaoke en el catálogo"
  ],
  "Не удалось подтвердить готовность": [
   "Could not confirm readiness",
