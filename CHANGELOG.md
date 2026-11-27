@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.18
+- Notify users inside the open app when a requested karaoke becomes playable, with direct open action and a persistent list in Profile.
+- Use numeric tolerance for decoded audio duration in the intro regression.
+
 ## 0.4.17
 - Exercise intro countdown seeking through real skip buttons, range keyboard input and timed-line clicks; assert the playback position as well as the countdown. No runtime changes.
 
