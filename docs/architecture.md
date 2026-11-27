@@ -73,3 +73,7 @@ Only explicit LRC gives the ready lyric label; TEXT and NONE retain orange/red; 
 
 ## End-of-song global search (0.5.14)
 Keep artist links and add «Перейти в глобальный поиск» as the final primary-accent action in the end panel. Uses existing search navigation, clears the previous query, and leaves the stopped player through ordinary route disposal. No playback, backend, or artist-link changes. E2E checks navigation and empty search. Release notes include the preceding lyric label fix.
+
+
+## Local video karaoke beta (0.5.15)
+Small camera preview above the existing lyrics. Explicit camera/mic permission; pause and rewind on entry; explicit start records from the beginning. Tap existing post-gain or post-DSP output into a separate recording branch with microphone and compressor; no microphone monitoring. Current mixer settings retained (including optional artist vocal). During capture, seek, pitch/speed and manual play locked; mixer collapsed. End, stop, audio interruption and hidden tab stop recording. Navigation discards unsaved output and releases tracks. Camera preview mirrored, saved stream not mirrored. Native MediaRecorder negotiates MP4/WebM; local Blob/File and native sharing where supported. No upload, backend, database, auth or extra audio downloads. Approximate 180 MiB limit, target 720p/24fps, no lyric overlay, countdown or cloud library. Headphones recommended. Physical iOS/Android validation pending.

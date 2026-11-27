@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.15
+- Experimental local video karaoke: compact camera preview above lyrics, microphone and live player mix, save/share recording on device.
+
 ## 0.5.14
 - Add a global search button below artist links at the end of the song.
 

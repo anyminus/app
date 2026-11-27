@@ -1,8 +1,8 @@
 import type {StretchNode} from 'signalsmith-stretch';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
-function playbackSession(){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session)session.type='playback'}catch{/* Optional Safari API; ordinary playback still works. */}}
+export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
 export class RemoteAudio {
- private context:AudioContext|null=null;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
+ private context:AudioContext|null=null;private capturing=false;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
  get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start)*this.rate:this.offset));}
  get length(){return this.duration;}
  get pitch(){return this.semitones;}
@@ -98,8 +98,8 @@ export class RemoteAudio {
  markOutputStalled(){this.pause();this.needsRecovery=true;}
  private rebuildOutput(){this.pause();const old=this.context;for(const gain of this.gains)try{gain.disconnect()}catch{}this.gains=[];this.clearPitch();this.context=null;if(old&&old.state!=='closed')void old.close().catch(()=>{});this.prepare();this.connectGains(this.context!);this.needsRecovery=false;}
  private async waitForClock(ctx:AudioContext){const deadline=performance.now()+1800;while(this.context===ctx&&this.running){if(ctx.state==='running'&&ctx.currentTime>this.start+.02)return;if(performance.now()>=deadline)break;await new Promise<void>(resolve=>window.setTimeout(resolve,60))}if(this.context!==ctx||!this.running)return;throw Error('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.');}
- async play(userInitiated=false){if(this.starting)return this.starting;if(!this.context||this.buffers.length!==2)throw Error('Аудио не загружено');playbackSession();
- if(userInitiated&&(this.needsRecovery||this.interrupted||String(this.context.state)==='interrupted'))this.rebuildOutput();
+ async play(userInitiated=false){if(this.starting)return this.starting;if(!this.context||this.buffers.length!==2)throw Error('Аудио не загружено');playbackSession(this.capturing?'play-and-record':'playback');
+ if(userInitiated&&(this.needsRecovery||this.interrupted||String(this.context.state)==='interrupted')){if(this.capturing)throw Error('Аудиовыход прерван. Повторите запись.');this.rebuildOutput();}
  const ctx=this.context!;
  const start=async()=>{let timeout:number|undefined;try{await Promise.race([ctx.resume(),new Promise<never>((_,reject)=>{timeout=window.setTimeout(()=>reject(Error('Браузер заблокировал звук. Нажмите воспроизведение ещё раз.')),4000)})]);}finally{clearTimeout(timeout)}
  if(this.context!==ctx||ctx.state!=='running')throw Error('Аудиовыход недоступен. Нажмите воспроизведение ещё раз.');
@@ -112,5 +112,13 @@ export class RemoteAudio {
  }
  pause(){if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
  async seek(t:number){const resume=this.running;this.pause();this.offset=Math.max(0,Math.min(t,this.duration));if(resume&&this.offset<this.duration)await this.play();}
+ createRecordingMix(microphone:MediaStream){
+ const ctx=this.context;if(!ctx||this.capturing||this.needsRecovery||!microphone.getAudioTracks().length)throw Error('Аудиовыход не готов к записи');
+ const destination=ctx.createMediaStreamDestination(),music=ctx.createGain(),voice=ctx.createGain(),mic=ctx.createMediaStreamSource(microphone),limiter=ctx.createDynamicsCompressor();
+ music.gain.value=.55;voice.gain.value=.75;limiter.threshold.value=-6;limiter.ratio.value=8;
+ const outputs=this.pitchGate?[this.pitchGate]:this.gains;
+ outputs.forEach(node=>node.connect(music));music.connect(limiter);mic.connect(voice);voice.connect(limiter);limiter.connect(destination);this.capturing=true;
+ let closed=false;return {stream:destination.stream,close:()=>{if(closed)return;closed=true;this.capturing=false;for(const node of outputs)try{node.disconnect(music)}catch{}music.disconnect();mic.disconnect();voice.disconnect();limiter.disconnect();destination.stream.getTracks().forEach(t=>t.stop());}};
+ }
  dispose(){this.pause();const ctx=this.context;this.clearPitch();this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.rate=1;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
 }

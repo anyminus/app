@@ -1,0 +1,37 @@
+import {test,expect} from '@playwright/test';
+import {mockApi} from './fixture';
+test.use({launchOptions:{args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']},permissions:['camera','microphone']});
+test('local video capture stays above lyrics and exports a file',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ const api=await mockApi(page);
+ await page.goto('/');
+ await page.getByRole('button',{name:'Test song one',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();
+ const camera=page.getByLabel('Предпросмотр камеры');
+ await expect(camera).toBeVisible();
+ const top=await camera.boundingBox(),lyrics=await page.getByLabel('Текст песни',{exact:true}).boundingBox();
+ expect(top).not.toBeNull();expect(lyrics).not.toBeNull();
+ expect(top!.height).toBeLessThanOrEqual(100);expect(top!.y+top!.height).toBeLessThanOrEqual(lyrics!.y);
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();
+ await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeDisabled();
+ await page.waitForTimeout(1300);
+ await page.getByRole('button',{name:'Остановить',exact:true}).click();
+ const save=page.getByRole('link',{name:'Сохранить видео'});
+ await expect(save).toBeVisible();
+ const href=await save.getAttribute('href');expect(href).toMatch(/^blob:/);
+ expect(await page.evaluate(async u=>(await (await fetch(u!)).blob()).size,href)).toBeGreaterThan(1000);
+ await expect(page.getByLabel('Предпросмотр камеры')).toHaveCount(0);
+ expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});
+test('camera denial restores ordinary playback',async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async()=>{throw new DOMException('denied','NotAllowedError')}})});
+ await mockApi(page);await page.goto('/');
+ await page.getByRole('button',{name:'Test song one',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();
+ await expect(page.getByText('Разрешите доступ к камере и микрофону.')).toBeVisible();
+ await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+});
