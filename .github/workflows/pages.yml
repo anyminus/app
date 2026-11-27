@@ -1,21 +1,26 @@
 name: Prototype CI and Pages
 on:
   push:
-    branches: [main, prototype/face-masks]
+    branches: [main, 'prototype/**']
   pull_request:
   workflow_dispatch:
+  workflow_run:
+    workflows: ['Prototype CI and Pages']
+    branches: ['prototype/**']
+    types: [completed]
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -57,17 +62,67 @@ jobs:
       - run: npm run test:e2e
       - run: npm run build-storybook
       - uses: actions/upload-artifact@v4
-        if: github.ref == 'refs/heads/prototype/face-masks'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
-          name: face-mask-preview
+          name: production-build
           path: dist
+          include-hidden-files: true
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/heads/prototype/') && github.event_name != 'pull_request'
+        with:
+          name: preview-build
+          path: dist
+  previews:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build explicitly allowed preview branches
+        env:
+          VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
+          VITE_TELEGRAM_MINI_APP_URL: ${{ vars.TELEGRAM_MINI_APP_URL }}
+        run: node scripts/build-pages-previews.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-sites
+          path: pages-previews
+          include-hidden-files: true
+  assemble:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [build, previews]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-build
+          path: site
+      - uses: actions/download-artifact@v4
+        with:
+          name: preview-sites
+          path: previews
+      - name: Combine without changing production files
+        run: |
+          test -f site/index.html
+          test ! -e site/prototype
+          test -d previews/prototype
+          cp -a previews/prototype site/prototype
       - uses: actions/upload-pages-artifact@v3
-        if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') || (github.ref == 'refs/heads/prototype/face-masks' && github.event_name == 'workflow_dispatch')
         with:
-          path: dist
+          path: site
   deploy:
-    if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') || (github.ref == 'refs/heads/prototype/face-masks' && github.event_name == 'workflow_dispatch')
-    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: assemble
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     runs-on: ubuntu-24.04
     environment:
       name: github-pages

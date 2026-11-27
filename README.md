@@ -35,3 +35,5 @@ Provider-ranked artist songs use explicit 20-track continuation where available.
 
 ### Эксперимент: маска с нотами
 Только в ветке `prototype/face-masks`. [Спецификация, ограничения и проверка](docs/face-mask-prototype.md).
+
+[Pages: отдельные адреса прототипов](docs/pages-previews.md).
