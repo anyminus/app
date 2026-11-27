@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.34
+- Show a numeric countdown in the lyric list during verified instrumental gaps strictly longer than ten seconds; use active lyric typography and current playback tempo.
+
 ## 0.5.33
 - Match the compact camera preview and saved-video thumbnail to the actual video aspect ratio instead of a fixed landscape box; update on metadata and orientation changes, without cropping.
 

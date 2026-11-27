@@ -69,3 +69,10 @@ test('release highlights are optional, bounded plain text',()=>{assert.deepEqual
 
 import {readSharedTime,validateSharedTime} from '../src/sharedPlayback.mjs';
 test('optional song time is independent from playback settings and safely parsed',()=>{const settings={music:85,vocals:23,musicMuted:false,vocalsMuted:false,pitch:-2,speed:2};assert.equal(sharedTrackPath('123',null,83),'/track/123?t=83');assert.deepEqual(parseRoute('#'+sharedTrackPath('123',settings,83)),{page:'track',id:'123',settings,time:83});assert.deepEqual(parseRoute('#/track/123?t=0'),{page:'track',id:'123',time:0});assert.deepEqual(parseRoute('#/track/123?t=83&music=20'),{page:'track',id:'123',time:83});for(const query of ['t=-1','t=901','t=1.5','t=','t=1&t=2','t=NaN','t=1e2'])assert.equal(readSharedTime(new URLSearchParams(query)),null);assert.equal(validateSharedTime(Infinity),null);assert.equal(parseRoute('#/artist/Test?t=83').time,undefined);assert.deepEqual(parseRoute('#'+sharedTrackPath('123',settings)+'&t=bad'),{page:'track',id:'123',settings});});
+
+import {interludeCountdown} from '../src/lyrics.mjs';
+test('interlude countdown requires a verified gap strictly longer than ten seconds',()=>{
+ const lines=[{startMs:0,endMs:3000},{startMs:15000,endMs:17000},{startMs:27000,endMs:30000},{startMs:45000,endMs:null},{startMs:60000,endMs:62000}];
+ assert.equal(interludeCountdown(lines,0,2.99),null);assert.equal(interludeCountdown(lines,0,3),12);assert.equal(interludeCountdown(lines,0,7.2),8);assert.equal(interludeCountdown(lines,0,14.99),1);assert.equal(interludeCountdown(lines,0,15),null);assert.equal(interludeCountdown(lines,0,3,2),6);
+ assert.equal(interludeCountdown(lines,1,17),null);assert.equal(interludeCountdown(lines,2,30),15);assert.equal(interludeCountdown(lines,3,50),null);assert.equal(interludeCountdown(lines,4,63),null);assert.equal(interludeCountdown(lines,-1,0),null);assert.equal(interludeCountdown([{startMs:0,endMs:0},{startMs:20000,endMs:21000}],0,5),null);
+});

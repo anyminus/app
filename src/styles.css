@@ -159,3 +159,5 @@ body.karaoke-open .tab-bar{display:none}
 .karaoke-video-mixer{min-width:0;display:grid;gap:3px}.karaoke-video-mixer .mixer{min-width:0}.video-mixer-note{color:var(--muted);font-size:10px;line-height:1.2;text-align:center}.karaoke-video-mixer .gain-toggle{flex:none}
 
 .video-karaoke-rec{left:3px;top:3px;padding:2px 3px;font-size:9px;white-space:nowrap;max-width:calc(100% - 6px);box-sizing:border-box}
+
+.karaoke-lyrics .karaoke-interlude-countdown{font-variant-numeric:tabular-nums;pointer-events:none}

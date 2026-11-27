@@ -120,3 +120,23 @@ test('inactive lyrics use their real smaller size to fit more words on a line',a
  await expect.poll(rows).toBe(1);await line.click();await expect(line).toHaveAttribute('aria-current','true');await expect(span).toHaveCSS('font-size','32px');await expect.poll(rows).toBeGreaterThan(1);
  await slider.fill('0');await expect.poll(rows).toBe(1);
 });
+
+test('instrumental countdown appears only for gaps over ten seconds and uses active lyric typography',async({page})=>{
+ await mockApi(page);await page.emulateMedia({reducedMotion:'reduce'});
+ const pair='00000000-0000-4000-8000-000000000001',duration=35,bytes=duration*48000,wav=Buffer.alloc(44+bytes);
+ wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(24000,24);wav.writeUInt32LE(48000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(bytes,40);
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/playback$/,r=>r.request().method()==='OPTIONS'?r.fallback():r.fulfill({json:{pairOperationId:pair,durationSeconds:duration,instrumental:'/demo/catalog/media/'+pair+'/instrumental',vocals:'/demo/catalog/media/'+pair+'/vocals'},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/(instrumental|vocals)$/,r=>r.fulfill({body:wav,contentType:'audio/wav',headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'First verse',startMs:0,endMs:3000,startOrigin:'source'},{text:'Second verse',startMs:15000,endMs:17000,startOrigin:'source'},{text:'Third verse',startMs:27000,endMs:30000,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
+ const first=page.getByRole('button',{name:'First verse',exact:true}),second=page.getByRole('button',{name:'Second verse',exact:true}),third=page.getByRole('button',{name:'Third verse',exact:true}),slider=page.getByRole('slider',{name:'Позиция песни'}),timer=page.getByRole('timer',{name:'До следующей строки'});
+ await first.click();await expect(first).toHaveAttribute('aria-current','true');
+ const typography=async(locator:typeof first)=>locator.locator('.lyric-text').evaluate(el=>{const s=getComputedStyle(el);return [s.fontSize,s.fontWeight,s.fontFamily,s.color]});
+ const activeStyle=await typography(first);
+ await slider.fill('3');await expect(timer).toHaveText('12');await expect(timer).toBeInViewport();expect(await typography(timer)).toEqual(activeStyle);await expect(first).not.toHaveAttribute('aria-current','true');
+ await slider.fill('14');await expect(timer).toHaveText('1');await page.waitForTimeout(1100);await expect(timer).toHaveText('1');
+ await second.click();await expect(timer).toHaveCount(0);await expect(second).toHaveAttribute('aria-current','true');
+ await slider.fill('20');await expect(timer).toHaveCount(0);
+ await third.click();await expect(third).toHaveAttribute('aria-current','true');await slider.fill('32');await expect(timer).toHaveCount(0);
+ await slider.fill('5');await expect(timer).toHaveText('10');await expect(timer).toBeInViewport();
+});

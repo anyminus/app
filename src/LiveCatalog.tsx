@@ -1,11 +1,11 @@
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {Fragment,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {ArrowLeft,Bell,MousePointer2,Heart,Send,Share2,Maximize2,Minimize2,MicVocal,Pause,Play,RefreshCw,Search,SkipBack,SkipForward} from 'lucide-react';
 import {normalizeJob,mediaUrl,providerLyricsHint} from './api.mjs';
 import {api,origin,coverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
 import {VideoKaraoke,type VideoTransport} from './VideoKaraoke';
 import {useSystemMedia} from './useSystemMedia';
-import {normalizeStoredLyrics,retryLyricsStatus,lyricScrollEase,introCountdown} from './lyrics.mjs';
+import {normalizeStoredLyrics,retryLyricsStatus,lyricScrollEase,introCountdown,interludeCountdown} from './lyrics.mjs';
 import {Mixer,Artwork,IconButton,ArtistLinks,KaraokeReadyStatus,ProviderLyricsStatus} from './components';
 import {effectiveVolume} from './mixer.mjs';
 import type {PlaybackSettings} from './sharedPlayback.mjs';
@@ -78,6 +78,8 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  const longIntro=lyrics.length>0&&lyrics[0].startMs>10000;
  const songEnded=playerReady&&!playing&&length>0&&position>=length-.001;
  const introRemaining=playerReady?introCountdown(lyrics[0]?.startMs,position,speed):null;
+ const interludeRemaining=playerReady&&!songEnded?interludeCountdown(lyrics,active,position,speed):null;
+ const inInterlude=interludeRemaining!==null;
 
  const lyricRef=useRef<HTMLDivElement>(null);const [focus,setFocus]=useState(false);
  // Lock the page itself. Only the independent lyrics viewport may scroll.
@@ -109,7 +111,7 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
    lyricFrame.current=requestAnimationFrame(tick);
  }
  useLayoutEffect(()=>{if(playerReady&&autoScroll)centerLine(false);else stopLyricMotion()},[playerReady,focus,lyrics,autoScroll,font]);
- useEffect(()=>{if(playerReady&&autoScroll)centerLine(true);return stopLyricMotion},[active,playerReady,autoScroll]);
+ useEffect(()=>{if(playerReady&&autoScroll)centerLine(true);return stopLyricMotion},[active,inInterlude,playerReady,autoScroll]);
  useEffect(()=>{
    const el=lyricRef.current;if(!playerReady||!autoScroll||!el)return;
    let width=el.clientWidth,height=el.clientHeight;
@@ -144,7 +146,7 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  <div className={'karaoke-lyrics'+(!songEnded&&lyrics.length?' timed':'')+(!songEnded&&longIntro?' has-long-intro':'')+(songEnded?' song-ended':'')} ref={lyricRef} aria-label="Текст песни" aria-describedby={!songEnded&&lyrics.length>0&&(!videoMode||videoTransportReady)?'lyric-seek-hint':undefined} style={{'--lyric-size':font+'px'} as React.CSSProperties}>
  {songEnded?<div className="karaoke-end-panel"><p className="metadata">Песня закончилась</p><h2>Выбрать другую песню исполнителя</h2>{selected.artistCredits?.length?selected.artistCredits.map(credit=><button type="button" className="secondary" key={credit.author_id} onClick={()=>onArtist(credit)}>{credit.name} <span aria-hidden="true">→</span></button>):<button type="button" className="secondary" onClick={()=>onArtist()}>{selected.artist} <span aria-hidden="true">→</span></button>}<button type="button" className="secondary karaoke-end-search" onClick={onSearch}><Search size={18}/>Перейти в глобальный поиск</button></div>:<>
  {longIntro&&<div className="karaoke-intro-spacer">{introRemaining!==null&&<div className="karaoke-intro-countdown" role="timer" aria-label="До начала текста"><span className="intro-label">До начала текста</span><strong>{formatTime(introRemaining)}</strong><span className="intro-hint">Приготовьтесь петь</span></div>}</div>}
- {lyrics.length?lyrics.map((l,i)=><button type="button" className={'lyric '+(i===active?'current':i<active?'past':'future')} data-active={i===active} aria-current={i===active?'true':undefined} key={i} disabled={videoMode&&!videoTransportReady} onClick={()=>void seek(l.startMs/1000)}><span className="lyric-text">{l.text}</span></button>):plainLyrics?<><p className="metadata">Текст без синхронизации</p><p className="plain-lyrics">{plainLyrics}</p></>:<div className="karaoke-lyrics-empty"><p className="metadata" role="status">{!playerReady?(error&&!loadingAudio?'Не удалось загрузить дорожки':'Загружаем дорожки…'):lyricState||'Загрузка текста…'}</p>{!playerReady&&error&&!loadingAudio&&<button className="secondary" onClick={()=>void openPlayer()}>Повторить загрузку дорожек</button>}{playerReady&&canSubscribe&&<><button className="secondary lyric-subscribe" aria-pressed={lyricsSubscribed} onClick={onToggleLyricsSubscription}><Bell size={18}/>{lyricsSubscribed?'Вы подписаны · отменить':'Подписаться на обновление'}</button><p className="metadata lyric-subscribe-note">{lyricsSubscribed?'Сообщим в ANYMINUS, когда текст появится. Проверка при открытом сайте.':'Уведомим в ANYMINUS, когда текст будет доступен.'}</p></>}{playerReady&&lyricState&&lyricState!=='Текст отсутствует в базе'&&<button className="text-button" disabled={lyricLoading} onClick={()=>setLyricRetry(n=>n+1)}>Повторить загрузку текста</button>}</div>}</>}
+ {lyrics.length?lyrics.map((l,i)=><Fragment key={i}><button type="button" className={'lyric '+(i===active&&!inInterlude?'current':i<=active?'past':'future')} data-active={i===active&&!inInterlude} aria-current={i===active&&!inInterlude?'true':undefined} disabled={videoMode&&!videoTransportReady} onClick={()=>void seek(l.startMs/1000)}><span className="lyric-text">{l.text}</span></button>{i===active&&inInterlude&&<div className="lyric current karaoke-interlude-countdown" data-active="true" role="timer" aria-label="До следующей строки"><span className="lyric-text">{interludeRemaining}</span></div>}</Fragment>):plainLyrics?<><p className="metadata">Текст без синхронизации</p><p className="plain-lyrics">{plainLyrics}</p></>:<div className="karaoke-lyrics-empty"><p className="metadata" role="status">{!playerReady?(error&&!loadingAudio?'Не удалось загрузить дорожки':'Загружаем дорожки…'):lyricState||'Загрузка текста…'}</p>{!playerReady&&error&&!loadingAudio&&<button className="secondary" onClick={()=>void openPlayer()}>Повторить загрузку дорожек</button>}{playerReady&&canSubscribe&&<><button className="secondary lyric-subscribe" aria-pressed={lyricsSubscribed} onClick={onToggleLyricsSubscription}><Bell size={18}/>{lyricsSubscribed?'Вы подписаны · отменить':'Подписаться на обновление'}</button><p className="metadata lyric-subscribe-note">{lyricsSubscribed?'Сообщим в ANYMINUS, когда текст появится. Проверка при открытом сайте.':'Уведомим в ANYMINUS, когда текст будет доступен.'}</p></>}{playerReady&&lyricState&&lyricState!=='Текст отсутствует в базе'&&<button className="text-button" disabled={lyricLoading} onClick={()=>setLyricRetry(n=>n+1)}>Повторить загрузку текста</button>}</div>}</>}
  </div>
  <div className="karaoke-dock">
  <div className="karaoke-timeline"><div className="time-label"><span>{formatTime(position)}</span><span>{formatTime(length||((selected.durationMs??0)/1000))}</span></div><input disabled={!playerReady||loadingAudio||(videoMode&&!videoTransportReady)} type="range" min="0" max={length} step=".1" value={position} aria-label="Позиция песни" style={{'--progress':(length?position/length*100:0)+'%'} as React.CSSProperties} onKeyDown={e=>{if(e.key==='Home'||e.key==='End'){e.preventDefault();void seek(e.key==='Home'?0:length)}}} onChange={e=>{const value=+e.target.value;void seek(length>0&&length-value<.100001?length:value)}}/></div>

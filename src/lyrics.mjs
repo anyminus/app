@@ -14,3 +14,16 @@ export function lyricScrollEase(progress){const t=Math.max(0,Math.min(1,progress
 // the audio position, not wall time; ceil avoids a visible zero before singing.
 /** @param {number|undefined} firstStartMs @param {number} positionSeconds @param {number} [rate] */
 export function introCountdown(firstStartMs,positionSeconds,rate=1){if(typeof firstStartMs!=='number'||!Number.isFinite(firstStartMs)||firstStartMs<=10000||!Number.isFinite(positionSeconds))return null;const remaining=firstStartMs-Math.max(0,positionSeconds)*1000;return remaining>0?Math.ceil(remaining/1000/(Number.isFinite(rate)&&rate>0?rate:1)):null}
+
+// Only explicit line ends can establish an instrumental gap. A missing end
+// or a long interval between starts alone is not evidence of silence.
+/** @param {readonly {startMs:number,endMs:number|null}[]} lines @param {number} active @param {number} positionSeconds @param {number} [rate] */
+export function interludeCountdown(lines,active,positionSeconds,rate=1){
+ const current=lines[active],next=lines[active+1];
+ if(active<0||!current||!next||!Number.isFinite(positionSeconds))return null;
+ const end=current.endMs,start=next.startMs;
+ if(typeof end!=='number'||!Number.isFinite(end)||end<=current.startMs||!Number.isFinite(start)||start-end<=10000)return null;
+ const now=positionSeconds*1000;
+ if(now<end||now>=start)return null;
+ return Math.ceil((start-now)/1000/(Number.isFinite(rate)&&rate>0?rate:1));
+}
