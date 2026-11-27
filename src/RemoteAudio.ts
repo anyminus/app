@@ -1,5 +1,5 @@
 import type {StretchNode} from 'signalsmith-stretch';
-import {defaultSync,readAudioDiagnostics,resolveDelay,type SyncSettings} from './recordingSync';
+import {defaultSync,readAudioDiagnostics,resolveDelay,recordingGains,defaultRecordingLevels,type RecordingLevels,type SyncSettings} from './recordingSync';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
 export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session&&session.type!==type)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
 export class RemoteAudio {
@@ -115,7 +115,7 @@ export class RemoteAudio {
  pause(){this.playEpoch++;if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
  async seek(t:number){const resume=this.running;this.pause();this.offset=Math.max(0,Math.min(t,this.duration));if(resume&&this.offset<this.duration)await this.play();}
  recordingDiagnostics(track?:MediaStreamTrack){return readAudioDiagnostics(this.context,track);}
- async createRecordingMix(microphone:MediaStream,settings:SyncSettings=defaultSync){
+ async createRecordingMix(microphone:MediaStream,settings:SyncSettings=defaultSync,levels:RecordingLevels=defaultRecordingLevels){
  if(!this.context||this.capturing||this.buffers.length!==2||!microphone.getAudioTracks().some(t=>t.readyState==='live'))throw Error('Аудиовыход не готов к записи');
  // The camera permission can interrupt Safari's old playback context. Recover
  // synchronously on the explicit recording gesture, BEFORE attaching the mic.
@@ -133,12 +133,13 @@ export class RemoteAudio {
  // Leave headroom when summing the two branches; never monitor the microphone.
  const musicLimiter=ctx.createDynamicsCompressor(),voiceLimiter=ctx.createDynamicsCompressor();
  for(const limiter of [musicLimiter,voiceLimiter]){limiter.threshold.value=-1;limiter.knee.value=0;limiter.ratio.value=20;limiter.attack.value=.003;limiter.release.value=.08;}
- music.gain.value=.55;voice.gain.value=.45;
+ const initialGains=recordingGains(levels);music.gain.value=initialGains.music;voice.gain.value=initialGains.voice;
+ const setLevels=(value:RecordingLevels)=>{const gains=recordingGains(value);for(const [node,level] of [[music,gains.music],[voice,gains.voice]] as const){node.gain.cancelScheduledValues(ctx.currentTime);node.gain.setTargetAtTime(level,ctx.currentTime,.015)}};
  const output=this.output!;
  const diagnostics=this.recordingDiagnostics(microphone.getAudioTracks()[0]),delayMs=resolveDelay(settings,diagnostics);
  const delay=delayMs>0?ctx.createDelay(.5):null;
  if(delay){delay.delayTime.value=delayMs/1000;output.connect(delay);delay.connect(musicLimiter);}else output.connect(musicLimiter);musicLimiter.connect(music);music.connect(destination);mic.connect(voiceLimiter);voiceLimiter.connect(voice);voice.connect(destination);this.capturing=true;
- let closed=false;return {stream:destination.stream,delayMs,diagnostics,close:()=>{if(closed)return;closed=true;this.capturing=false;try{output.disconnect(delay??musicLimiter)}catch{}delay?.disconnect();musicLimiter.disconnect();music.disconnect();mic.disconnect();voiceLimiter.disconnect();voice.disconnect();destination.stream.getTracks().forEach(t=>t.stop());}};
+ let closed=false;return {stream:destination.stream,delayMs,diagnostics,setLevels,close:()=>{if(closed)return;closed=true;this.capturing=false;try{output.disconnect(delay??musicLimiter)}catch{}delay?.disconnect();musicLimiter.disconnect();music.disconnect();mic.disconnect();voiceLimiter.disconnect();voice.disconnect();destination.stream.getTracks().forEach(t=>t.stop());}};
  }
  dispose(){this.pause();const ctx=this.context;this.clearPitch();this.output?.disconnect();this.output=null;this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.rate=1;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
 }

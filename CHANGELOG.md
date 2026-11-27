@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.42
+- Open recorded video in a large inline modal with an explicit View button; add persistent independent recording music and microphone sliders, including live adjustment and default microphone level 100%.
+
 ## 0.5.41
 - Fall back to the stable public artwork proxy if a validated provider cover fails; show closed diagnostic stage/detail in CI smoke. Fix original-player media test fixture to serve byte ranges like the production endpoint.
 

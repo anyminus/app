@@ -30,3 +30,14 @@ export function delayedClock(history:ClockSample[],sample:ClockSample,delayMs:nu
  const f=Math.max(0,Math.min(1,(target-a.time)/(b.time-a.time||1)));
  return {...a,position:a.position+(b.position-a.position)*f};
 }
+
+export type RecordingLevels={music:number;voice:number};
+export const defaultRecordingLevels:RecordingLevels={music:55,voice:100};
+export function boundedLevel(value:unknown,fallback:number){return typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value))):fallback;}
+export function recordingGains(levels:RecordingLevels){
+ const music=boundedLevel(levels.music,55)/100,voice=boundedLevel(levels.voice,100)/100;
+ // Static headroom for summing two full-scale branches. No signal-dependent ducking.
+ const divisor=Math.max(1,music+voice);return {music:music/divisor,voice:voice/divisor};
+}
+export function loadRecordingLevels():RecordingLevels{try{const v=JSON.parse(localStorage.getItem('anyminus.video.levels.v1')??'null');if(v)return {music:boundedLevel(v.music,55),voice:boundedLevel(v.voice,100)};}catch{}return {...defaultRecordingLevels};}
+export function saveRecordingLevels(value:RecordingLevels){try{localStorage.setItem('anyminus.video.levels.v1',JSON.stringify(value));}catch{}}

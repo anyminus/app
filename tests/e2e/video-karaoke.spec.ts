@@ -238,7 +238,7 @@ test('video pitch and tempo use a continuous recording audio bus',async({page})=
  await page.addInitScript(()=>{
   const connect=AudioNode.prototype.connect,start=MediaRecorder.prototype.start,stop=MediaRecorder.prototype.stop,sourceStart=AudioBufferSourceNode.prototype.start;
   Reflect.set(window,'__pitchVideoStarts',0);Reflect.set(window,'__pitchVideoStops',0);Reflect.set(window,'__pitchVideoRates',[]);
-  AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(this instanceof GainNode&&args[0] instanceof MediaStreamAudioDestinationNode&&Math.abs(this.gain.value-.55)<.001){const analyser=this.context.createAnalyser();analyser.fftSize=8192;Reflect.apply(connect,this,[analyser]);Reflect.set(window,'__recordingMusicAnalyser',analyser);}return result} as typeof connect;
+  AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(this instanceof GainNode&&args[0] instanceof MediaStreamAudioDestinationNode&&Math.abs(this.gain.value-55/155)<.001){const analyser=this.context.createAnalyser();analyser.fftSize=8192;Reflect.apply(connect,this,[analyser]);Reflect.set(window,'__recordingMusicAnalyser',analyser);}return result} as typeof connect;
   MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__pitchVideoStarts',Number(Reflect.get(window,'__pitchVideoStarts'))+1);Reflect.set(window,'__pitchVideoTrack',this.stream.getAudioTracks()[0]);return start.apply(this,args)};
   MediaRecorder.prototype.stop=function(){Reflect.set(window,'__pitchVideoStops',Number(Reflect.get(window,'__pitchVideoStops'))+1);return stop.call(this)};
   AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){(Reflect.get(window,'__pitchVideoRates') as number[]).push(this.playbackRate.value);return sourceStart.apply(this,args)};
@@ -274,7 +274,7 @@ test('karaoke microphone requests music-friendly audio and recording has indepen
  const constraints={echoCancellation:false,noiseSuppression:false,autoGainControl:false};expect(await page.evaluate(()=>Reflect.get(window,'__micConstraints'))).toEqual([constraints,constraints]);
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
  const graph=await page.evaluate(()=>{const edges=Reflect.get(window,'__recordingGraph') as [AudioNode,AudioNode][];const inputs=edges.filter(([,to])=>to instanceof MediaStreamAudioDestinationNode);const sources=inputs.map(([from])=>from);const upstream=sources.map(source=>edges.filter(([,to])=>to===source).map(([from])=>from));return {inputs:sources.length,gains:sources.map(s=>s instanceof GainNode?s.gain.value:0).sort(),independent:upstream.length===2&&upstream.every(a=>a.length===1&&a[0] instanceof DynamicsCompressorNode)&&upstream[0][0]!==upstream[1][0]};});
- expect(graph.inputs).toBe(2);expect(graph.gains[0]).toBeCloseTo(.45,3);expect(graph.gains[1]).toBeCloseTo(.55,3);expect(graph.independent).toBe(true);
+ expect(graph.inputs).toBe(2);expect(graph.gains[0]).toBeCloseTo(55/155,3);expect(graph.gains[1]).toBeCloseTo(100/155,3);expect(graph.independent).toBe(true);
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });
 
@@ -401,4 +401,18 @@ test('automatic recording compensation uses reported latency and does not guess 
  expect(resolveDelay({mode:'auto',manualMs:150},{...info,outputMs:900})).toBe(500);
  expect(resolveDelay({mode:'manual',manualMs:200},info)).toBe(200);
  expect(resolveDelay({mode:'off',manualMs:200},{...info,outputMs:150})).toBe(0);
+});
+
+test('recording levels default to voice 100, can be changed during capture, and preview opens large modal',async({page})=>{
+ await page.addInitScript(()=>{const connect=AudioNode.prototype.connect;Reflect.set(window,'__recordGains',[]);AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const value=Reflect.apply(connect,this,args);if(this instanceof GainNode&&args[0] instanceof MediaStreamAudioDestinationNode)(Reflect.get(window,'__recordGains') as GainNode[]).push(this);return value} as typeof connect;});
+ await mockApi(page);await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();
+ const music=page.getByRole('slider',{name:'Музыка в записи'}),voice=page.getByRole('slider',{name:'Голос в записи'});await expect(music).toHaveValue('55');await expect(voice).toHaveValue('100');await music.fill('20');await voice.fill('80');
+ await page.getByRole('button',{name:'Закрыть настройки звука'}).click();await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ const gains=()=>page.evaluate(()=>((Reflect.get(window,'__recordGains') as GainNode[]).map(n=>Math.round(n.gain.value*100))));
+ await expect.poll(gains).toEqual([20,80]);await page.getByRole('button',{name:'Настройки звука',exact:true}).click();await voice.fill('60');await expect.poll(gains).toEqual([20,60]);await page.getByRole('button',{name:'Закрыть настройки звука'}).click();
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();const save=page.getByRole('link',{name:'Сохранить видео'});await expect(save).toBeVisible();
+ await page.getByRole('button',{name:'Просмотреть',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Просмотр записи'});await expect(dialog).toBeVisible();const video=dialog.getByLabel('Видео для просмотра');await expect(video).toBeVisible();expect((await video.boundingBox())!.width).toBeGreaterThan(300);await expect(video).toHaveAttribute('playsinline','');
+ await dialog.getByRole('button',{name:'Закрыть просмотр видео'}).click();await expect(dialog).toHaveCount(0);await expect(save).toBeVisible();
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('anyminus.video.levels.v1')!))).toEqual({music:20,voice:60});
 });
