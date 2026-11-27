@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.37
+- Verify microphone processing preferences and retry exact disabling if reported active; isolate camera preview from microphone audio, keep playback gain at unity and restore Apple playback session after capture cancellation. Correct system seek boundary regression assertion.
+
 ## 0.5.36
 - Register system previous/next actions as ten-second seeks in the current karaoke track; retain absolute and relative seek handlers, refresh native playback position on visibility changes and page restoration.
 

@@ -15,8 +15,11 @@ test('system media controls publish metadata, seek both stems, pause, resume and
  await action('seekbackward',{seekOffset:2});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('2');
  await action('seekforward',{seekOffset:1});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('3');
  await action('previoustrack');await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('0');
- await action('nexttrack');await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('8');
- await expect.poll(async()=>(await state()).position.position).toBe(8);
+ await action('nexttrack');
+ // Decoded audio may end a fraction of a sample before 8 s; the range
+ // snaps to its 0.1s step, but Media Session must retain the exact end.
+ await expect(page.getByText('Песня закончилась',{exact:true})).toBeVisible();
+ await expect.poll(async()=>{const p=(await state()).position;return Math.abs(p.position-p.duration)}).toBeLessThan(.001);
  await action('seekto',{seekTime:3,fastSeek:true});await expect(page.getByRole('slider',{name:'Позиция песни'})).toHaveValue('3');
  await page.evaluate(()=>{(window as any).__systemMedia.session.position=null;document.dispatchEvent(new Event('visibilitychange'))});await expect.poll(async()=>(await state()).position?.position).toBe(3);
  await action('play');await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect.poll(async()=>(await state()).playback).toBe('playing');

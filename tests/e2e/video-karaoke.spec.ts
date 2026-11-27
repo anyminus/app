@@ -336,3 +336,23 @@ test('compact preview follows camera aspect ratio instead of fixed landscape fra
  await page.getByRole('button',{name:'Отмена',exact:true}).click();
  await expect(frame).toHaveCount(0);
 });
+
+test('microphone processing is verified and preview contains only the camera track',async({page})=>{
+ await page.addInitScript(()=>{
+ const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices),connect=AudioNode.prototype.connect;
+ Reflect.set(window,'__rawMicApplied',[]);Reflect.set(window,'__speakerNodes',[]);
+ Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async(c:MediaStreamConstraints)=>{const stream=await get(c);const track=stream.getAudioTracks()[0];let enabled=true;
+ const settings=track.getSettings.bind(track);Object.defineProperty(track,'getSettings',{value:()=>({...settings(),echoCancellation:enabled,noiseSuppression:false,autoGainControl:false})});
+ Object.defineProperty(track,'applyConstraints',{value:async(c:MediaTrackConstraints)=>{(Reflect.get(window,'__rawMicApplied') as unknown[]).push(c);enabled=false;}});
+ return stream;}});
+ AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(this instanceof GainNode&&args[0]===this.context.destination)(Reflect.get(window,'__speakerNodes') as GainNode[]).push(this);return result} as typeof connect;
+ });
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ const speaker=()=>page.evaluate(()=>{const nodes=Reflect.get(window,'__speakerNodes') as GainNode[];return nodes.map(n=>n.gain.value)});
+ expect(await speaker()).toEqual([1]);
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>Reflect.get(window,'__rawMicApplied'))).toEqual([{echoCancellation:{exact:false}}]);
+ expect(await page.getByLabel('Предпросмотр камеры').evaluate(el=>((el as HTMLVideoElement).srcObject as MediaStream).getAudioTracks().length)).toBe(0);
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();expect(await speaker()).toEqual([1]);
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+});
