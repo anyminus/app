@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.33
+- Match the compact camera preview and saved-video thumbnail to the actual video aspect ratio instead of a fixed landscape box; update on metadata and orientation changes, without cropping.
+
 ## 0.5.32
 - Target 30 FPS on iPhone, select Android/other capture profiles using camera settings and device resource hints; correct frame pacing and cache text measurements.
 - Introduce a stable, fading lyric drum and safer vertical title/lyric placement for messenger playback; preserve watermark and font sizes.

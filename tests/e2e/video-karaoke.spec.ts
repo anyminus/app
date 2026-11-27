@@ -318,3 +318,20 @@ test('Android recording adapts to camera frame rate and conservative device budg
  expect(await page.evaluate(()=>Reflect.get(window,'__adaptiveRate'))).toBe(15);
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });
+
+test('compact preview follows camera aspect ratio instead of fixed landscape frame',async({page})=>{
+ await mockApi(page);await page.setViewportSize({width:390,height:844});await page.goto('/');
+ await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();
+ const video=page.getByLabel('Предпросмотр камеры');await expect(video).toBeVisible();
+ await expect.poll(()=>video.evaluate(el=>(el as HTMLVideoElement).videoWidth)).toBeGreaterThan(0);
+ const setDimensions=(width:number,height:number)=>video.evaluate((el,dimensions)=>{Object.defineProperty(el,'videoWidth',{configurable:true,value:dimensions.width});Object.defineProperty(el,'videoHeight',{configurable:true,value:dimensions.height});el.dispatchEvent(new Event('resize'));},{width,height});
+ const frame=page.locator('.video-karaoke-preview');
+ const ratio=()=>frame.evaluate(el=>{const rect=el.getBoundingClientRect();return rect.width/rect.height});
+ await setDimensions(720,1280);await expect.poll(async()=>Math.abs(await ratio()-9/16)).toBeLessThan(.02);
+ await expect(video).toHaveCSS('object-fit','contain');
+ const portrait=await frame.boundingBox();expect(portrait!.height).toBeLessThanOrEqual(100);expect(portrait!.width).toBeLessThan(portrait!.height);
+ await setDimensions(1280,720);await expect.poll(async()=>Math.abs(await ratio()-16/9)).toBeLessThan(.02);
+ await page.getByRole('button',{name:'Отмена',exact:true}).click();
+ await expect(frame).toHaveCount(0);
+});
