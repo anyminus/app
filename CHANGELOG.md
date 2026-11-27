@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.31
+- Recover the iOS audio output for subsequent recording takes; stop stale playback promises and bound recorder finalization to five seconds, with manual recovery and partial-file fallback.
+
 ## 0.5.30
 - Request unprocessed microphone audio for video karaoke and separate accompaniment and vocal peak protection to prevent singing from ducking recorded music. Preserve raw-audio preferences during camera constraint fallback.
 

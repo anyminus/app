@@ -270,3 +270,29 @@ test('karaoke microphone requests music-friendly audio and recording has indepen
  expect(graph.inputs).toBe(2);expect(graph.gains[0]).toBeCloseTo(.45,3);expect(graph.gains[1]).toBeCloseTo(.55,3);expect(graph.independent).toBe(true);
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });
+
+test('second iPhone take after sharing rebuilds audio output and finishes',async({page})=>{
+ await page.addInitScript(()=>{
+ Object.defineProperty(navigator,'platform',{configurable:true,value:'iPhone'});
+ Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{}});
+ const start=AudioBufferSourceNode.prototype.start;Reflect.set(window,'__takeContexts',[]);
+ AudioBufferSourceNode.prototype.start=function(...args:Parameters<AudioBufferSourceNode['start']>){(Reflect.get(window,'__takeContexts') as BaseAudioContext[]).push(this.context);return start.apply(this,args)};
+ });
+ const api=await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ for(let i=0;i<2;i++){
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
+ const overlay=page.getByRole('checkbox',{name:'Текст на видео'});if(await overlay.isEnabled())await overlay.uncheck();
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+ await page.getByRole('button',{name:'Поделиться',exact:true}).click();await expect(page.getByRole('button',{name:'Закрыть',exact:true})).toBeEnabled();await page.getByRole('button',{name:'Закрыть',exact:true}).click();
+ }
+ expect(await page.evaluate(()=>{const contexts=Reflect.get(window,'__takeContexts') as BaseAudioContext[];return contexts.length>=6&&contexts[contexts.length-1]!==contexts[contexts.length-3];})).toBe(true);expect(api.media).toBe(2);
+});
+test('missing recorder stop event does not strand player and camera',async({page})=>{
+ await page.addInitScript(()=>{const stop=MediaRecorder.prototype.stop;MediaRecorder.prototype.stop=function(){this.onstop=null;return stop.call(this)};});
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();await page.waitForTimeout(1100);
+ await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByText('Сохраняем видео…',{exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible({timeout:8000});await expect(page.getByText(/Сохранена доступная часть записи/)).toBeVisible();await expect(page.getByLabel('Предпросмотр камеры')).toHaveCount(0);await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+});
