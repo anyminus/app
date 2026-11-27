@@ -2,10 +2,13 @@ import type {StretchNode} from 'signalsmith-stretch';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
 function playbackSession(){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session)session.type='playback'}catch{/* Optional Safari API; ordinary playback still works. */}}
 export class RemoteAudio {
- private context:AudioContext|null=null;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
- get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start):this.offset));}
+ private context:AudioContext|null=null;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
+ get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start)*this.rate:this.offset));}
  get length(){return this.duration;}
  get pitch(){return this.semitones;}
+ get speed(){return this.rate;}
+ // BufferSource speed also changes pitch. Counteract it in the shared live DSP.
+ private compensatedPitch(semitones=this.semitones,rate=this.rate){return semitones-12*Math.log2(rate);}
  get pitchSupported(){return !!this.context?.audioWorklet&&typeof AudioWorkletNode!=='undefined';}
  get playing(){return this.running&&this.context?.state==='running';}
  get interrupted(){return this.running&&this.context?.state!=='running';}
@@ -49,13 +52,32 @@ export class RemoteAudio {
   if(this.starting)await this.starting;
   const ctx=this.context;if(!ctx||this.buffers.length!==2)throw Error('Аудио не загружено');
   if(this.pitchNode){
-   await this.pitchNode.schedule({active:true,rate:1,semitones:value,output:ctx.currentTime+this.pitchLatency});
+   await this.pitchNode.schedule({active:true,rate:1,semitones:this.compensatedPitch(value),output:ctx.currentTime+this.pitchLatency});
    if(this.context!==ctx)throw Error('Аудиовыход изменился');this.semitones=value;return;
   }
   if(value===0){this.semitones=0;return}
-  const prepared=await this.createPitch(ctx,value);
+  const prepared=await this.createPitch(ctx,this.compensatedPitch(value));
   if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}
   const resume=this.running;this.pause();this.attachPitch(ctx,prepared.node,prepared.latency);this.semitones=value;
+  if(resume&&this.offset<this.duration)await this.play();
+ }
+ async setSpeed(value:number){
+  if(!Number.isFinite(value)||value<.5||value>1.5)throw Error('Недопустимая скорость');
+  if(value===this.rate)return;
+  if(this.starting)await this.starting;
+  const ctx=this.context;if(!ctx||this.buffers.length!==2)throw Error('Аудио не загружено');
+  // Prepare the DSP before stopping dry playback, so failed setup leaves the
+  // current position, speed and audio unchanged.
+  const prepared=this.pitchNode?null:await this.createPitch(ctx,this.compensatedPitch(this.semitones,value));
+  if(this.context!==ctx){prepared?.node.disconnect();prepared?.node.port.close();throw Error('Аудиовыход изменился')}
+  const resume=this.running;this.pause();
+  if(prepared)this.attachPitch(ctx,prepared.node,prepared.latency);
+  else{
+   try{await this.pitchNode!.schedule({active:true,rate:1,semitones:this.compensatedPitch(this.semitones,value),output:ctx.currentTime+this.pitchLatency})}
+   catch(e){if(this.context===ctx)this.markOutputStalled();throw e}
+  }
+  if(this.context!==ctx)throw Error('Аудиовыход изменился');
+  this.rate=value;
   if(resume&&this.offset<this.duration)await this.play();
  }
  private connectGains(ctx:AudioContext){this.gains=this.buffers.map((_,i)=>{const gain=ctx.createGain();gain.gain.value=this.levels[i]/100;gain.connect(ctx.destination);return gain;});}
@@ -70,13 +92,13 @@ export class RemoteAudio {
  const start=async()=>{let timeout:number|undefined;try{await Promise.race([ctx.resume(),new Promise<never>((_,reject)=>{timeout=window.setTimeout(()=>reject(Error('Браузер заблокировал звук. Нажмите воспроизведение ещё раз.')),4000)})]);}finally{clearTimeout(timeout)}
  if(this.context!==ctx||ctx.state!=='running')throw Error('Аудиовыход недоступен. Нажмите воспроизведение ещё раз.');
  if(this.running)return;if(this.offset>=this.duration)this.offset=0;
- if(this.semitones!==0&&!this.pitchNode){const prepared=await this.createPitch(ctx,this.semitones);if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}this.attachPitch(ctx,prepared.node,prepared.latency)}
+ if((this.semitones!==0||this.rate!==1)&&!this.pitchNode){const prepared=await this.createPitch(ctx,this.compensatedPitch());if(this.context!==ctx){prepared.node.disconnect();prepared.node.port.close();throw Error('Аудиовыход изменился')}this.attachPitch(ctx,prepared.node,prepared.latency)}
  const inputStart=ctx.currentTime+.04;this.start=inputStart+this.pitchLatency;
  if(this.pitchGate){this.pitchGate.gain.cancelScheduledValues(ctx.currentTime);this.pitchGate.gain.setValueAtTime(0,ctx.currentTime);this.pitchGate.gain.setValueAtTime(1,this.start)}
- this.sources=this.buffers.map((buffer,i)=>{const source=ctx.createBufferSource();source.buffer=buffer;source.connect(this.gains[i]);source.start(inputStart,this.offset);return source});this.running=true;await this.waitForClock(ctx);};
+ this.sources=this.buffers.map((buffer,i)=>{const source=ctx.createBufferSource();source.buffer=buffer;source.playbackRate.value=this.rate;source.connect(this.gains[i]);source.start(inputStart,this.offset);return source});this.running=true;await this.waitForClock(ctx);};
  const pending=start();this.starting=pending;try{await pending}catch(e){if(this.context===ctx)this.markOutputStalled();throw e}finally{if(this.starting===pending)this.starting=null}
  }
  pause(){if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
  async seek(t:number){const resume=this.running;this.pause();this.offset=Math.max(0,Math.min(t,this.duration));if(resume&&this.offset<this.duration)await this.play();}
- dispose(){this.pause();const ctx=this.context;this.clearPitch();this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
+ dispose(){this.pause();const ctx=this.context;this.clearPitch();this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.rate=1;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
 }

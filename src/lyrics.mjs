@@ -12,5 +12,5 @@ export function lyricScrollEase(progress){const t=Math.max(0,Math.min(1,progress
 
 // Only long intros with a validated source timestamp qualify. Countdown follows
 // the audio position, not wall time; ceil avoids a visible zero before singing.
-/** @param {number|undefined} firstStartMs @param {number} positionSeconds */
-export function introCountdown(firstStartMs,positionSeconds){if(typeof firstStartMs!=='number'||!Number.isFinite(firstStartMs)||firstStartMs<=10000||!Number.isFinite(positionSeconds))return null;const remaining=firstStartMs-Math.max(0,positionSeconds)*1000;return remaining>0?Math.ceil(remaining/1000):null}
+/** @param {number|undefined} firstStartMs @param {number} positionSeconds @param {number} [rate] */
+export function introCountdown(firstStartMs,positionSeconds,rate=1){if(typeof firstStartMs!=='number'||!Number.isFinite(firstStartMs)||firstStartMs<=10000||!Number.isFinite(positionSeconds))return null;const remaining=firstStartMs-Math.max(0,positionSeconds)*1000;return remaining>0?Math.ceil(remaining/1000/(Number.isFinite(rate)&&rate>0?rate:1)):null}

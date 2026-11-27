@@ -75,3 +75,24 @@ test('shared pitch shifter changes actual output frequency without changing dura
  await minus.click();await expect(value).toHaveText('+1');await minus.click();await expect(value).toHaveText('0');
  for(const size of [{width:320,height:568},{width:667,height:375}]){await page.setViewportSize(size);await expect(panel).toBeInViewport({ratio:.95})}
 });
+
+
+test('tempo controls keep pitch, change source clock and both stem rates, and preserve seek',async({page})=>{
+ await page.addInitScript(()=>{
+  const connect=AudioNode.prototype.connect,start=AudioBufferSourceNode.prototype.start;
+  AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(args[0]===this.context.destination&&this instanceof GainNode){const analyser=this.context.createAnalyser();analyser.fftSize=8192;Reflect.apply(connect,this,[analyser]);Reflect.set(window,'__tempoAnalyser',analyser)}return result} as typeof connect;
+  AudioBufferSourceNode.prototype.start=function(this:AudioBufferSourceNode,...args:Parameters<AudioBufferSourceNode['start']>){const rates=(Reflect.get(window,'__tempoRates')??[]) as number[];rates.push(this.playbackRate.value);Reflect.set(window,'__tempoRates',rates);return Reflect.apply(start,this,args)};
+ });
+ const api=await mockApi(page);await page.setViewportSize({width:390,height:664});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await page.getByRole('button',{name:'Пауза',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Скорость',exact:true}),value=panel.getByLabel('Скорость воспроизведения'),plus=panel.getByRole('button',{name:'Увеличить скорость'}),minus=panel.getByRole('button',{name:'Уменьшить скорость'}),slider=page.getByRole('slider',{name:'Позиция песни'});
+ await expect(value).toHaveText('1.0×');await slider.press('Home');
+ await plus.click();await expect(value).toHaveText('1.1×',{timeout:10000});await plus.click();await expect(value).toHaveText('1.2×');
+ await expect(page.getByLabel('Тональность в полутонах')).toHaveText('0');await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ const rates=await page.evaluate(()=>Reflect.get(window,'__tempoRates').slice(-2));expect(rates[0]).toBeCloseTo(1.2,3);expect(rates[1]).toBeCloseTo(1.2,3);
+ const frequency=()=>page.evaluate(()=>{const a=Reflect.get(window,'__tempoAnalyser') as AnalyserNode;if(!a)return 0;const bins=new Float32Array(a.frequencyBinCount);a.getFloatFrequencyData(bins);let peak=0;for(let i=1;i<bins.length;i++)if(bins[i]>bins[peak])peak=i;return bins[peak]>-70?peak*a.context.sampleRate/a.fftSize:0});
+ await expect.poll(async()=>Math.abs(await frequency()-440),{timeout:4000}).toBeLessThan(15);
+ const p0=Number(await slider.inputValue());await page.waitForTimeout(800);const p1=Number(await slider.inputValue());expect(p1-p0).toBeGreaterThan(.65);expect(p1-p0).toBeLessThan(1.35);
+ await page.getByRole('button',{name:'Пауза',exact:true}).click();await slider.press('Home');await expect(slider).toHaveValue('0');
+ await minus.click();await expect(value).toHaveText('1.1×');await minus.click();await expect(value).toHaveText('1.0×');expect(api.media).toBe(2);
+ for(const size of [{width:320,height:568},{width:667,height:375}]){await page.setViewportSize(size);await expect(panel).toBeInViewport({ratio:.95})}
+});

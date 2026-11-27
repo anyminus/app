@@ -1,5 +1,5 @@
 import {useEffect,useRef} from 'react';
-type Props={ready:boolean;title:string;artist:string;artwork:string|null;playing:boolean;length:number;position:number;play:()=>void;pause:()=>void;seek:(seconds:number)=>void;currentTime:()=>number};
+type Props={ready:boolean;title:string;artist:string;artwork:string|null;playing:boolean;length:number;position:number;speed?:number;play:()=>void;pause:()=>void;seek:(seconds:number)=>void;currentTime:()=>number};
 export function useSystemMedia(props:Props){
  const latest=useRef(props);latest.current=props;
  useEffect(()=>{
@@ -26,6 +26,6 @@ export function useSystemMedia(props:Props){
   if(!props.ready||!('mediaSession' in navigator))return;
   const session=navigator.mediaSession;
   try{session.playbackState=props.playing?'playing':'paused'}catch{}
-  try{if(Number.isFinite(props.length)&&props.length>0){const time=latest.current.currentTime();session.setPositionState({duration:props.length,playbackRate:1,position:Math.max(0,Math.min(props.length,Number.isFinite(time)?time:0))})}}catch{}
- },[props.ready,props.playing,props.length,second]);
+  try{if(Number.isFinite(props.length)&&props.length>0){const time=latest.current.currentTime();session.setPositionState({duration:props.length,playbackRate:props.speed??1,position:Math.max(0,Math.min(props.length,Number.isFinite(time)?time:0))})}}catch{}
+ },[props.ready,props.playing,props.length,props.speed,second]);
 }

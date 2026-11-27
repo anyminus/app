@@ -56,3 +56,5 @@ test('long intro countdown uses source timestamp and media position',()=>{assert
 
 import {publishedUpgrade} from '../src/release-version.mjs';
 test('published release comparator rejects malformed, same and stale versions',()=>{const m=version=>({schemaVersion:1,version});assert.equal(publishedUpgrade('0.5.2',m('0.5.2')),null);assert.equal(publishedUpgrade('0.5.2',m('0.5.1')),null);assert.equal(publishedUpgrade('0.5.9',m('0.5.10')),'0.5.10');assert.equal(publishedUpgrade('0.5.9',m('0.6.0')),'0.6.0');assert.equal(publishedUpgrade('0.5.2',m('garbage')),null);assert.equal(publishedUpgrade('0.5.2',{version:'1.0.0'}),null);assert.equal(publishedUpgrade('0.5.2',null),null)});
+
+test('intro countdown reports real seconds at changed tempo',()=>{assert.equal(introCountdown(30000,0,.5),60);assert.equal(introCountdown(30000,0,1.5),20);assert.equal(introCountdown(30000,15,1.2),13);assert.equal(introCountdown(30000,30,1.5),null)});

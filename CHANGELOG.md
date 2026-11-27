@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.4
+- Add speed +/- control alongside pitch, independent pitch compensation, synchronized media position and intro countdown.
+
 ## 0.5.3
 - Add a permanent, compact tap-to-seek hint above timed lyrics, including focus mode and long-intro countdown.
 
