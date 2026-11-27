@@ -22,3 +22,6 @@ Show «До начала текста» with mm:ss remaining when the first veri
 
 ## CI regression repair (0.4.16)
 0.4.14 and 0.4.15 browser suites failed at startup because Playwright's Node ESM loader requires an import attribute for JSON. The test reads the package manifest with node:fs; Vite's production JSON import remains unchanged. 0.4.13 previously failed the stalled-audio test because it froze only the first context created during navigation; the application releases that warm-up context when status is not ready, then creates another on enqueue. Freeze every context constructed before explicit retry and verify the retry creates exactly one new context, advances playback, and does not download or enqueue again. No runtime changes. Publication and real iPhone acceptance remain pending.
+
+## Intro regression follow-up (0.4.17)
+CI 45981424903 passed 56 browser tests and failed the new intro seek check: range.fill('5') left the displayed countdown at 0:15 instead of 0:10. Cause is not yet proven; replace synthetic fill with real user controls (Home, skip +10, ArrowRight and lyric click) and assert slider values, pause stability, first-line activation and rewind. Boundary of one second and 10-second threshold remain in the unit test. No runtime modification or disabled tests. Await CI to establish whether there is a runtime seeking issue.

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.17
+- Exercise intro countdown seeking through real skip buttons, range keyboard input and timed-line clicks; assert the playback position as well as the countdown. No runtime changes.
+
 ## 0.4.16
 - Repair Node ESM test loading of the package version and make the stalled-audio regression freeze every context created before explicit recovery; keep all assertions and the intro countdown.
 
