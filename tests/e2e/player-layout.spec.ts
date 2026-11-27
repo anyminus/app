@@ -68,17 +68,25 @@ test('stalled Web Audio clock after creating a song recovers on explicit play wi
 });
 
 test('long intro counts down from the media position, pauses, disappears and returns on rewind',async({page})=>{
- await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';const duration=20,bytes=duration*48000;const wav=Buffer.alloc(44+bytes);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(24000,24);wav.writeUInt32LE(48000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(bytes,40);
+ await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';const duration=26,bytes=duration*48000;const wav=Buffer.alloc(44+bytes);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(24000,24);wav.writeUInt32LE(48000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(bytes,40);
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/playback$/,r=>r.request().method()==='OPTIONS'?r.fallback():r.fulfill({json:{pairOperationId:pair,durationSeconds:duration,instrumental:'/demo/catalog/media/'+pair+'/instrumental',vocals:'/demo/catalog/media/'+pair+'/vocals'},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/(instrumental|vocals)$/,r=>r.fulfill({body:wav,contentType:'audio/wav',headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'First timed line',startMs:15000,endMs:18000,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.setViewportSize({width:390,height:664});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await page.getByRole('button',{name:'Пауза',exact:true}).click();
- const slider=page.getByRole('slider',{name:'Позиция песни'}),timer=page.getByRole('timer',{name:'До начала текста'});await expect.poll(async()=>Number(await slider.getAttribute('max'))).toBeCloseTo(20,2);await expect(timer).toBeVisible();await expect(slider).toBeEnabled();
+ const slider=page.getByRole('slider',{name:'Позиция песни'}),timer=page.getByRole('timer',{name:'До начала текста'});await expect.poll(async()=>Number(await slider.getAttribute('max'))).toBeCloseTo(26,2);await expect(timer).toBeVisible();await expect(slider).toBeEnabled();
  // Exercise actual user controls rather than range.fill's synthetic input event.
  await slider.press('Home');await expect(slider).toHaveValue('0');await expect(timer.locator('strong')).toHaveText('15');const hint=page.getByText('Нажмите на любую строку, чтобы перейти к ней',{exact:true});await expect(hint).toBeInViewport();
  await page.getByRole('button',{name:'Вперёд 10 секунд',exact:true}).click();await expect(slider).toHaveValue('10');await expect(timer.locator('strong')).toHaveText('5');await expect(timer).toBeInViewport();await page.waitForTimeout(1100);await expect(timer.locator('strong')).toHaveText('5');
  await slider.press('ArrowRight');await expect(slider).toHaveValue('10.1');await expect(timer.locator('strong')).toHaveText('5');
  await page.getByRole('button',{name:'First timed line',exact:true}).click();await expect(slider).toHaveValue('15');await expect(timer).toHaveCount(0);await expect(hint).toBeInViewport();await expect(page.getByRole('button',{name:'First timed line'})).toHaveAttribute('aria-current','true');
+ const hintWrap=page.locator('.lyric-seek-hint-wrap'),lyrics=page.getByLabel('Текст песни',{exact:true});
+ await slider.press('Home');await expect(slider).toHaveValue('0');
+ await page.getByRole('button',{name:'Вперёд 10 секунд',exact:true}).click();await expect(slider).toHaveValue('10');await expect(hintWrap).toHaveCSS('opacity','1');
+ await slider.press('ArrowLeft');await expect(slider).toHaveValue('9.9');
+ await page.getByRole('button',{name:'Вперёд 10 секунд',exact:true}).click();await expect(slider).toHaveValue('19.9');await expect(hint).toBeVisible();
+ await slider.press('ArrowRight');await expect(slider).toHaveValue('20');await expect(hintWrap).toHaveClass(/is-hidden/);await expect(hintWrap).toHaveCSS('opacity','0');await expect(hint).toBeHidden();await expect.poll(async()=>Math.round((await hintWrap.boundingBox())!.height)).toBe(0);await expect(lyrics).not.toHaveAttribute('aria-describedby','lyric-seek-hint');
+ await slider.press('Home');await expect(slider).toHaveValue('0');await expect(hint).toBeVisible();await expect(hintWrap).toHaveCSS('opacity','1');await expect(lyrics).toHaveAttribute('aria-describedby','lyric-seek-hint');
+
  await slider.press('Home');await expect(slider).toHaveValue('0');await expect(timer.locator('strong')).toHaveText('15');await expect(timer).toBeInViewport();expect(await page.evaluate(()=>window.scrollY)).toBe(0);
 });
 

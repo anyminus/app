@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Timed lyric seek hint (0.5.89)
+The hint is available only for timed lyrics when seeking is permitted and the song has not ended. Its visible state is derived from the same media position as the active lyric: position in milliseconds less than first startMs + 5000. Pauses do not advance the threshold; seeking earlier restores the hint. CSS fades and collapses the grid wrapper over 400ms, returning vertical space to lyrics; reduced-motion preferences disable the transition. Hidden hints are excluded from aria-describedby. No changes to seek or audio behavior.
+
 ## Compact song credits and readiness labels (0.5.88)
 Shared TrackRow clamps the artist-credit container to two lines while retaining individual artist links and a full-name title. The player header retains its one-line layout. A ready audio pair is necessary for a database badge; the stored `lyricsFormat` selects LRC (Karaoke in catalog), TEXT (Karaoke without timing), NONE (Karaoke without lyrics) or absent/null (Karaoke, lyrics unverified). Provider hints do not prove the stored text format. All lists share one badge, no added API requests or changes to creation or playback. Browser regressions cover status variants and mobile credits geometry.
 

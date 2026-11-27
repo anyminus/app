@@ -292,3 +292,9 @@ body.karaoke-open .tab-bar{display:none}
 .track-row .track-artist-lines .artist-credits,.track-row .track-artist-lines .artist-credits>span{display:inline;white-space:normal}
 .track-row .track-artist-lines .artist-link{display:inline;font:inherit;line-height:inherit;vertical-align:baseline;white-space:normal;overflow:visible;overflow-wrap:anywhere;max-width:100%}
 .track-database-status.database-plain{color:var(--lyrics-plain)}.track-database-status.database-missing{color:var(--lyrics-missing)}.track-database-status.database-unverified{color:var(--muted);font-weight:500}
+
+/* Fade and collapse the seek hint after the first lyric's five-second window. */
+.lyric-seek-hint-wrap{display:grid;grid-template-rows:1fr;opacity:1;visibility:visible;transition:grid-template-rows 400ms ease,opacity 400ms ease,visibility 0s}
+.lyric-seek-hint-clip{min-height:0;overflow:hidden}
+.lyric-seek-hint-wrap.is-hidden{grid-template-rows:0fr;opacity:0;visibility:hidden;pointer-events:none;transition:grid-template-rows 400ms ease,opacity 400ms ease,visibility 0s 400ms}
+@media(prefers-reduced-motion:reduce){.lyric-seek-hint-wrap,.lyric-seek-hint-wrap.is-hidden{transition:none}}

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.89
+- Fade and collapse the lyric seek hint over 400ms once media position reaches the first lyric timestamp plus five seconds. Keep it during intros and paused positions within that window; restore on rewind, respect reduced-motion settings, remove accessibility description when hidden. Add long-intro boundary regression.
+
 ## 0.5.88
 - Limit artist credits in all shared song rows to two lines with overflow ellipsis; preserve artist links and full hover title, leave player header unchanged. Show one stored karaoke status according to LRC/TEXT/NONE/unknown across all lists; do not claim timing when unknown. No extra API calls. Update translations and browser regressions.
 
