@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.43
+- Compact recording sound settings: closely spaced level sliders, compensation directly underneath, current delay beside its label, optional collapsed device diagnostics, taller responsive panel and accurate range progress fills.
+
 ## 0.5.42
 - Open recorded video in a large inline modal with an explicit View button; add persistent independent recording music and microphone sliders, including live adjustment and default microphone level 100%.
 

@@ -370,7 +370,7 @@ test('video sync settings use browser estimates, persist manual mode and delay o
  await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
  await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Настройки звука',exact:true}).click();const panel=page.getByRole('region',{name:'Настройки звука видеозаписи'});await expect(panel).toBeVisible();
- await expect(panel.getByText('Test microphone',{exact:true})).toBeVisible();await expect(panel.locator('output')).toHaveText('180 мс');
+ await expect(panel.locator('output')).toHaveText('180 мс');await panel.getByText('Параметры аудиоустройств',{exact:true}).click();await expect(panel.getByText('Test microphone',{exact:true})).toBeVisible();await panel.getByText('Параметры аудиоустройств',{exact:true}).click();
  await panel.getByRole('button',{name:'Выкл.',exact:true}).click();await expect(panel.locator('output')).toHaveText('0 мс');
  await panel.getByRole('button',{name:'Вручную',exact:true}).click();await panel.getByRole('button',{name:'200',exact:true}).click();await expect(panel.locator('output')).toHaveText('200 мс');
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('anyminus.video.sync.v1')!))).toEqual({mode:'manual',manualMs:200});
@@ -415,4 +415,16 @@ test('recording levels default to voice 100, can be changed during capture, and 
  await page.getByRole('button',{name:'Просмотреть',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Просмотр записи'});await expect(dialog).toBeVisible();const video=dialog.getByLabel('Видео для просмотра');await expect(video).toBeVisible();expect((await video.boundingBox())!.width).toBeGreaterThan(300);await expect(video).toHaveAttribute('playsinline','');
  await dialog.getByRole('button',{name:'Закрыть просмотр видео'}).click();await expect(dialog).toHaveCount(0);await expect(save).toBeVisible();
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('anyminus.video.levels.v1')!))).toEqual({music:20,voice:60});
+});
+
+test('compact recording settings keep compensation above collapsed diagnostics on mobile',async({page})=>{
+ await mockApi(page);await page.setViewportSize({width:390,height:700});await page.goto('/');
+ await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Настройки звука видеозаписи'}),music=panel.getByRole('slider',{name:'Музыка в записи'}),voice=panel.getByRole('slider',{name:'Голос в записи'}),auto=panel.getByRole('button',{name:'Авто',exact:true});
+ await expect(panel).toBeVisible();await expect(auto).toBeInViewport({ratio:1});await expect(panel.locator('details')).not.toHaveAttribute('open','');
+ const geometry=await panel.evaluate(el=>{const sliders=el.querySelectorAll('input[type=range]'),first=sliders[0].getBoundingClientRect(),second=sliders[1].getBoundingClientRect(),mode=el.querySelector('.video-sync-modes')!.getBoundingClientRect(),box=el.getBoundingClientRect();return {gap:second.top-first.top,modeBottom:mode.bottom,panelBottom:box.bottom,scroll:el.scrollTop}});
+ expect(geometry.gap).toBeLessThan(54);expect(geometry.modeBottom).toBeLessThanOrEqual(geometry.panelBottom);expect(geometry.scroll).toBe(0);
+ await expect(music).toHaveCSS('--progress','55%');await expect(voice).toHaveCSS('--progress','100%');await music.fill('32');await expect(music).toHaveCSS('--progress','32%');
+ await panel.getByRole('button',{name:'Вручную',exact:true}).click();await expect(panel.getByRole('slider',{name:'Компенсация задержки в миллисекундах'})).toBeInViewport({ratio:1});
 });
