@@ -311,3 +311,7 @@ Owner clarification: after confirmed ready status the inline label becomes «К�
 
 ## Artist search suggestions (0.5.72)
 Search uses optional independent SDK artists array plus current track credits, validates IDs, ranks exact names first, then reordered words, prefixes and bounded single-edit token matches. Display at most three suggestions; no suggestions derived from track titles. Legacy exact full artist fallback only when no verified results. Search artist photo uses existing artist-artwork endpoint and LazyCover. Preserve strict identity for artist catalog navigation. Updated obsolete ready-default browser test blocking 0.5.71 (122 passed, 1 failed). Added surname/reordered name and image regression. No storage mutation. Production verification pending.
+
+
+## Compact karaoke player header (0.5.73)
+Owner requested the same visible artwork in normal and lyrics-focus modes, square image sized to the title plus artist lines (19.52 + 3 + 14.4 CSS px, rounded to 37 px), no lyrics-format caption in this header. Catalog/detail statuses and lyric error/empty-state behavior unchanged. Tests cover loaded artwork and matching bounds before/after mixer toggling and viewport changes; obsolete player-header label assertions removed, catalog label assertions retained. No backend or storage changes. CI pending.

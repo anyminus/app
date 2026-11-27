@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.73
+- Keep artwork visible in both mixer modes. Match square artwork to the two-line title/artist block and remove lyric-format label from player header only.
+
 ## 0.5.72
 - Use independent SDK artist suggestions and tolerant token matching with exact-first ranking, verified IDs, and circular artist portrait tiles. Update previous default-tab integration test.
 
