@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.50
+- Add bounded IndexedDB stem cache, persist partial checkpoints and completed stems across reloads, retain fresh playback authorization, show cached bytes and profile cache clearing.
+
 ## 0.5.49
 - Add persistent experimental audio output modes in Profile: Auto (alternate latency hint after a detected failure on explicit Play), Standard, and CarPlay compatibility (play-and-record session without media capture). Preserve original audio and recording routing.
 

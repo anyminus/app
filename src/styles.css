@@ -183,3 +183,5 @@ body.karaoke-open .tab-bar{display:none}
 .language-setting{gap:10px}.language-setting>span{flex:1;min-width:0}.language-setting select{max-width:58%;min-width:0;font:inherit;font-size:13px;color:var(--text);background:var(--raised);border:1px solid var(--border);border-radius:9px;padding:8px 7px}.app[lang]:not([lang=ru]) .video-sync-settings button{white-space:normal}.app[lang]:not([lang=ru]) .track-row .track-info{min-width:0}.app[lang]:not([lang=ru]) .tab-bar button span{font-size:10px;overflow-wrap:anywhere}
 
 .audio-output-settings{margin:4px 0 12px}.audio-output-settings .setting-row{margin-bottom:4px}.audio-output-settings .metadata{font-size:12px;line-height:1.4;margin:4px 0}.audio-output-settings select{max-width:64%}
+
+.stem-cache-settings{margin:4px 0 12px}.stem-cache-settings .setting-row{margin-bottom:4px}.stem-cache-settings .metadata{font-size:12px;line-height:1.4;margin:4px 0 8px}.stem-cache-settings .secondary{min-height:36px;font-size:13px}.stem-loading .stem-cache-saved{color:var(--accent)}

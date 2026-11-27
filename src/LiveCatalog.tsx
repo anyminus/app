@@ -174,6 +174,7 @@ export function LiveCatalog({onOriginal,originalPlaying,originalActive,onKaraoke
 
 function StemLoading({progress,loading}:{progress:DownloadProgress|null;loading:boolean}){
  const stems=progress?.stems??[{received:0,total:null,phase:'connecting'},{received:0,total:null,phase:'connecting'}];
+ const cached=progress?.stems.reduce((sum,s)=>sum+(s.cached??0),0)??0;
  const received=stems.reduce((sum,s)=>sum+s.received,0),total=stems.every(s=>s.total!==null)?stems.reduce((sum,s)=>sum+(s.total??0),0):null;
  const mb=(n:number)=>(n/1000000).toFixed(2).replace('.',',')+trUi(' МБ');
  const percent=(n:number,t:number|null)=>t&&t>0?Math.min(100,Math.floor(n/t*100)):null;
@@ -182,6 +183,7 @@ function StemLoading({progress,loading}:{progress:DownloadProgress|null;loading:
   <div className="stem-loading-top"><strong>{overall===null?trUi('Загрузка'):overall+'%'}</strong><span>{mb(received)}{total!==null?' / '+mb(total):''}</span></div>
   <progress aria-label={trUi("Общий прогресс загрузки")} max={total??1} {...(total!==null?{value:received}:loading?{}:{value:0})}/>
   {stems.map((s,i)=><div className="stem-loading-row" key={i}><div><span>{i===0?trUi('Музыка'):trUi('Голос')}</span><span>{mb(s.received)}{s.total!==null?' / '+mb(s.total):''}</span></div><progress aria-label={i===0?trUi('Загрузка музыки'):trUi('Загрузка голоса')} max={s.total??1} {...(s.total!==null?{value:s.received}:loading?{}:{value:0})}/></div>)}
-  <p>{!loading?trUi('Можно повторить загрузку. Полученные части сохраняются в открытой вкладке.'):progress?.phase==='waiting'?trUi('Продолжим, когда вы вернётесь в приложение и появится связь.'):progress?.phase==='retrying'?trUi('Пытаемся докачать недостающие данные.'):progress?.phase==='decoding'?trUi('Дорожки загружены, готовим воспроизведение.'):trUi('На медленной сети это может занять несколько минут.')}</p>
+  {cached>0&&<p className="stem-cache-saved">{trUi("Из кеша:")} {mb(cached)}</p>}
+  <p>{!loading?trUi('Можно повторить загрузку. Полученные части сохраняются, если доступен кеш браузера.'):progress?.phase==='waiting'?trUi('Продолжим, когда вы вернётесь в приложение и появится связь.'):progress?.phase==='retrying'?trUi('Пытаемся докачать недостающие данные.'):progress?.phase==='decoding'?trUi('Дорожки загружены, готовим воспроизведение.'):trUi('На медленной сети это может занять несколько минут.')}</p>
  </section>
 }

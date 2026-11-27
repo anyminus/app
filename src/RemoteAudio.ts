@@ -24,7 +24,7 @@ export class RemoteAudio {
   if(!Number.isFinite(duration)||duration<=0||duration>900||urls.length!==2||!download.matches(urls))throw Error(trUi('Неподдерживаемая длительность или дорожки'));
   this.prepare();const ctx=this.context!;
   try{const bytes=await download.fetchAll(signal,onProgress,refresh);
-   let buffers:AudioBuffer[];try{buffers=await Promise.all(bytes.map(b=>ctx.decodeAudioData(b.buffer)));if(buffers.some(b=>Math.abs(b.duration-duration)>1)||Math.abs(buffers[0].duration-buffers[1].duration)>0.1)throw Error(trUi('Длительности дорожек не совпадают'));}catch(e){download.clear();throw e}
+   let buffers:AudioBuffer[];try{buffers=await Promise.all(bytes.map(b=>ctx.decodeAudioData(b.buffer)));if(buffers.some(b=>Math.abs(b.duration-duration)>1)||Math.abs(buffers[0].duration-buffers[1].duration)>0.1)throw Error(trUi('Длительности дорожек не совпадают'));}catch(e){await download.clear();throw e}
    if(signal.aborted||this.context!==ctx)throw Error(trUi('Отменено'));this.buffers=buffers;this.duration=Math.min(duration,...buffers.map(b=>b.duration));this.connectGains(ctx);
   }catch(e){this.dispose();throw e;}
  }

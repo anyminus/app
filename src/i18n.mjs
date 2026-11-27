@@ -2315,6 +2315,41 @@ const dictionary={
   "Experimental CarPlay compatibility mode in Profile.",
   "Experimenteller CarPlay-Kompatibilitätsmodus im Profil.",
   "Modo experimental de compatibilidad con CarPlay en Perfil."
+ ],
+ "Кеш аудиодорожек": [
+  "Audio track cache",
+  "Audiospur-Cache",
+  "Caché de pistas de audio"
+ ],
+ "Дорожки сохраняются до 7 дней. Старые удаляются автоматически.": [
+  "Tracks are kept for up to 7 days. Old tracks are removed automatically.",
+  "Spuren werden bis zu 7 Tage gespeichert. Alte Spuren werden automatisch gelöscht.",
+  "Las pistas se guardan hasta 7 días. Las antiguas se eliminan automáticamente."
+ ],
+ "Очистить кеш": [
+  "Clear cache",
+  "Cache leeren",
+  "Borrar caché"
+ ],
+ "Не удалось очистить кеш.": [
+  "Could not clear cache.",
+  "Cache konnte nicht geleert werden.",
+  "No se pudo borrar la caché."
+ ],
+ "Из кеша:": [
+  "From cache:",
+  "Aus dem Cache:",
+  "Desde la caché:"
+ ],
+ "Можно повторить загрузку. Полученные части сохраняются, если доступен кеш браузера.": [
+  "Retry the download. Received data is saved if browser storage is available.",
+  "Erneut laden. Empfangene Daten bleiben gespeichert, wenn Browserspeicher verfügbar ist.",
+  "Reintenta la descarga. Los datos recibidos se guardan si hay almacenamiento disponible."
+ ],
+ "Кеш аудиодорожек с докачкой после обновления страницы.": [
+  "Audio track cache with resume after page reload.",
+  "Audiospur-Cache mit Fortsetzung nach Neuladen.",
+  "Caché de pistas con reanudación tras recargar la página."
  ]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}
