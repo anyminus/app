@@ -277,3 +277,7 @@ Owner requests removal of the upper-right focus toggle because the bottom microp
 
 ## Recorded intro countdown (0.5.64)
 Owner requests 3–2–1 before the first timed line of every song whose first timestamp exceeds 3000ms. Render only in the video canvas (preview and captured output), active lyric style, keeping first lyric in the upcoming slot. Compute from existing compensated media position divided by current playback rate (three real seconds), no independent timer. No countdown for untimed/disabled lyrics, first start <=3000ms, earlier intro, or after first lyric; a seek recalculates from position. Snap first lyric on onset instead of animating from a non-lyric slot. Existing ordinary player countdown unchanged. Add pure boundary/tempo tests and actual MediaRecorder canvas regression. CI/device acceptance pending.
+
+
+## Recorded voice effects (0.5.65)
+Owner requests louder voice and echo/reverb sliders. Existing recording music/voice levels remain unchanged, independent limiter retained. Insert mic preamp (0–12 dB), parallel two-tap 220/440ms feedforward echo (bounded wet level, no feedback), and short 850ms deterministic stereo impulse convolver before voice-only limiter. Wet paths allocated lazily and cleaned on stop; no connection to speaker or music branch, no network. Settings local, default zero, live ramp, reset, all four UI languages. Place after compensation to retain existing mobile layout. No guarantee of subjective quality or recovery of clipped mic input; real iPhone audio and CI pending.

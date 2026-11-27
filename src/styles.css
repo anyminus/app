@@ -229,3 +229,5 @@ body.karaoke-open .tab-bar{display:none}
 @container mix-tools (max-width:170px){
  .karaoke-mix-tools>.karaoke-pitch>.mixer-title{white-space:normal;overflow-wrap:anywhere}
 }
+
+.video-sync-settings .video-voice-effects{border-top:1px solid var(--border);padding-top:5px;margin:7px 0 3px}.video-voice-effects legend{padding:0 5px 0 0;color:var(--accent)}.video-effects-reset{color:var(--accent);background:var(--raised);border-radius:8px;padding:5px 9px;min-height:30px;font-size:11px;margin:3px 0}.video-voice-effects .video-recording-level strong{white-space:nowrap}

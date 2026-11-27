@@ -2420,7 +2420,14 @@ const dictionary={
   "Recording sliders affect the video audio only. Headroom helps prevent clipping.",
   "Aufnahmeregler ändern nur den Videoton. Pegelreserve hilft gegen Übersteuerung.",
   "Los controles de grabación solo cambian el audio del vídeo. El margen ayuda a evitar saturación."
- ]
+ ],
+"Эффекты голоса":["Voice effects","Stimmeffekte","Efectos de voz"],
+"Усиление голоса":["Voice boost","Stimmverstärkung","Amplificación de voz"],
+"Эхо":["Echo","Echo","Eco"],
+"Реверберация":["Reverb","Hall","Reverberación"],
+"Сбросить эффекты":["Reset effects","Effekte zurücksetzen","Restablecer efectos"],
+"Только голос в видео. Эффекты не слышны в динамиках во время записи.":["Recorded voice only. Effects are not played through speakers during recording.","Nur die Stimme im Video. Effekte sind während der Aufnahme nicht über Lautsprecher hörbar.","Solo la voz grabada. Los efectos no se reproducen por los altavoces durante la grabación."],
+"Не удалось изменить эффекты голоса.":["Could not change voice effects.","Stimmeffekte konnten nicht geändert werden.","No se pudieron cambiar los efectos de voz."]
 };
 export function supportedLanguage(value){return languages.some(l=>l.code===value);}
 export function detectLanguage(values){for(const value of values??[]){const code=String(value).toLowerCase().split(/[-_]/)[0];if(supportedLanguage(code))return code;}return 'en';}

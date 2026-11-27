@@ -55,3 +55,10 @@ export const monitorBoostGain=Math.pow(10,3/20);
 const monitorBoostKey='anyminus.video.monitor-boost.v1';
 export function loadMonitorBoost(){try{return localStorage.getItem(monitorBoostKey)==='true'}catch{return false}}
 export function saveMonitorBoost(value:boolean){try{localStorage.setItem(monitorBoostKey,String(value))}catch{}}
+
+export type VoiceEffects={boostDb:number;echo:number;reverb:number};
+export const defaultVoiceEffects:VoiceEffects={boostDb:0,echo:0,reverb:0};
+export function boundedVoiceEffects(value:Partial<VoiceEffects>|null|undefined):VoiceEffects{return {boostDb:typeof value?.boostDb==='number'&&Number.isFinite(value.boostDb)?Math.max(0,Math.min(12,Math.round(value.boostDb))):0,echo:boundedLevel(value?.echo,0),reverb:boundedLevel(value?.reverb,0)};}
+const voiceEffectsKey='anyminus.video.voice-effects.v1';
+export function loadVoiceEffects():VoiceEffects{try{return boundedVoiceEffects(JSON.parse(localStorage.getItem(voiceEffectsKey)??'null'))}catch{return {...defaultVoiceEffects}}}
+export function saveVoiceEffects(value:VoiceEffects){try{localStorage.setItem(voiceEffectsKey,JSON.stringify(boundedVoiceEffects(value)))}catch{}}

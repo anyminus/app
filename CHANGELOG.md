@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.65
+- Add local, live recording-only voice boost (+0–12 dB), echo and reverb with independent voice peak protection, no microphone monitoring, reset and saved preferences. Effects default off; wet paths allocated only when used. Add multilingual controls and graph regression.
+
 ## 0.5.64
 - Render a three-second intro countdown in the actual recording canvas when the first timed lyric starts after 3s. Use compensated media position and playback rate; respect lyrics opt-out and snap the first lyric into its active position. Add boundary and recorded-canvas tests.
 

@@ -2,7 +2,7 @@ import {t as trUi} from './i18n.mjs';
 import {readAudioOutputMode} from './audioOutputMode';
 import type {StretchNode} from 'signalsmith-stretch';
 import {StemDownload,type DownloadProgress} from './stemDownload';
-import {defaultSync,readAudioDiagnostics,resolveDelay,recordingGains,defaultRecordingLevels,monitorBoostGain,type RecordingLevels,type SyncSettings} from './recordingSync';
+import {defaultSync,readAudioDiagnostics,resolveDelay,recordingGains,defaultRecordingLevels,monitorBoostGain,defaultVoiceEffects,boundedVoiceEffects,type VoiceEffects,type RecordingLevels,type SyncSettings} from './recordingSync';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
 export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session&&session.type!==type)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
 export class RemoteAudio {
@@ -121,7 +121,7 @@ export class RemoteAudio {
  pause(){this.playEpoch++;if(!this.running)return;this.offset=this.position;this.running=false;if(this.pitchGate&&this.context){this.pitchGate.gain.cancelScheduledValues(this.context.currentTime);this.pitchGate.gain.setValueAtTime(0,this.context.currentTime)}for(const source of this.sources){try{source.stop()}catch{}source.disconnect()}this.sources=[];}
  async seek(t:number){const resume=this.running;this.pause();this.offset=Math.max(0,Math.min(t,this.duration));if(resume&&this.offset<this.duration)await this.play();}
  recordingDiagnostics(track?:MediaStreamTrack){return readAudioDiagnostics(this.context,track,this.outputMode);}
- async createRecordingMix(microphone:MediaStream,settings:SyncSettings=defaultSync,levels:RecordingLevels=defaultRecordingLevels,boostListening=false){
+ async createRecordingMix(microphone:MediaStream,settings:SyncSettings=defaultSync,levels:RecordingLevels=defaultRecordingLevels,boostListening=false,effects:VoiceEffects=defaultVoiceEffects){
  if(!this.context||this.capturing||this.buffers.length!==2||!microphone.getAudioTracks().some(t=>t.readyState==='live'))throw Error(trUi('Аудиовыход не готов к записи'));
  // The camera permission can interrupt Safari's old playback context. Recover
  // synchronously on the explicit recording gesture, BEFORE attaching the mic.
@@ -159,10 +159,33 @@ export class RemoteAudio {
  };
  const diagnostics=this.recordingDiagnostics(microphone.getAudioTracks()[0]),delayMs=resolveDelay(settings,diagnostics);
  const delay=delayMs>0?ctx.createDelay(.5):null;
- if(delay){delay.delayTime.value=delayMs/1000;output.connect(delay);delay.connect(musicLimiter);}else output.connect(musicLimiter);musicLimiter.connect(music);music.connect(destination);mic.connect(voiceLimiter);voiceLimiter.connect(voice);voice.connect(destination);this.capturing=true;
- let closed=false;const close=()=>{if(closed)return;closed=true;this.capturing=false;setMonitorBoost(false);try{output.disconnect(delay??musicLimiter)}catch{}delay?.disconnect();musicLimiter.disconnect();music.disconnect();mic.disconnect();voiceLimiter.disconnect();voice.disconnect();destination.stream.getTracks().forEach(t=>t.stop());};
- try{setMonitorBoost(boostListening)}catch(e){close();throw e}
- return {stream:destination.stream,delayMs,diagnostics,setLevels,setMonitorBoost:(enabled:boolean)=>{if(!closed)setMonitorBoost(enabled)},close};
+ if(delay){delay.delayTime.value=delayMs/1000;output.connect(delay);delay.connect(musicLimiter);}else output.connect(musicLimiter);musicLimiter.connect(music);music.connect(destination);// Keep the direct mic path intact and add bounded parallel wet paths only to
+ // the voice limiter. No feedback loop, speaker monitoring or music processing.
+ const preamp=ctx.createGain();mic.connect(preamp);preamp.connect(voiceLimiter);voiceLimiter.connect(voice);voice.connect(destination);
+ const effectNodes:AudioNode[]=[];let echoSend:GainNode|null=null,reverbSend:GainNode|null=null;
+ const ramp=(node:GainNode,value:number,immediate=false)=>{node.gain.cancelScheduledValues(ctx.currentTime);if(immediate)node.gain.value=value;else node.gain.setTargetAtTime(value,ctx.currentTime,.025)};
+ const setVoiceEffects=(value:VoiceEffects,immediate=false)=>{
+  const v=boundedVoiceEffects(value);
+  if(v.echo>0&&!echoSend){
+   const send=ctx.createGain(),tap1=ctx.createDelay(.5),tap2=ctx.createDelay(.5),second=ctx.createGain();
+   send.gain.value=0;tap1.delayTime.value=.22;tap2.delayTime.value=.44;second.gain.value=.4;
+   effectNodes.push(send,tap1,tap2,second);preamp.connect(send);send.connect(tap1);send.connect(tap2);tap1.connect(voiceLimiter);tap2.connect(second);second.connect(voiceLimiter);echoSend=send;
+  }
+  if(v.reverb>0&&!reverbSend){
+   const send=ctx.createGain(),room=ctx.createConvolver();send.gain.value=0;
+   // Short, deterministic stereo room impulse, generated locally and once per take.
+   const frames=Math.ceil(ctx.sampleRate*.85),impulse=ctx.createBuffer(2,frames,ctx.sampleRate);let seed=0x12345678;
+   for(let ch=0;ch<2;ch++){const data=impulse.getChannelData(ch);for(let i=0;i<frames;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const t=i/ctx.sampleRate;data[i]=(seed/4294967296*2-1)*Math.min(1,t/.015)*Math.exp(-t*8);}}
+   room.buffer=impulse;effectNodes.push(send,room);preamp.connect(send);send.connect(room);room.connect(voiceLimiter);reverbSend=send;
+  }
+  ramp(preamp,Math.pow(10,v.boostDb/20),immediate);
+  if(echoSend)ramp(echoSend,v.echo/100*.32,immediate);
+  if(reverbSend)ramp(reverbSend,v.reverb/100*.45,immediate);
+ };
+ this.capturing=true;
+ let closed=false;const close=()=>{if(closed)return;closed=true;this.capturing=false;setMonitorBoost(false);try{output.disconnect(delay??musicLimiter)}catch{}delay?.disconnect();musicLimiter.disconnect();music.disconnect();mic.disconnect();preamp.disconnect();for(const node of effectNodes)node.disconnect();voiceLimiter.disconnect();voice.disconnect();destination.stream.getTracks().forEach(t=>t.stop());};
+ try{setVoiceEffects(effects,true);setMonitorBoost(boostListening)}catch(e){close();throw e}
+ return {stream:destination.stream,delayMs,diagnostics,setLevels,setVoiceEffects:(value:VoiceEffects)=>{if(!closed)setVoiceEffects(value)},setMonitorBoost:(enabled:boolean)=>{if(!closed)setMonitorBoost(enabled)},close};
  }
  dispose(){this.pause();const ctx=this.context;this.clearPitch();this.output?.disconnect();this.output=null;this.context=null;this.buffers=[];this.gains=[];this.semitones=0;this.rate=1;this.needsRecovery=false;if(ctx&&ctx.state!=='closed')void ctx.close().catch(()=>{});}
 }
