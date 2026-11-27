@@ -281,3 +281,7 @@ Owner requests 3–2–1 before the first timed line of every song whose first t
 
 ## Recorded voice effects (0.5.65)
 Owner requests louder voice and echo/reverb sliders. Existing recording music/voice levels remain unchanged, independent limiter retained. Insert mic preamp (0–12 dB), parallel two-tap 220/440ms feedforward echo (bounded wet level, no feedback), and short 850ms deterministic stereo impulse convolver before voice-only limiter. Wet paths allocated lazily and cleaned on stop; no connection to speaker or music branch, no network. Settings local, default zero, live ramp, reset, all four UI languages. Place after compensation to retain existing mobile layout. No guarantee of subjective quality or recovery of clipped mic input; real iPhone audio and CI pending.
+
+
+## Final local lyrics status (0.5.66)
+Owner requires three explicit user-facing labels for checked ready songs. Use existing localized TEXT/LRC/NONE labels in shared KaraokeReadyStatus. Keep explicit null neutral for truly unverified or pending records. Server maps terminal failed receipts to local absence and stops re-requesting the SDK. DB audit 1121/1121 published candidates labeled: 783 LRC, 89 TEXT, 249 NONE. UI tests update exact label expectations. Deployment pending.

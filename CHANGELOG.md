@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.66
+- Display explicit timed/plain/missing text labels for ready tracks. Unknown is reserved for genuinely unresolved checks, not terminal failed receipts. Server policy uses one SDK LRC/TEXT cycle.
+
 ## 0.5.65
 - Add local, live recording-only voice boost (+0–12 dB), echo and reverb with independent voice peak protection, no microphone monitoring, reset and saved preferences. Effects default off; wet paths allocated only when used. Add multilingual controls and graph regression.
 
