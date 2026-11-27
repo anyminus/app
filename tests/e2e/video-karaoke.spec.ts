@@ -82,9 +82,11 @@ test('video recording survives timeline, lyric and ten-second jumps',async({page
 test('timed lyrics are drawn into the captured video canvas and follow a seek',async({page})=>{
  await page.addInitScript(()=>{
   const draw=CanvasRenderingContext2D.prototype.fillText,capture=HTMLCanvasElement.prototype.captureStream,start=MediaRecorder.prototype.start;
+  Object.defineProperty(navigator,'hardwareConcurrency',{configurable:true,value:8});Object.defineProperty(navigator,'deviceMemory',{configurable:true,value:8});
+  const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async(c:MediaStreamConstraints)=>{Reflect.set(window,'__videoRequest',c.video);const stream=await get(c);const video=stream.getVideoTracks()[0];const settings=video.getSettings.bind(video);Object.defineProperty(video,'getSettings',{value:()=>({...settings(),frameRate:30})});Object.defineProperty(video,'getCapabilities',{value:()=>({frameRate:{min:1,max:30}})});return stream}});
   Reflect.set(window,'__overlayText',[]);Reflect.set(window,'__overlayTrack',null);Reflect.set(window,'__recordedCanvas',false);
   CanvasRenderingContext2D.prototype.fillText=function(...args:Parameters<CanvasRenderingContext2D['fillText']>){if(this.canvas.classList.contains('video-overlay')){const rows=Reflect.get(window,'__overlayText') as string[];rows.push(args[0]);if(rows.length>150)rows.shift();}return draw.apply(this,args)};
-  HTMLCanvasElement.prototype.captureStream=function(rate?:number){const stream=capture.call(this,rate);if(this.classList.contains('video-overlay'))Reflect.set(window,'__overlayTrack',stream.getVideoTracks()[0]);return stream;};
+  HTMLCanvasElement.prototype.captureStream=function(rate?:number){const stream=capture.call(this,rate);if(this.classList.contains('video-overlay')){Reflect.set(window,'__overlayTrack',stream.getVideoTracks()[0]);Reflect.set(window,'__captureRate',rate);}return stream;};
   MediaRecorder.prototype.start=function(...args:Parameters<MediaRecorder['start']>){Reflect.set(window,'__recordedCanvas',this.stream.getVideoTracks()[0]===Reflect.get(window,'__overlayTrack'));return start.apply(this,args)};
  });
  const api=await mockApi(page);
@@ -96,6 +98,8 @@ test('timed lyrics are drawn into the captured video canvas and follow a seek',a
  await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toEqual(expect.arrayContaining(['Alpha','Test song one','Test artist','AnyMinus']));
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect.poll(async()=>await page.getByText('● REC',{exact:true}).isVisible()?'recording':(await page.locator('.video-karaoke-error,.karaoke-error').allTextContents()).join(' | ')||'starting',{timeout:10000}).toBe('recording');
  expect(await page.evaluate(()=>Reflect.get(window,'__recordedCanvas'))).toBe(true);
+ expect(await page.evaluate(()=>Reflect.get(window,'__captureRate'))).toBe(30);
+ expect(await page.evaluate(()=>Reflect.get(window,'__videoRequest').frameRate)).toEqual({ideal:30,max:30});
  await page.evaluate(()=>{(Reflect.get(window,'__overlayText') as string[]).length=0;});
  await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toEqual(expect.arrayContaining(['Test song one','Test artist','AnyMinus']));
  await page.getByRole('button',{name:'Bravo',exact:true}).click();
@@ -295,4 +299,22 @@ test('missing recorder stop event does not strand player and camera',async({page
  await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByText('Сохраняем видео…',{exact:true})).toBeVisible();
  await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible({timeout:8000});await expect(page.getByText(/Сохранена доступная часть записи/)).toBeVisible();await expect(page.getByLabel('Предпросмотр камеры')).toHaveCount(0);await expect(page.getByRole('button',{name:'Воспроизвести',exact:true})).toBeEnabled();
  await page.getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+});
+
+test('Android recording adapts to camera frame rate and conservative device budget',async({page})=>{
+ await page.addInitScript(()=>{
+ Object.defineProperty(navigator,'userAgent',{configurable:true,value:'Mozilla/5.0 (Linux; Android 14) Chrome/134.0.0.0 Mobile Safari/537.36'});
+ Object.defineProperty(navigator,'hardwareConcurrency',{configurable:true,value:4});Object.defineProperty(navigator,'deviceMemory',{configurable:true,value:2});
+ const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices),capture=HTMLCanvasElement.prototype.captureStream;
+ Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async(c:MediaStreamConstraints)=>{Reflect.set(window,'__adaptiveRequest',c.video);const stream=await get(c);const track=stream.getVideoTracks()[0];Object.defineProperty(track,'getSettings',{value:()=>({frameRate:15,width:640,height:480})});Object.defineProperty(track,'getCapabilities',{value:()=>({frameRate:{min:1,max:20}})});return stream}});
+ HTMLCanvasElement.prototype.captureStream=function(rate?:number){if(this.classList.contains('video-overlay'))Reflect.set(window,'__adaptiveRate',rate);return capture.call(this,rate)};
+ });
+ await mockApi(page);
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Adaptive line',startMs:0,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Adaptive line',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>Reflect.get(window,'__adaptiveRequest'))).toMatchObject({width:{ideal:960},height:{ideal:540},frameRate:{ideal:24,max:24}});
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>Reflect.get(window,'__adaptiveRate'))).toBe(15);
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });

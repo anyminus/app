@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.32
+- Target 30 FPS on iPhone, select Android/other capture profiles using camera settings and device resource hints; correct frame pacing and cache text measurements.
+- Introduce a stable, fading lyric drum and safer vertical title/lyric placement for messenger playback; preserve watermark and font sizes.
+
 ## 0.5.31
 - Recover the iOS audio output for subsequent recording takes; stop stale playback promises and bound recorder finalization to five seconds, with manual recovery and partial-file fallback.
 

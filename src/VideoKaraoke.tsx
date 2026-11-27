@@ -5,8 +5,29 @@ import {drawKaraokeFrame,overlaySupported,resetVideoMotion,type TimedLine} from 
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
 export type VideoTransport={toggle:()=>void};
 type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];seekRevision:RefObject<number>;playing:boolean;title:string;artist:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
+type CaptureProfile={fps:number;width:number;height:number;bitrate:number};
+const standardProfile:CaptureProfile={fps:30,width:1280,height:720,bitrate:2800000};
 const mp4=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
 function appleMobile(){return /iPhone|iPad|iPod/i.test(navigator.platform)||(/Mac/i.test(navigator.platform)&&navigator.maxTouchPoints>1)||(/Apple/i.test(navigator.vendor)&&/iPhone|iPad|iPod/i.test(navigator.userAgent));}
+function requestedProfile():CaptureProfile{
+ if(appleMobile())return {...standardProfile};
+ const memory=(navigator as Navigator&{deviceMemory?:number}).deviceMemory;
+ const cores=navigator.hardwareConcurrency;
+ const constrained=(typeof memory==='number'&&memory<=3)||(cores>0&&cores<=4);
+ return constrained?{fps:24,width:960,height:540,bitrate:1600000}:{...standardProfile};
+}
+function cameraProfile(track:MediaStreamTrack,requested:CaptureProfile):CaptureProfile{
+ if(appleMobile())return requested;
+ let settings:MediaTrackSettings={},capabilities:MediaTrackCapabilities={};
+ try{settings=track.getSettings();}catch{}
+ try{capabilities=track.getCapabilities?.()??{};}catch{}
+ const rates=[settings.frameRate,capabilities.frameRate?.max].filter((v):v is number=>typeof v==='number'&&Number.isFinite(v)&&v>0);
+ const fps=Math.max(1,Math.min(requested.fps,...rates));
+ const actualPixels=(settings.width||requested.width)*(settings.height||requested.height);
+ const pixels=Math.min(actualPixels,requested.width*requested.height);
+ const bitrate=Math.round(Math.max(500000,Math.min(requested.bitrate,2800000*pixels/(1280*720)*fps/30))/1000)*1000;
+ return {...requested,fps,bitrate};
+}
 function mp4Available(){try{return typeof MediaRecorder==='function'&&(typeof MediaRecorder.isTypeSupported!=='function'||mp4.some(type=>MediaRecorder.isTypeSupported(type)));}catch{return false;}}
 function canShareFile(file:File){try{return typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[file]});}catch{return false;}}
 const webm=['video/webm;codecs=vp8,opus','video/webm'];
@@ -16,12 +37,12 @@ function basicSupport(){
 }
 // Android Chromium generally prefers WebM; Safari can use MP4. A positive
 // isTypeSupported does not guarantee available hardware/resources at start().
-function startRecorder(stream:MediaStream,overlay:boolean){
+function startRecorder(stream:MediaStream,overlay:boolean,profile:CaptureProfile){
  let last:unknown;
  for(const mimeType of (appleMobile()?mp4:[...(overlay||/Android/i.test(navigator.userAgent)?[...webm,...mp4]:[...mp4,...webm]),''])){
   try{
    if(mimeType&&typeof MediaRecorder.isTypeSupported==='function'&&!MediaRecorder.isTypeSupported(mimeType))continue;
-   const recorder=new MediaRecorder(stream,{...(mimeType?{mimeType}:{}),videoBitsPerSecond:2000000,audioBitsPerSecond:128000});
+   const recorder=new MediaRecorder(stream,{...(mimeType?{mimeType}:{}),videoBitsPerSecond:profile.bitrate,audioBitsPerSecond:128000});
    recorder.start(1000);if(recorder.state!=='recording')throw Error('Кодировщик не запустился');return recorder;
   }catch(e){last=e;}
  }
@@ -35,6 +56,7 @@ export function VideoKaraoke(props:Props){
  const finishTimer=useRef<number|undefined>(undefined),finalizing=useRef(false),captureUsed=useRef(false);
  const canOverlay=overlaySupported()&&!overlayFailed&&props.lyrics.length>0;
  const showOverlay=phase==='preview'?includeLyrics&&canOverlay:recordOverlay;
+ const profile=useRef<CaptureProfile>(standardProfile);
  const latest=useRef(props);latest.current=props;
  const mounted=useRef(false),generation=useRef(0),camera=useRef<MediaStream|null>(null),preview=useRef<HTMLVideoElement|null>(null),recorder=useRef<MediaRecorder|null>(null),mix=useRef<Awaited<ReturnType<RemoteAudio['createRecordingMix']>>|null>(null),url=useRef(''),chunks=useRef<Blob[]>([]),bytes=useRef(0),stopReason=useRef(''),starting=useRef(false);
  function releaseCanvas(){resetVideoMotion(canvas.current);canvasStream.current?.getTracks().forEach(t=>t.stop());canvasStream.current=null;}
@@ -68,8 +90,9 @@ export function VideoKaraoke(props:Props){
  useEffect(()=>{if(phase==='recording'&&!props.playing)finish();},[phase,props.playing]);
  useEffect(()=>{
   if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing')){resetVideoMotion(canvas.current);return;}
-  let raf=0,last=-Infinity;
-  function tick(now:number){if(now-last>=1000/24-2){last=now;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{drawKaraokeFrame(cv,vid,p.lyrics,p.audio.current?.position??0,{title:p.title,artist:p.artist},undefined,p.seekRevision.current,now,p.playing&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
+  let raf=0,nextFrame=0;const period=1000/profile.current.fps;const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+  // Keep an absolute cadence instead of accumulating rAF quantization error.
+  function tick(now:number){if(now+1>=nextFrame){nextFrame=nextFrame===0?now+period:nextFrame+Math.max(1,Math.floor((now+1-nextFrame)/period)+1)*period;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{drawKaraokeFrame(cv,vid,p.lyrics,p.audio.current?.position??0,{title:p.title,artist:p.artist},undefined,p.seekRevision.current,now,p.playing&&!reduced.matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
   raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
  },[showOverlay,phase]);
  useEffect(()=>{const hidden=()=>{if(!document.hidden)return;if(recorder.current)finish('Запись остановлена: приложение свернули.');else if(camera.current){cancel();setError('Камера отключена: приложение свернули.');}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);
@@ -77,14 +100,14 @@ export function VideoKaraoke(props:Props){
   setError('');clearResult();if(!supported){setError('Ваш телефон или браузер не поддерживает видеокараоке. Откройте AnyMinus в актуальном Chrome или Safari.');return;}
   const id=++generation.current;setPhase('permission');props.onMode(true);
   try{await props.onPrepare();if(!mounted.current||generation.current!==id)return;playbackSession('play-and-record');
-   let stream:MediaStream;
+   let stream:MediaStream;const requested=requestedProfile();
    // Music capture rather than voice-call processing. These are preferences;
    // browsers may ignore unsupported constraints or impose OS audio routing.
    const audioConstraints:MediaTrackConstraints={echoCancellation:false,noiseSuppression:false,autoGainControl:false};
-   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:24,max:30}},audio:audioConstraints});}
+   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'},width:{ideal:requested.width},height:{ideal:requested.height},frameRate:{ideal:requested.fps,max:requested.fps}},audio:audioConstraints});}
    catch(e){if(!(e instanceof DOMException)||!['OverconstrainedError','NotSupportedError','TypeError'].includes(e.name))throw e;if(!mounted.current||generation.current!==id)return;stream=await navigator.mediaDevices.getUserMedia({video:true,audio:audioConstraints});}
    if(!stream.getVideoTracks().some(t=>t.readyState==='live')||!stream.getAudioTracks().some(t=>t.readyState==='live')){stream.getTracks().forEach(t=>t.stop());throw new DOMException('Camera or microphone unavailable','NotFoundError');}
-   if(!mounted.current||generation.current!==id||document.hidden){stream.getTracks().forEach(t=>t.stop());if(mounted.current&&generation.current===id)cancel();return;}camera.current=stream;
+   if(!mounted.current||generation.current!==id||document.hidden){stream.getTracks().forEach(t=>t.stop());if(mounted.current&&generation.current===id)cancel();return;}camera.current=stream;profile.current=cameraProfile(stream.getVideoTracks()[0],requested);
    for(const t of stream.getTracks())t.addEventListener('ended',()=>{if(!mounted.current||camera.current!==stream)return;if(recorder.current)finish('Камера или микрофон отключились.');else{cancel();setError('Камера или микрофон отключились.');}},{once:true});
    setPhase('preview');
   }catch(e){if(!mounted.current||generation.current!==id)return;cancel();const name=e instanceof Error?e.name:'';
@@ -109,12 +132,12 @@ export function VideoKaraoke(props:Props){
      await new Promise<void>(resolve=>window.setTimeout(resolve,50));
     }
     if(!mounted.current||generation.current!==id||camera.current!==source)return;
-    try{canvasStream.current=cv.captureStream(24);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false);}
+    try{canvasStream.current=cv.captureStream(profile.current.fps);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false);}
     catch{releaseCanvas();setOverlayFailed(true);setIncludeLyrics(false);throw Error('Наложение текста недоступно в этом браузере. Можно записать видео без текста.');}
     for(const track of videoTracks)track.addEventListener('ended',()=>{if(mounted.current&&recorder.current?.state==='recording')finish('Видеопоток с текстом прерван.');},{once:true});
    }
    const stream=new MediaStream([...videoTracks,...prepared.stream.getAudioTracks()]);
-   let r:MediaRecorder;try{r=startRecorder(stream,withText);}catch(e){if(withText){setOverlayFailed(true);setIncludeLyrics(false);throw Error(apple?'Запись MP4 с текстом недоступна. Попробуйте обычную видеозапись без текста.':'Не удалось запустить запись с текстом. Попробуйте обычную видеозапись.');}if(apple){cancel();setUnsupported(true);setError('На этом iPhone/iPad не удалось запустить запись MP4. Видеокараоке недоступно в текущем браузере.');return;}throw e;}recorder.current=r;
+   let r:MediaRecorder;try{r=startRecorder(stream,withText,profile.current);}catch(e){if(withText){setOverlayFailed(true);setIncludeLyrics(false);throw Error(apple?'Запись MP4 с текстом недоступна. Попробуйте обычную видеозапись без текста.':'Не удалось запустить запись с текстом. Попробуйте обычную видеозапись.');}if(apple){cancel();setUnsupported(true);setError('На этом iPhone/iPad не удалось запустить запись MP4. Видеокараоке недоступно в текущем браузере.');return;}throw e;}recorder.current=r;
    r.ondataavailable=e=>{if(recorder.current===r&&e.data.size){chunks.current.push(e.data);bytes.current+=e.data.size;if(bytes.current>=180*1024*1024&&r.state==='recording')finish('Достигнут предел размера записи.');}};
    r.onerror=e=>{const detail=(e as Event&{error?:DOMException}).error;stopReason.current='Ошибка записи видео'+(detail?': '+detail.name+' — '+detail.message:'.');finish(stopReason.current);};
    r.onstop=()=>complete(r);

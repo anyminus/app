@@ -1,5 +1,4 @@
 import {classicVideoTemplate,type VideoTemplate} from './videoTemplate';
-import {lyricScrollEase} from './lyrics.mjs';
 export type VideoMetadata={title:string;artist:string};
 export type TimedLine={text:string;startMs:number;endMs:number|null};
 
@@ -23,7 +22,10 @@ function layout(ctx:CanvasRenderingContext2D,text:string,width:number,base:numbe
 }
 type Motion={lines:readonly TimedLine[];index:number;previous:number;started:number;revision:number;seconds:number;now:number};
 const motionByCanvas=new WeakMap<HTMLCanvasElement,Motion>();
-export function resetVideoMotion(canvas:HTMLCanvasElement|null){if(canvas)motionByCanvas.delete(canvas);}
+const layoutsByCanvas=new WeakMap<HTMLCanvasElement,Map<string,ReturnType<typeof layout>>>();
+const labelsByCanvas=new WeakMap<HTMLCanvasElement,Map<string,string>>();
+function cached<K,V>(cache:Map<K,V>,key:K,compute:()=>V){const hit=cache.get(key);if(hit!==undefined)return hit;const value=compute();if(cache.size>=256){const first=cache.keys().next();if(!first.done)cache.delete(first.value);}cache.set(key,value);return value;}
+export function resetVideoMotion(canvas:HTMLCanvasElement|null){if(canvas){motionByCanvas.delete(canvas);layoutsByCanvas.delete(canvas);labelsByCanvas.delete(canvas);}}
 function blendColor(a:string,b:string,t:number){if(!/^#[0-9a-f]{6}$/i.test(a)||!/^#[0-9a-f]{6}$/i.test(b))return t<.5?a:b;const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return 'rgb('+[16,8,0].map(shift=>Math.round(((x>>shift)&255)*(1-t)+((y>>shift)&255)*t)).join(',')+')';}
 export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement,lines:readonly TimedLine[],seconds:number,metadata:VideoMetadata,template:VideoTemplate=classicVideoTemplate,revision=0,now=performance.now(),animate=true){
  if(video.readyState<2||!video.videoWidth||!video.videoHeight)return false;
@@ -39,48 +41,58 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
   motion={lines,index,previous:index,started:now,revision,seconds,now};motionByCanvas.set(canvas,motion);
  }else if(motion.index!==index){motion.previous=index===motion.index+1?motion.index:index;motion.index=index;motion.started=now;}
  motion.seconds=seconds;motion.now=now;
- const progress=motion.previous===index?1:lyricScrollEase(Math.min(1,Math.max(0,(now-motion.started)/duration)));
+ const elapsed=Math.min(1,Math.max(0,(now-motion.started)/Math.max(1,duration)));
+ const progress=motion.previous===index?1:elapsed*elapsed*(3-2*elapsed);
  if(progress===1)motion.previous=index;
  const unit=Math.min(w,h),margin=Math.max(1,Math.round(unit*template.margin)),gap=Math.max(1,Math.round(unit*template.gap)),width=Math.max(1,w-margin*2);
+ const layouts=layoutsByCanvas.get(canvas)??new Map<string,ReturnType<typeof layout>>();layoutsByCanvas.set(canvas,layouts);
+ const labels=labelsByCanvas.get(canvas)??new Map<string,string>();labelsByCanvas.set(canvas,labels);
  const font=(weight:number,size:number)=>weight+' '+size+'px '+template.fontFamily;
  const x=(align:CanvasTextAlign)=>align==='left'?margin:align==='right'?w-margin:w/2;
  function singleLine(text:string,size:number,weight:number,color:string,align:CanvasTextAlign,y:number){
   ctx.font=font(weight,size);ctx.textAlign=align;ctx.textBaseline='top';ctx.fillStyle=color;
-  let value=text.trim().replace(/\s+/gu,' ');if(ctx.measureText(value).width>width){const chars=Array.from(value);while(chars.length&&ctx.measureText(chars.join('')+'…').width>width)chars.pop();value=chars.join('')+'…';}
+  const value=cached(labels,JSON.stringify([text,width,ctx.font]),()=>{let value=text.trim().replace(/\s+/gu,' ');if(ctx.measureText(value).width>width){const chars=Array.from(value);while(chars.length&&ctx.measureText(chars.join('')+'…').width>width)chars.pop();value=chars.join('')+'…';}return value;});
   if(value)ctx.fillText(value,x(align),y,width);
  }
  const titleSize=Math.max(1,Math.round(unit*template.header.titleSize)),artistSize=Math.max(1,Math.round(unit*template.header.artistSize)),markSize=Math.max(1,Math.round(unit*template.watermark.size));
- const headerEnd=margin+titleSize*1.25+artistSize*1.25+gap+margin;
- const headerShade=ctx.createLinearGradient(0,0,0,headerEnd+margin);headerShade.addColorStop(0,'rgba(0,0,0,'+template.header.shadeOpacity+')');headerShade.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=headerShade;ctx.fillRect(0,0,w,headerEnd+margin);
- singleLine(metadata.title,titleSize,750,template.header.titleColor,template.header.align,margin);
- singleLine(metadata.artist,artistSize,500,template.header.artistColor,template.header.align,margin+titleSize*1.25+gap/2);
- const markY=h-margin-markSize*1.2,bottom=markY-gap;
+ const headerTop=Math.max(margin,h*template.header.safeTop);
+ const headerEnd=headerTop+titleSize*1.25+artistSize*1.25+gap+margin;
+ const headerShade=ctx.createLinearGradient(0,0,0,headerEnd+margin);headerShade.addColorStop(0,'rgba(0,0,0,'+template.header.shadeOpacity+')');headerShade.addColorStop(Math.min(.8,headerTop/(headerEnd+margin)),'rgba(0,0,0,'+template.header.shadeOpacity+')');headerShade.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=headerShade;ctx.fillRect(0,0,w,headerEnd+margin);
+ singleLine(metadata.title,titleSize,750,template.header.titleColor,template.header.align,headerTop);
+ singleLine(metadata.artist,artistSize,500,template.header.artistColor,template.header.align,headerTop+titleSize*1.25+gap/2);
+ const markY=h-margin-markSize*1.2,bottom=Math.min(markY-gap,h*(1-template.lyrics.safeBottom));
  const activeSize=Math.max(1,Math.round(unit*template.lyrics.currentSize)),nextSize=Math.max(1,Math.round(unit*template.lyrics.nextSize));
  const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
- const line=(i:number,size:number,weight:number)=>layout(ctx,lines[i]?.text??'',width,Math.max(1,Math.round(size)),Math.round(weight),template.fontFamily);
+ const line=(i:number,size:number,weight:number)=>{
+  const text=lines[i]?.text??'',px=Math.max(1,Math.round(size)),bold=Math.round(weight/50)*50;
+  return cached(layouts,JSON.stringify([text,width,px,bold,template.fontFamily]),()=>layout(ctx,text,width,px,bold,template.fontFamily));
+ };
  const height=(item:ReturnType<typeof layout>)=>item.rows.length*item.size*1.24;
- const pairGap=(a:ReturnType<typeof layout>,b:ReturnType<typeof layout>)=>a.rows.length&&b.rows.length?gap:0;
- const active=line(index,activeSize,750),next=line(index+1,nextSize,550);
- const activeY=bottom-height(next)-pairGap(active,next)-height(active);
- const nextY=bottom-height(next);
- const prior=line(index-1,activeSize,750),small=line(index,nextSize,550);
- const oldNextY=bottom-height(small);
- const oldTop=oldNextY-pairGap(prior,small)-height(prior);
- const moving=progress<1;
- const current=moving?line(index,lerp(nextSize,activeSize,progress),lerp(550,750,progress)):active;
- const outgoing=moving?line(index-1,lerp(activeSize,nextSize,progress),lerp(750,550,progress)):prior;
- const currentY=moving?lerp(oldNextY,activeY,progress):activeY;
- const outgoingY=currentY-height(outgoing)-pairGap(outgoing,current);
- const incomingY=moving?Math.max(nextY,currentY+height(current)+pairGap(current,next)):nextY;
- const clipTop=Math.max(headerEnd,Math.min(activeY,moving?Math.min(oldTop,outgoingY):activeY)-margin*2);
- const shade=ctx.createLinearGradient(0,Math.max(0,clipTop-margin),0,h);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.4,'rgba(0,0,0,.65)');shade.addColorStop(1,'rgba(0,0,0,'+template.lyrics.shadeOpacity+')');
- ctx.fillStyle=shade;ctx.fillRect(0,Math.max(0,clipTop-margin),w,h);
- ctx.save();ctx.beginPath();ctx.rect(0,clipTop,w,Math.max(0,bottom-clipTop));ctx.clip();
- ctx.textAlign=template.lyrics.align;ctx.textBaseline='top';ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=Math.max(1,unit*.006);
- function paint(item:ReturnType<typeof layout>,color:string,y:number,alpha:number){if(alpha<=0)return;ctx.globalAlpha=alpha;ctx.font=font(item.weight,item.size);ctx.fillStyle=color;for(const row of item.rows){ctx.fillText(row,x(template.lyrics.align),y,width);y+=item.size*1.24;}}
- if(moving)paint(outgoing,blendColor(template.lyrics.currentColor,template.lyrics.nextColor,progress),outgoingY,1-progress);
- paint(current,moving?blendColor(template.lyrics.nextColor,template.lyrics.currentColor,progress):template.lyrics.currentColor,currentY,1);
- paint(next,template.lyrics.nextColor,incomingY,moving?progress:1);
+ // Stable two-slot drum. Reserve room for two wrapped rows in each slot;
+ // changing the line length never changes the scroll distance.
+ const step=(activeSize+nextSize)*1.24+gap;
+ const nextCenter=bottom-nextSize*1.24,activeCenter=nextCenter-step;
+ const clipTop=Math.max(headerEnd,activeCenter-activeSize*1.24-gap);
+ const clipBottom=Math.min(markY-gap,bottom+gap);
+ const shadeStart=Math.max(0,clipTop-margin*2);
+ const shade=ctx.createLinearGradient(0,shadeStart,0,h);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.4,'rgba(0,0,0,.65)');shade.addColorStop(1,'rgba(0,0,0,'+template.lyrics.shadeOpacity+')');
+ ctx.fillStyle=shade;ctx.fillRect(0,shadeStart,w,h);
+ ctx.save();ctx.beginPath();ctx.rect(0,clipTop,w,Math.max(0,clipBottom-clipTop));ctx.clip();
+ ctx.textAlign=template.lyrics.align;ctx.textBaseline='top';ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=Math.max(1,unit*.004);
+ function paint(item:ReturnType<typeof layout>,color:string,center:number,alpha:number){
+  if(alpha<=0||!item.rows.length)return;
+  const fade=Math.min(1,Math.max(0,(center-clipTop)/(activeSize*1.24)),Math.max(0,(clipBottom-center)/(nextSize*1.24)));
+  ctx.globalAlpha=alpha*fade;ctx.font=font(item.weight,item.size);ctx.fillStyle=color;
+  let y=center-height(item)/2;for(const row of item.rows){ctx.fillText(row,x(template.lyrics.align),y,width);y+=item.size*1.24;}
+ }
+ if(progress<1){
+  paint(line(index-1,lerp(activeSize,nextSize,progress),lerp(750,550,progress)),blendColor(template.lyrics.currentColor,template.lyrics.nextColor,progress),activeCenter-step*progress,1-progress);
+  paint(line(index,lerp(nextSize,activeSize,progress),lerp(550,750,progress)),blendColor(template.lyrics.nextColor,template.lyrics.currentColor,progress),nextCenter-step*progress,lerp(template.lyrics.nextOpacity,1,progress));
+  paint(line(index+1,nextSize,550),template.lyrics.nextColor,nextCenter+step*(1-progress),template.lyrics.nextOpacity*progress);
+ }else{
+  paint(line(index,activeSize,750),template.lyrics.currentColor,activeCenter,1);
+  paint(line(index+1,nextSize,550),template.lyrics.nextColor,nextCenter,template.lyrics.nextOpacity);
+ }
  ctx.restore();
  singleLine(template.watermark.text,markSize,650,template.watermark.color,template.watermark.align,markY);
  return true;
