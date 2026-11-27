@@ -19,6 +19,7 @@ export function createDemoApi(origin,fetcher=fetch){
 
  return {
  search:(q,signal,telegramToken=undefined)=>{const text=q.trim();if(text.length<2||text.length>200)throw Error('Поиск: 2–200 символов');return call('/demo/search',{query:{q:text,limit:20},token:telegramToken,signal})},
+ /** @param {string} name @param {AbortSignal} signal @param {string} [artistId] @param {string} [cursor] */
  artistPopular:(name,signal,artistId=undefined,cursor=undefined)=>{const text=name.trim();if(!text||text.length>200)throw Error('Некорректное имя артиста');if(cursor!==undefined&&(!/^(20|40|60|80)$/.test(cursor)||!/^\d{1,20}$/.test(artistId??'')))throw Error('Некорректная страница артиста');return call('/demo/artists/popular',{query:cursor===undefined?{name:text}:{artistId,cursor},signal})},
  catalog:(cursor,signal,seed=undefined)=>call('/demo/catalog',{query:{limit:100,cursor,seed},signal}),
  auth,

@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.4.2
+- Fix TypeScript inference for optional artist ID and cursor parameters (CI TS2345); retain the unpublished release version.
 - Add explicit continuation to provider-ranked artist songs; 20 per page, preserve order, deduplicate, retry failed pages without clearing earlier tracks. No general-search substitution.
 - Retry stable public artwork for tracks with missing cover metadata, including old favorites and shared tracks. Accept only known Yandex music cover origins. Server deployment and real image acceptance required.
 
