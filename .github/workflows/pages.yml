@@ -35,6 +35,13 @@ jobs:
         run: node scripts/check-artist-catalog.mjs
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
+      - name: Diagnose reported track 108591168 (read-only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/check-reported-track.mjs
+        env:
+          VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}
       - run: npm run build
         env:
           VITE_DEMO_API_ORIGIN: ${{ vars.DEMO_API_ORIGIN }}

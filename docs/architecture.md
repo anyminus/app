@@ -245,3 +245,7 @@ Owner reports system music volume drops during video capture and requests a chec
 
 ## Listening boost visibility correction (0.5.56)
 CI 46050147159 compiled and passed 112/113 E2E. Live toggle test failed because the checkbox was accidentally inside the preview-only compensation block. Move the checkbox and its note outside that conditional, keep existing test unchanged. Clarify owner observes volume and quality change on iPhone even without CarPlay, immediately on opening camera/mic preview. WebKit reports 236219 and 311451 describe this system limitation; fixed +3 dB boost cannot restore lost frequency response. Existing music-friendly capture constraints and verification retained. No further changes to audio session or signal graph. Real device quality remains unverified; CI pending.
+
+
+## Shared track incident (0.5.57)
+Owner reports track 108591168 stopped working. Main 0.5.56 CI/deploy succeeded; iOS branch isolated. Direct live HTTP inaccessible from editing environment, root cause unconfirmed. Identified failure mode: provider metadata can hang until the 30s outer deadline and prevent verified ready-status fallback. Bound metadata and status reads to 6.5s each with local cancellation; keep single retry for quick transient failures, no retry of rate limits, and no job creation on route lookup. Add synthetic stalled-provider regression and non-blocking exact-ID read-only probe (anonymous session creation only; no enqueue, no token/body logging). Live acceptance still required.

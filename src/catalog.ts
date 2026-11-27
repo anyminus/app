@@ -54,6 +54,15 @@ export function useCatalog(query:string|null,artist:string|null=null,authorId?:s
 function transient(e:unknown){return e instanceof ApiError&&(e.status===0||e.status===408||[500,502,503,504].includes(e.status))}
 function delay(ms:number,signal:AbortSignal){return new Promise<void>((resolve,reject)=>{if(signal.aborted){reject(signal.reason);return}const abort=()=>{clearTimeout(timer);reject(signal.reason)};const timer=window.setTimeout(()=>{signal.removeEventListener('abort',abort);resolve()},ms);signal.addEventListener('abort',abort,{once:true})})}
 async function retryRead<T>(read:()=>Promise<T>,signal:AbortSignal):Promise<T>{try{return await read()}catch(e){if(signal.aborted||!transient(e))throw e;await delay(700,signal);return read()}}
+// A stalled provider metadata response must not consume the entire song-page deadline.
+async function boundedRead<T>(read:(signal:AbortSignal)=>Promise<T>,parent:AbortSignal,ms:number,path='/demo/track-metadata'):Promise<T>{
+ const child=new AbortController();
+ const abort=()=>child.abort(parent.reason);
+ parent.addEventListener('abort',abort,{once:true});if(parent.aborted)abort();
+ const timer=window.setTimeout(()=>child.abort(new ApiError(408,0,path)),ms);
+ try{return await read(child.signal)}catch(e){if(parent.aborted)throw parent.reason;if(child.signal.aborted)throw child.signal.reason;throw e}
+ finally{clearTimeout(timer);parent.removeEventListener('abort',abort)}
+}
 // Bounded public catalog lookup: never request every page without a limit.
 async function findCatalogTrack(id:string,parent:AbortSignal,maxPages=8):Promise<LiveTrack|undefined>{
  // Prefer ready receipts, but don't let pagination on slow mobile networks
@@ -98,7 +107,7 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
  if(!auth||typeof auth!=='object'||!('accessToken' in auth)||typeof auth.accessToken!=='string')throw Error(trUi('Не удалось авторизоваться'));
  const accessToken=auth.accessToken;
  try{
-  const meta=await retryRead(()=>api.metadata(id,accessToken,signal),signal);
+  const meta=await boundedRead(local=>retryRead(()=>api.metadata(id,accessToken,local),local),signal,6500);
   const track=normalizeTracks({items:[{...meta,providerTrackId:id}]})[0] as LiveTrack|undefined;
   if(track&&track.title.trim()&&track.artist.trim())return track;
   throw Error(trUi('Метаданные песни недоступны'));
@@ -106,7 +115,7 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
   if(signal.aborted)throw e;
   if(e instanceof ApiError&&![0,404,408,429,500,502,503,504].includes(e.status))throw e;
   // A verified ready pair can be played even if metadata is missing.
-  const raw=await retryRead(()=>api.status(id,accessToken,signal),signal);
+  const raw=await boundedRead(local=>retryRead(()=>api.status(id,accessToken,local),local),signal,6500,'/demo/karaoke/status');
   const job=normalizeJob(raw);
   if(job.state!=='ready'||!job.pairOperationId)throw e;
   let fromCatalog:LiveTrack|undefined;

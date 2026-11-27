@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.57
+- Bound provider metadata and ready-status requests independently so stalled metadata cannot consume the entire shared-song lookup deadline; keep verified ready fallback and no automatic enqueue. Add a regression and targeted read-only production diagnostic.
+
 ## 0.5.56
 - Keep the optional listening boost checkbox accessible during active recording; clarify that recording sliders do not affect listening volume.
 

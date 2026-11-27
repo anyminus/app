@@ -98,3 +98,15 @@ test('missing metadata keeps a usable card and retries without inventing title o
  await page.goto('/#/track/36016832');const card=page.getByRole('region',{name:'Информация о песне'});await expect(card.getByRole('alert')).toBeVisible();await expect(card.getByText('ID: 36016832')).toBeVisible();await expect(card.locator('.artwork')).toBeVisible();await expect(page.getByRole('button',{name:'Создать караоке'})).toHaveCount(0);await card.getByRole('button',{name:'Повторить',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Recovered title',exact:true})).toBeVisible();await expect(card).toHaveCount(0);expect(attempts).toBe(2);expect(api.enqueued).toBe(0);
 });
+
+test('slow provider metadata cannot block a verified ready track',async({page})=>{
+ const api=await mockApi(page);let release!:()=>void;const wait=new Promise<void>(resolve=>{release=resolve});
+ const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,content-type','Access-Control-Allow-Methods':'GET,OPTIONS'};
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[],nextCursor:null},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/track-metadata\/101$/,async r=>{if(r.request().method()==='OPTIONS')return r.fulfill({status:204,headers});await wait;await r.fulfill({status:502,json:{},headers}).catch(()=>{})});
+ try{
+  await page.goto('/#/track/101');
+  await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:20000});
+  expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+ }finally{release()}
+});
