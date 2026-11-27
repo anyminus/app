@@ -331,3 +331,7 @@ Greek (el, Ελληνικά) supported for automatic device language (including 
 
 ## Cover ambience and recording trigger refinement (0.5.77)
 Owner requested a more recognizable backdrop, transparent mixer/pitch/tempo panel backgrounds and recording button on the right side of the player header. Blur 35px (was 90px), dark scrim 50% (was 65%), light scrim 65% (was 75%). Cards transparent in both normal and cover-background modes; borders, individual buttons and slider styles retained. Move the existing idle video trigger via a React portal to a header host; same enable handler, disabled state, beta marker and localized accessible name. Preview, permissions, recording, errors and settings stay below header; no changes to audio or capture lifecycle. Regression assertions cover header placement in portrait/landscape and transparent panels. CI pending.
+
+
+## Single ready-track row caption (0.5.78)
+Owner requested only «Караоке в базе» for stored tracks instead of two status captions. Shared TrackRow non-compact ready branch renders exactly one database status regardless of lyric format. Home compact mode retains previous rule: only plain-text badge, no other ready labels. Uncreated track availability, queue progress, lyric data and playback behavior unchanged. Updated search, artist-ready and queue-completion E2E expectations. No backend changes. CI pending.

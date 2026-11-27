@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.78
+- Show only the stored karaoke label in non-home ready track rows; remove redundant lyric-format line. Preserve the home plain-lyrics exception and uncreated-track availability/queue statuses.
+
 ## 0.5.77
 - Reduce cover blur from 90px to 35px and lighten the contrast scrim. Transparent karaoke mixer/pitch/tempo cards. Move the existing recording trigger to a compact header portal, preserving recording controls and errors below the header.
 
