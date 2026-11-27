@@ -1,7 +1,7 @@
 # Changelog
 
 ## 0.4.8
-- Display provider lyrics availability on uncreated popular/search songs and on the song page before Create. Unknown capability triggers a bounded metadata check; absence never inferred from a failed request.
+- Display lyrics availability for every popular/search result and on the song page before Create; use neutral unknown and prefer verified stored format for ready songs. Unknown capability triggers a bounded metadata check; absence never inferred from a failed request.
 
 ## 0.4.7
 - Show the same three colored lyrics availability labels on the song/player page after create and ready polling, with neutral lyrics checking during creation.

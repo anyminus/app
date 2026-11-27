@@ -107,3 +107,5 @@ body.karaoke-open .tab-bar{display:none}
 .karaoke-heading .song-lyrics-status{font-size:10px;line-height:1.15;white-space:normal}.song-lyrics-pending{font-size:12px;text-align:center}
 
 .song-lyrics-preview{display:grid;gap:5px}.song-lyrics-preview .song-lyrics-status{font-size:13px;line-height:1.3}.song-lyrics-preview .metadata{font-size:12px}
+
+.lyrics-unknown{font-size:10px;line-height:1.1;color:var(--muted);font-weight:500}

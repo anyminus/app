@@ -27,3 +27,5 @@ The ready label is shared between list rows and the song/player heading. A new r
 
 ## 0.4.8 preview before creation
 `providerLyricsFormat` describes reported provider capability independently from `lyricsFormat` (stored ready pair). Uncreated list rows and song detail show timed/plain/missing labels with the established palette. Opening a song with unknown capability performs a bounded, read-only metadata lookup before enabling Create; failure leaves a neutral unknown label. Never enqueue for checking; no prohibition on deliberate creation. Ready songs use verified stored status. No DB migration.
+
+Search and popular results always show a text-availability label, including a neutral «Наличие текста не подтверждено» for unknown. Already-ready entries preserve the existing ready label and use stored format for the availability label when known; plain ready uses the shared identical label only once. No additional per-song calls from the browser. This is the same 0.4.8 release while its initial CI is running.
