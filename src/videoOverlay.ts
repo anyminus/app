@@ -23,7 +23,7 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
  const scale=Math.min(1,1280/Math.max(video.videoWidth,video.videoHeight));
  const w=Math.max(2,Math.round(video.videoWidth*scale/2)*2),h=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
- const context=canvas.getContext('2d',{alpha:false});if(!context)return false;const ctx:CanvasRenderingContext2D=context;
+ const context=canvas.getContext('2d');if(!context)return false;const ctx:CanvasRenderingContext2D=context;
  ctx.drawImage(video,0,0,w,h);
  let index=-1;for(let i=0;i<lines.length&&lines[i].startMs<=seconds*1000;i++)index=i;
  const current=lines[index]?.text??'',next=lines[index+1]?.text??'';

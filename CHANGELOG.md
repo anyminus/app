@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.20
+- Harden composited video startup: keep the camera attached, wait for the first frame, select a compatible encoder and expose specific capture errors.
+
 ## 0.5.19
 - Preserve the exact song position when opening the camera; recording starts from that position or a subsequently selected lyric/timeline position.
 - Fix TypeScript null narrowing in the lyric compositor that blocked the 0.5.18 build.

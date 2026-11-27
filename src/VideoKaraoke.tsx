@@ -5,7 +5,21 @@ import {drawKaraokeFrame,overlaySupported,type TimedLine} from './videoOverlay';
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
 export type VideoTransport={toggle:()=>void};
 type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];playing:boolean;title:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
-const formats=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp8,opus','video/webm'];
+const mp4=['video/mp4','video/mp4;codecs=avc1.42E01E,mp4a.40.2'];
+const webm=['video/webm;codecs=vp8,opus','video/webm'];
+// Canvas tracks in Chromium are best served by the software VP8 encoder;
+// Safari can use MP4. isTypeSupported alone does not guarantee start().
+function startRecorder(stream:MediaStream,overlay:boolean){
+ let last:unknown;
+ for(const mimeType of [...(overlay?[...webm,...mp4]:[...mp4,...webm]),'']){
+  try{
+   if(mimeType&&!MediaRecorder.isTypeSupported(mimeType))continue;
+   const recorder=new MediaRecorder(stream,{...(mimeType?{mimeType}:{}),videoBitsPerSecond:2000000,audioBitsPerSecond:128000});
+   recorder.start(1000);return recorder;
+  }catch(e){last=e;}
+ }
+ throw Error('Не удалось запустить кодирование видео: '+(last instanceof Error?last.message:'нет доступного формата'));
+}
 export function VideoKaraoke(props:Props){
  const [phase,setPhase]=useState<Phase>('idle'),[error,setError]=useState(''),[result,setResult]=useState<{url:string;file:File}|null>(null);
  const [includeLyrics,setIncludeLyrics]=useState(true),[recordOverlay,setRecordOverlay]=useState(false);
@@ -22,7 +36,7 @@ export function VideoKaraoke(props:Props){
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;const r=recorder.current;if(r){r.ondataavailable=null;r.onstop=null;r.onerror=null;if(r.state!=='inactive')r.stop();}release();if(url.current)URL.revokeObjectURL(url.current);}},[]);
  useImperativeHandle(props.ref,()=>({toggle:()=>{if(phase==='preview')void start();else if(phase==='recording')finish();}}));
  useLayoutEffect(()=>{latest.current.onTransportReady(phase==='preview'||phase==='recording');},[phase]);
- useEffect(()=>{if(preview.current&&camera.current)preview.current.srcObject=camera.current;},[phase]);
+ useEffect(()=>{const video=preview.current,stream=camera.current;if(video&&stream&&video.srcObject!==stream){video.srcObject=stream;void video.play().catch(()=>{});}},[phase]);
  useEffect(()=>{if(phase==='recording'&&!props.playing)finish();},[phase,props.playing]);
  useEffect(()=>{
   if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing'))return;
@@ -49,24 +63,31 @@ export function VideoKaraoke(props:Props){
    let videoTracks=source.getVideoTracks();
    if(withText){
     const cv=canvas.current,vid=preview.current;
-    if(!cv||!vid||!drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0))throw Error('Камера ещё не готова. Повторите запуск записи.');
-    try{canvasStream.current=cv.captureStream(24);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');}
+    if(!cv||!vid)throw Error('Предпросмотр камеры недоступен.');
+    // Permission resolution is not proof that a decoded camera frame exists.
+    const deadline=performance.now()+2500;
+    while(!drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0)){
+     if(!mounted.current||generation.current!==id||camera.current!==source)return;
+     if(performance.now()>=deadline)throw Error('Камера не передала первый кадр. Повторите запуск записи.');
+     await new Promise<void>(resolve=>window.setTimeout(resolve,50));
+    }
+    if(!mounted.current||generation.current!==id||camera.current!==source)return;
+    try{canvasStream.current=cv.captureStream(24);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0);}
     catch{releaseCanvas();throw Error('Этот браузер не смог записать текст поверх видео. Снимите галочку «Текст на видео» и повторите.');}
     for(const track of videoTracks)track.addEventListener('ended',()=>{if(mounted.current&&recorder.current?.state==='recording')finish('Видеопоток с текстом прерван.');},{once:true});
    }
    const stream=new MediaStream([...videoTracks,...prepared.stream.getAudioTracks()]);
-   const mimeType=formats.find(type=>MediaRecorder.isTypeSupported(type));
-   const r=new MediaRecorder(stream,{...(mimeType?{mimeType}:{}),videoBitsPerSecond:2000000,audioBitsPerSecond:128000});recorder.current=r;
+   const r=startRecorder(stream,withText);recorder.current=r;
    r.ondataavailable=e=>{if(e.data.size){chunks.current.push(e.data);bytes.current+=e.data.size;if(bytes.current>=180*1024*1024&&r.state==='recording')finish('Достигнут предел размера записи.');}};
-   r.onerror=()=>{stopReason.current='Ошибка записи видео.';if(r.state!=='inactive')finish(stopReason.current);};
+   r.onerror=e=>{const detail=(e as Event&{error?:DOMException}).error;stopReason.current='Ошибка записи видео'+(detail?': '+detail.name+' — '+detail.message:'.');if(r.state!=='inactive')finish(stopReason.current);};
    r.onstop=()=>{
     const type=r.mimeType||chunks.current[0]?.type||'video/webm';const parts=chunks.current;chunks.current=[];recorder.current=null;release();if(!mounted.current)return;setRecordOverlay(false);
     latest.current.onStop();latest.current.onMode(false);setError(stopReason.current);
     if(!parts.length){setPhase('idle');setError(stopReason.current||'Видео не записалось. Попробуйте снова.');return;}
     const name=(latest.current.title.replace(/[^\p{L}\p{N} ._-]/gu,'_').slice(0,80)||'AnyMinus')+'-'+Date.now()+(type.includes('mp4')?'.mp4':'.webm');const file=new File(parts,name,{type});url.current=URL.createObjectURL(file);setResult({url:url.current,file});setPhase('result');
    };
-   r.start(1000);const ok=await props.onStart();if(!mounted.current||recorder.current!==r||r.state!=='recording')return;if(!ok){finish('Не удалось запустить музыку. Закройте результат и повторите запись.');return;}setPhase('recording');
-   }catch(e){if(!mounted.current||generation.current!==id)return;const r=recorder.current;if(r&&r.state!=='inactive'){finish('Не удалось начать запись.');return;}recorder.current=null;releaseCanvas();mix.current?.close();mix.current=null;setRecordOverlay(false);setPhase('preview');setError(e instanceof Error?e.message:'Не удалось начать запись. Повторите попытку.');}finally{if(generation.current===id)starting.current=false;}
+   const ok=await props.onStart();if(!mounted.current||recorder.current!==r||r.state!=='recording')return;if(!ok){finish('Не удалось запустить музыку. Закройте результат и повторите запись.');return;}setPhase('recording');
+   }catch(e){if(!mounted.current||generation.current!==id)return;const r=recorder.current;if(r&&r.state!=='inactive'){finish('Не удалось начать запись.');return;}recorder.current=null;releaseCanvas();mix.current?.close();mix.current=null;setRecordOverlay(false);setPhase('preview');setError(e instanceof Error?e.name+': '+e.message:'Не удалось начать запись. Повторите попытку.');}finally{if(generation.current===id)starting.current=false;}
  }
  async function share(){if(!result)return;try{await navigator.share({files:[result.file],title:props.title});}catch(e){if(!(e instanceof DOMException&&e.name==='AbortError'))setError('Не удалось поделиться. Сохраните видео как файл.');}}
  const active=phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing';

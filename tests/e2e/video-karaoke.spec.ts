@@ -66,7 +66,7 @@ test('video recording survives timeline, lyric and ten-second jumps',async({page
  await page.getByRole('button',{name:/Записать видео/}).click();
  const slider=page.getByRole('slider',{name:'Позиция песни'}),second=page.getByRole('button',{name:'Second verse',exact:true}),rec=page.getByText('● REC',{exact:true});
  await expect(slider).toBeEnabled();await second.click();await expect(slider).toHaveValue('5');
- await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(rec).toBeVisible();
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect.poll(async()=>await rec.isVisible()?'recording':(await page.locator('.video-karaoke-error,.karaoke-error').allTextContents()).join(' | ')||'starting',{timeout:10000}).toBe('recording');
  const position=async()=>Number(await slider.inputValue());
  await expect.poll(position).toBeGreaterThan(5);
  await page.getByRole('button',{name:'Вперёд 10 секунд',exact:true}).click();await expect.poll(position).toBeGreaterThan(15);
@@ -94,7 +94,7 @@ test('timed lyrics are drawn into the captured video canvas and follow a seek',a
  const checkbox=page.getByRole('checkbox',{name:'Текст на видео'});await expect(checkbox).toBeChecked();
  await checkbox.uncheck();await expect(page.locator('canvas.video-overlay')).not.toHaveClass(/visible/);await checkbox.check();
  await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toContain('Alpha');
- await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect.poll(async()=>await page.getByText('● REC',{exact:true}).isVisible()?'recording':(await page.locator('.video-karaoke-error,.karaoke-error').allTextContents()).join(' | ')||'starting',{timeout:10000}).toBe('recording');
  expect(await page.evaluate(()=>Reflect.get(window,'__recordedCanvas'))).toBe(true);
  await page.getByRole('button',{name:'Bravo',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__overlayText') as string[])).toContain('Charlie');
