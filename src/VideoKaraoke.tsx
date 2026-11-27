@@ -1,6 +1,7 @@
 import {useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type RefObject,type Ref,type CSSProperties} from 'react';
-import {Video,Square,Download,X,Share2} from 'lucide-react';
+import {Video,Square,Download,X,Share2,Settings2} from 'lucide-react';
 import {RemoteAudio,playbackSession} from './RemoteAudio';
+import {loadSync,saveSync,resolveDelay,boundedDelay,delayedClock,type SyncSettings,type SyncMode,type AudioDiagnostics,type ClockSample} from './recordingSync';
 import {drawKaraokeFrame,overlaySupported,resetVideoMotion,type TimedLine} from './videoOverlay';
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
 export type VideoTransport={toggle:()=>void};
@@ -67,6 +68,13 @@ export function VideoKaraoke(props:Props){
  function updateCameraRatio(video:HTMLVideoElement){if(video.videoWidth>0&&video.videoHeight>0)setCameraRatio(video.videoWidth/video.videoHeight);}
  const [phase,setPhase]=useState<Phase>('idle'),[error,setError]=useState(''),[result,setResult]=useState<{url:string;file:File}|null>(null);
  const [micProcessingWarning,setMicProcessingWarning]=useState(false);
+ const [syncOpen,setSyncOpen]=useState(false),[syncSettings,setSyncSettings]=useState<SyncSettings>(loadSync);
+ const [diagnostics,setDiagnostics]=useState<AudioDiagnostics|null>(null),[outputName,setOutputName]=useState('Не определён браузером'),[appliedDelay,setAppliedDelay]=useState(0);
+ const clockHistory=useRef<ClockSample[]>([]),recordDelay=useRef(0),tailTimer=useRef<number|undefined>(undefined);
+ function updateSync(value:SyncSettings){setSyncSettings(value);saveSync(value);}
+ function refreshDiagnostics(){const audio=latest.current.audio.current,track=camera.current?.getAudioTracks()[0];if(!audio||!track)return;setDiagnostics(audio.recordingDiagnostics(track));}
+ useEffect(()=>{if(phase!=='preview')return;refreshDiagnostics();const refresh=()=>refreshDiagnostics();const timer=window.setInterval(refresh,1000);navigator.mediaDevices?.addEventListener?.('devicechange',refresh);return()=>{clearInterval(timer);navigator.mediaDevices?.removeEventListener?.('devicechange',refresh);};},[phase]);
+ useEffect(()=>{let live=true;setOutputName('Не определён браузером');const id=diagnostics?.sinkId;if(id&&syncOpen){void navigator.mediaDevices?.enumerateDevices?.().then(devices=>{if(live)setOutputName(devices.find(device=>device.kind==='audiooutput'&&device.deviceId===id)?.label||'Системное устройство');}).catch(()=>{});}return()=>{live=false};},[diagnostics?.sinkId,syncOpen]);
  const videoOnlyPreview=useRef<MediaStream|null>(null);
  const [sharing,setSharing]=useState(false),[shareHint,setShareHint]=useState('');const shareBusy=useRef(false),shareAttempt=useRef(0);
  const [includeLyrics,setIncludeLyrics]=useState(true),[recordOverlay,setRecordOverlay]=useState(false);const [overlayFailed,setOverlayFailed]=useState(false),[unsupported,setUnsupported]=useState(false);const apple=appleMobile(),missingMP4=apple&&!mp4Available();const supported=basicSupport()&&!unsupported&&!missingMP4;
@@ -78,11 +86,11 @@ export function VideoKaraoke(props:Props){
  const latest=useRef(props);latest.current=props;
  const mounted=useRef(false),generation=useRef(0),camera=useRef<MediaStream|null>(null),preview=useRef<HTMLVideoElement|null>(null),recorder=useRef<MediaRecorder|null>(null),mix=useRef<Awaited<ReturnType<RemoteAudio['createRecordingMix']>>|null>(null),url=useRef(''),chunks=useRef<Blob[]>([]),bytes=useRef(0),stopReason=useRef(''),starting=useRef(false);
  function releaseCanvas(){resetVideoMotion(canvas.current);canvasStream.current?.getTracks().forEach(t=>t.stop());canvasStream.current=null;}
- function release(){releaseCanvas();const hadMix=!!mix.current;mix.current?.close();mix.current=null;const stream=camera.current;camera.current=null;videoOnlyPreview.current=null;if(preview.current)preview.current.srcObject=null;stream?.getTracks().forEach(t=>t.stop());playbackSession();if((hadMix||stream)&&appleMobile())latest.current.audio.current?.markOutputStalled();}
+ function release(){clearTimeout(tailTimer.current);tailTimer.current=undefined;clockHistory.current=[];recordDelay.current=0;releaseCanvas();const hadMix=!!mix.current;mix.current?.close();mix.current=null;const stream=camera.current;camera.current=null;videoOnlyPreview.current=null;if(preview.current)preview.current.srcObject=null;stream?.getTracks().forEach(t=>t.stop());playbackSession();if((hadMix||stream)&&appleMobile())latest.current.audio.current?.markOutputStalled();}
  function clearResult(){shareAttempt.current++;shareBusy.current=false;setSharing(false);setShareHint('');if(url.current)URL.revokeObjectURL(url.current);url.current='';setResult(null);}
  function complete(r:MediaRecorder,timedOut=false){
   if(recorder.current!==r)return;
-  clearTimeout(finishTimer.current);finishTimer.current=undefined;finalizing.current=false;recorder.current=null;
+  clearTimeout(finishTimer.current);clearTimeout(tailTimer.current);tailTimer.current=undefined;finishTimer.current=undefined;finalizing.current=false;recorder.current=null;
   r.ondataavailable=null;r.onstop=null;r.onerror=null;
   const type=(chunks.current.find(b=>b.type)?.type||r.mimeType||'').split(';')[0].trim().toLowerCase(),parts=chunks.current;chunks.current=[];bytes.current=0;
   latest.current.onStop();release();if(!mounted.current)return;
@@ -96,12 +104,16 @@ export function VideoKaraoke(props:Props){
  }
  function finish(reason=''){
   const r=recorder.current;if(!r)return;if(reason&&!stopReason.current)stopReason.current=reason;
-  if(finalizing.current)return;finalizing.current=true;setPhase('finishing');latest.current.onStop();
-  finishTimer.current=window.setTimeout(()=>{if(recorder.current!==r)return;try{if(r.state!=='inactive')r.stop();}catch{}complete(r,true);},5000);
-  try{if(r.state!=='inactive')r.stop();}catch{complete(r,true);}
+  if(finalizing.current){if(reason&&tailTimer.current!==undefined){clearTimeout(tailTimer.current);tailTimer.current=undefined;try{if(r.state!=='inactive')r.stop();}catch{complete(r,true);}}return;}
+  finalizing.current=true;setPhase('finishing');latest.current.onStop();
+  const stop=()=>{tailTimer.current=undefined;if(recorder.current!==r)return;try{if(r.state!=='inactive')r.stop();}catch{complete(r,true);}};
+  // Keep the recorder open for the delayed music tail on normal stop.
+  const tail=!reason&&!document.hidden&&r.state==='recording'?recordDelay.current:0;
+  finishTimer.current=window.setTimeout(()=>{if(recorder.current!==r)return;stop();complete(r,true);},5000+tail);
+  if(tail>0)tailTimer.current=window.setTimeout(stop,tail+40);else stop();
  }
  function cancel(){if(recorder.current){finish('Запись остановлена.');return;}clearTimeout(finishTimer.current);finalizing.current=false;setRecordOverlay(false);generation.current++;starting.current=false;release();latest.current.onMode(false);setPhase('idle');}
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;clearTimeout(finishTimer.current);const r=recorder.current;recorder.current=null;if(r){r.ondataavailable=null;r.onstop=null;r.onerror=null;try{if(r.state!=='inactive')r.stop();}catch{}}release();if(url.current)URL.revokeObjectURL(url.current);}},[]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;clearTimeout(finishTimer.current);clearTimeout(tailTimer.current);const r=recorder.current;recorder.current=null;if(r){r.ondataavailable=null;r.onstop=null;r.onerror=null;try{if(r.state!=='inactive')r.stop();}catch{}}release();if(url.current)URL.revokeObjectURL(url.current);}},[]);
  useImperativeHandle(props.ref,()=>({toggle:()=>{if(phase==='preview')void start();else if(phase==='recording')finish();}}));
  useLayoutEffect(()=>{latest.current.onTransportReady(phase==='preview'||phase==='recording');},[phase]);
  useEffect(()=>{const video=preview.current,stream=videoOnlyPreview.current;if(video&&stream&&video.srcObject!==stream){video.srcObject=stream;void video.play().catch(()=>{});}},[phase]);
@@ -110,12 +122,12 @@ export function VideoKaraoke(props:Props){
   if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing')){resetVideoMotion(canvas.current);return;}
   let raf=0,nextFrame=0;const period=1000/profile.current.fps;const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   // Keep an absolute cadence instead of accumulating rAF quantization error.
-  function tick(now:number){if(now+1>=nextFrame){nextFrame=nextFrame===0?now+period:nextFrame+Math.max(1,Math.floor((now+1-nextFrame)/period)+1)*period;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{drawKaraokeFrame(cv,vid,p.lyrics,p.audio.current?.position??0,{title:p.title,artist:p.artist},undefined,p.seekRevision.current,now,p.playing&&!reduced.matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
+  function tick(now:number){if(now+1>=nextFrame){nextFrame=nextFrame===0?now+period:nextFrame+Math.max(1,Math.floor((now+1-nextFrame)/period)+1)*period;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{const sample=delayedClock(clockHistory.current,{time:now,position:p.audio.current?.position??0,revision:p.seekRevision.current},phase==='preview'?0:recordDelay.current);drawKaraokeFrame(cv,vid,p.lyrics,sample.position,{title:p.title,artist:p.artist},undefined,sample.revision,now,(p.playing||phase==='finishing')&&!reduced.matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
   raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
  },[showOverlay,phase]);
  useEffect(()=>{const hidden=()=>{if(!document.hidden)return;if(recorder.current)finish('Запись остановлена: приложение свернули.');else if(camera.current){cancel();setError('Камера отключена: приложение свернули.');}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);
  async function enable(){
-  setError('');setMicProcessingWarning(false);clearResult();if(!supported){setError('Ваш телефон или браузер не поддерживает видеокараоке. Откройте AnyMinus в актуальном Chrome или Safari.');return;}
+  setError('');setMicProcessingWarning(false);setSyncOpen(false);setDiagnostics(null);setAppliedDelay(0);clearResult();if(!supported){setError('Ваш телефон или браузер не поддерживает видеокараоке. Откройте AnyMinus в актуальном Chrome или Safari.');return;}
   const id=++generation.current;setCameraRatio(16/9);setPhase('permission');props.onMode(true);
   try{await props.onPrepare();if(!mounted.current||generation.current!==id)return;playbackSession('play-and-record');
    let stream:MediaStream;const requested=requestedProfile();
@@ -139,8 +151,8 @@ export function VideoKaraoke(props:Props){
   if(props.disabled||!camera.current||!props.audio.current||recorder.current||starting.current)return;starting.current=true;const id=generation.current;const source=camera.current;const withText=includeLyrics&&canOverlay;setRecordOverlay(withText);setError('');setPhase('starting');chunks.current=[];bytes.current=0;stopReason.current='';
   try{
    if(apple&&captureUsed.current)props.audio.current.markOutputStalled();
-   const prepared=await props.audio.current.createRecordingMix(source);
-   if(!mounted.current||generation.current!==id||camera.current!==source){prepared.close();return;}mix.current=prepared;captureUsed.current=true;
+   const prepared=await props.audio.current.createRecordingMix(source,syncSettings);
+   if(!mounted.current||generation.current!==id||camera.current!==source){prepared.close();return;}mix.current=prepared;captureUsed.current=true;recordDelay.current=prepared.delayMs;clockHistory.current=[];setAppliedDelay(prepared.delayMs);setDiagnostics(prepared.diagnostics);setSyncOpen(false);
    let videoTracks=source.getVideoTracks();
    if(withText){
     const cv=canvas.current,vid=preview.current;
@@ -163,7 +175,7 @@ export function VideoKaraoke(props:Props){
    r.onerror=e=>{const detail=(e as Event&{error?:DOMException}).error;stopReason.current='Ошибка записи видео'+(detail?': '+detail.name+' — '+detail.message:'.');finish(stopReason.current);};
    r.onstop=()=>complete(r);
    const ok=await props.onStart();if(!mounted.current||recorder.current!==r||finalizing.current)return;if(!ok||r.state!=='recording'){finish('Не удалось запустить музыку. Начните новый дубль.');return;}setPhase('recording');
-   }catch(e){if(!mounted.current||generation.current!==id)return;const r=recorder.current;if(r){finish('Не удалось начать запись.');return;}recorder.current=null;releaseCanvas();mix.current?.close();mix.current=null;setRecordOverlay(false);setPhase('preview');setError(e instanceof Error?e.name+': '+e.message:'Не удалось начать запись. Повторите попытку.');}finally{if(generation.current===id)starting.current=false;}
+   }catch(e){if(!mounted.current||generation.current!==id)return;const r=recorder.current;if(r){finish('Не удалось начать запись.');return;}recorder.current=null;releaseCanvas();mix.current?.close();mix.current=null;recordDelay.current=0;clockHistory.current=[];setRecordOverlay(false);setPhase('preview');setError(e instanceof Error?e.name+': '+e.message:'Не удалось начать запись. Повторите попытку.');}finally{if(generation.current===id)starting.current=false;}
  }
  async function share(){
   if(!result||shareBusy.current)return;
@@ -179,8 +191,16 @@ export function VideoKaraoke(props:Props){
   {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||!supported} onClick={()=>void enable()}><Video size={16}/>Записать видео <span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">{missingMP4?'В этом браузере iPhone/iPad недоступна запись MP4. Видеокараоке отключено.':'Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.'}</p>}</>}
   {phase==='permission'&&<div className="video-karaoke-actions"><span role="status">Разрешите камеру и микрофон…</span><button type="button" onClick={cancel}>Отмена</button></div>}
   {active&&<div className="video-karaoke-panel"><div className="video-karaoke-preview" style={frameStyle}><video ref={preview} autoPlay muted playsInline onLoadedMetadata={e=>updateCameraRatio(e.currentTarget)} onResize={e=>updateCameraRatio(e.currentTarget)} aria-label="Предпросмотр камеры"/><canvas ref={canvas} className={showOverlay?'video-overlay visible':'video-overlay'} aria-label="Текст в видео" aria-hidden={!showOverlay}/>{phase==='recording'&&<span className="video-karaoke-rec">● REC</span>}</div><div className="video-karaoke-actions">
-   {phase==='preview'?<><button type="button" className="video-karaoke-start" disabled={props.disabled} onClick={()=>void start()}><Video size={16}/>Начать запись</button><label className="video-overlay-option"><input type="checkbox" checked={includeLyrics&&canOverlay} disabled={!canOverlay} onChange={e=>setIncludeLyrics(e.target.checked)}/>Текст на видео</label><span>{!canOverlay?(overlayFailed||!overlaySupported()?'Наложение не поддерживается':'Нужен синхронный текст'):'Лучше в наушниках'}</span><button type="button" onClick={cancel}><X size={14}/>Отмена</button></>:phase==='finishing'?<><span role="status">Сохраняем видео…</span><button type="button" onClick={()=>{const r=recorder.current;if(r)complete(r,true)}}>Завершить принудительно</button></>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>Остановить</button><span role="status">{phase==='starting'?'Запуск…':'Идёт запись · локально'}</span></>}
+   {phase==='preview'?<><button type="button" className="video-karaoke-start" disabled={props.disabled} onClick={()=>void start()}><Video size={16}/>Начать запись</button><label className="video-overlay-option"><input type="checkbox" checked={includeLyrics&&canOverlay} disabled={!canOverlay} onChange={e=>setIncludeLyrics(e.target.checked)}/>Текст на видео</label><span>{!canOverlay?(overlayFailed||!overlaySupported()?'Наложение не поддерживается':'Нужен синхронный текст'):'Лучше в наушниках'}</span><button type="button" onClick={()=>{refreshDiagnostics();setSyncOpen(o=>!o)}} aria-expanded={syncOpen} aria-controls="video-sync-settings"><Settings2 size={14}/>Настройки звука</button><button type="button" onClick={cancel}><X size={14}/>Отмена</button></>:phase==='finishing'?<><span role="status">Сохраняем видео…</span><button type="button" onClick={()=>{const r=recorder.current;if(r){try{if(r.state!=='inactive')r.stop();}catch{}complete(r,true)}}}>Завершить принудительно</button></>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>Остановить</button><span role="status">{phase==='starting'?'Запуск…':'Идёт запись · локально'}</span>{phase==='recording'&&appliedDelay>0&&<span>Компенсация: {appliedDelay} мс</span>}</>}
   </div></div>}
+  {phase==='preview'&&syncOpen&&<section id="video-sync-settings" className="video-sync-settings" aria-label="Настройки звука видеозаписи">
+   <div className="video-sync-heading"><strong>Настройки звука</strong><button type="button" onClick={()=>setSyncOpen(false)} aria-label="Закрыть настройки звука"><X size={15}/></button></div>
+   <dl><dt>Микрофон</dt><dd>{diagnostics?.micLabel??'Не определён'}</dd><dt>Аудиовыход</dt><dd>{outputName}</dd><dt>Задержка выхода</dt><dd>{diagnostics?.outputMs!=null?diagnostics.outputMs+' мс':'Нет данных'}</dd><dt>Задержка аудиодвижка</dt><dd>{diagnostics?.baseMs!=null?diagnostics.baseMs+' мс':'Нет данных'}</dd><dt>Задержка микрофона</dt><dd>{diagnostics?.inputMs!=null?diagnostics.inputMs+' мс':'Нет данных'}</dd><dt>Частота аудио</dt><dd>{diagnostics?.sampleRate?diagnostics.sampleRate/1000+' кГц':'Нет данных'}{diagnostics?.channels?' · микрофон '+diagnostics.channels+' кан.':''}</dd></dl>
+   <fieldset><legend>Компенсация задержки</legend><div className="video-sync-modes">{(['auto','manual','off'] as SyncMode[]).map(mode=><button type="button" key={mode} aria-pressed={syncSettings.mode===mode} onClick={()=>updateSync({...syncSettings,mode})}>{mode==='auto'?'Авто':mode==='manual'?'Вручную':'Выкл.'}</button>)}</div>
+   <output className="video-sync-value">{diagnostics?resolveDelay(syncSettings,diagnostics):syncSettings.mode==='manual'?syncSettings.manualMs:0} мс</output>
+   {syncSettings.mode==='manual'&&<><input aria-label="Компенсация задержки в миллисекундах" type="range" min="0" max="500" step="10" value={syncSettings.manualMs} onChange={e=>updateSync({...syncSettings,manualMs:boundedDelay(Number(e.target.value))})}/><div className="video-sync-presets">{[0,100,150,200,300].map(ms=><button type="button" key={ms} aria-pressed={syncSettings.manualMs===ms} onClick={()=>updateSync({...syncSettings,manualMs:ms})}>{ms}</button>)}</div></>}
+   <p>{syncSettings.mode==='auto'?(diagnostics?.outputMs?'Оценка по данным браузера, не измеренная калибровка.':'Браузер не сообщает задержку выхода. При рассинхроне выберите вручную.'):syncSettings.mode==='off'?'Дополнительная задержка отключена.':'Если голос отстаёт, увеличьте задержку музыки.'} Изменения только в следующем видео; звук в наушниках не меняется.</p></fieldset>
+  </section>}
   {phase==='result'&&result&&<div className="video-karaoke-panel"><video ref={previewResult} className="video-karaoke-result" style={frameStyle} src={result.url} controls playsInline preload="metadata" onLoadedMetadata={e=>updateCameraRatio(e.currentTarget)} onResize={e=>updateCameraRatio(e.currentTarget)} aria-label="Записанное видео"/><div className="video-karaoke-actions"><a href={result.url} download={result.file.name}><Download size={16}/>Сохранить видео</a>{(!apple||result.file.type==='video/mp4')&&canShareFile(result.file)&&<button type="button" disabled={sharing} onClick={()=>void share()}><Share2 size={15}/>{sharing?'Открыто меню отправки…':'Поделиться'}</button>}<button type="button" disabled={sharing} onClick={()=>{clearResult();setPhase('idle');setError('')}}><X size={14}/>Закрыть</button><span>{result.file.type==='video/mp4'?'MP4':'WebM'} · {(result.file.size/1048576).toFixed(1)} МБ</span><span>Видео не отправляется на сервер</span><span role="status">{shareHint||(!canShareFile(result.file)?'Сохраните файл и прикрепите его в мессенджере.':appleMobile()&&result.file.type==='video/webm'?'WebM: для Telegram надёжнее сохранить и прикрепить файл вручную.':'Если Telegram зависнет, сохраните файл и прикрепите его из чата.')}</span></div></div>}
   {active&&micProcessingWarning&&<p className="video-karaoke-error" role="status">Браузер оставил обработку микрофона включённой. Звучание может отличаться.</p>}
   {error&&<p className="video-karaoke-error" role="alert">{error}</p>}

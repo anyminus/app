@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.38
+- Add local video audio diagnostics and Auto/Manual/Off latency compensation settings; delay only the recorded accompaniment and corresponding canvas clock, preserve live playback and flush the delayed tail on normal stop.
+
 ## 0.5.37
 - Verify microphone processing preferences and retry exact disabling if reported active; isolate camera preview from microphone audio, keep playback gain at unity and restore Apple playback session after capture cancellation. Correct system seek boundary regression assertion.
 

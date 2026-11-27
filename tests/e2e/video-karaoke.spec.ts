@@ -356,3 +356,26 @@ test('microphone processing is verified and preview contains only the camera tra
  await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();expect(await speaker()).toEqual([1]);
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });
+
+test('video sync settings use browser estimates, persist manual mode and delay only recording music',async({page})=>{
+ await page.addInitScript(()=>{
+ Object.defineProperty(AudioContext.prototype,'outputLatency',{configurable:true,get:()=>.15});Object.defineProperty(AudioContext.prototype,'baseLatency',{configurable:true,get:()=>.02});
+ const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices),connect=AudioNode.prototype.connect;
+ Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async(c:MediaStreamConstraints)=>{const stream=await get(c);const track=stream.getAudioTracks()[0],settings=track.getSettings.bind(track);Object.defineProperty(track,'label',{value:'Test microphone'});Object.defineProperty(track,'getSettings',{value:()=>({...settings(),latency:.01})});return stream;}});
+ Reflect.set(window,'__syncEdges',[]);
+ AudioNode.prototype.connect=function(this:AudioNode,...args:unknown[]){const result=Reflect.apply(connect,this,args);if(args[0] instanceof AudioNode)(Reflect.get(window,'__syncEdges') as [AudioNode,AudioNode][]).push([this,args[0]]);return result} as typeof connect;
+ });
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Настройки звука',exact:true}).click();const panel=page.getByRole('region',{name:'Настройки звука видеозаписи'});await expect(panel).toBeVisible();
+ await expect(panel.getByText('Test microphone',{exact:true})).toBeVisible();await expect(panel.locator('output')).toHaveText('180 мс');
+ await panel.getByRole('button',{name:'Выкл.',exact:true}).click();await expect(panel.locator('output')).toHaveText('0 мс');
+ await panel.getByRole('button',{name:'Вручную',exact:true}).click();await panel.getByRole('button',{name:'200',exact:true}).click();await expect(panel.locator('output')).toHaveText('200 мс');
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('anyminus.video.sync.v1')!))).toEqual({mode:'manual',manualMs:200});
+ await panel.getByRole('button',{name:'Закрыть настройки звука'}).click();await expect(panel).toHaveCount(0);
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();await expect(page.getByText('Компенсация: 200 мс')).toBeVisible();
+ const graph=await page.evaluate(()=>{const edges=Reflect.get(window,'__syncEdges') as [AudioNode,AudioNode][];const link=edges.find(([,to])=>to instanceof DelayNode);if(!link)return null;const [bus,delay]=link;return {delay:(delay as DelayNode).delayTime.value,unity:(bus as GainNode).gain.value,speaker:edges.some(([from,to])=>from===bus&&to===bus.context.destination),toLimiter:edges.some(([from,to])=>from===delay&&to instanceof DynamicsCompressorNode),directSpeaker:edges.some(([from,to])=>from===delay&&to===delay.context.destination)};});
+ expect(graph).not.toBeNull();expect(graph!.delay).toBeCloseTo(.2,3);expect(graph).toMatchObject({unity:1,speaker:true,toLimiter:true,directSpeaker:false});
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+ await page.getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();await page.getByRole('button',{name:'Настройки звука',exact:true}).click();await expect(panel.locator('output')).toHaveText('200 мс');await expect(panel.getByRole('button',{name:'Вручную',exact:true})).toHaveAttribute('aria-pressed','true');
+});
