@@ -6,6 +6,8 @@ type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'res
 export type VideoTransport={toggle:()=>void};
 type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];playing:boolean;title:string;artist:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
 const mp4=['video/mp4','video/mp4;codecs=avc1.42E01E,mp4a.40.2'];
+function appleMobile(){return /iPhone|iPad|iPod/i.test(navigator.platform)||(/Mac/i.test(navigator.platform)&&navigator.maxTouchPoints>1)||(/Apple/i.test(navigator.vendor)&&/iPhone|iPad|iPod/i.test(navigator.userAgent));}
+function canShareFile(file:File){try{return typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[file]});}catch{return false;}}
 const webm=['video/webm;codecs=vp8,opus','video/webm'];
 // Feature detection, not a phone model or OS allowlist.
 function basicSupport(){
@@ -15,7 +17,7 @@ function basicSupport(){
 // isTypeSupported does not guarantee available hardware/resources at start().
 function startRecorder(stream:MediaStream,overlay:boolean){
  let last:unknown;
- for(const mimeType of [...(overlay||/Android/i.test(navigator.userAgent)?[...webm,...mp4]:[...mp4,...webm]),'']){
+ for(const mimeType of [...(!appleMobile()&&(overlay||/Android/i.test(navigator.userAgent))?[...webm,...mp4]:[...mp4,...webm]),'']){
   try{
    if(mimeType&&typeof MediaRecorder.isTypeSupported==='function'&&!MediaRecorder.isTypeSupported(mimeType))continue;
    const recorder=new MediaRecorder(stream,{...(mimeType?{mimeType}:{}),videoBitsPerSecond:2000000,audioBitsPerSecond:128000});
@@ -26,6 +28,7 @@ function startRecorder(stream:MediaStream,overlay:boolean){
 }
 export function VideoKaraoke(props:Props){
  const [phase,setPhase]=useState<Phase>('idle'),[error,setError]=useState(''),[result,setResult]=useState<{url:string;file:File}|null>(null);
+ const [sharing,setSharing]=useState(false),[shareHint,setShareHint]=useState('');const shareBusy=useRef(false),shareAttempt=useRef(0);
  const [includeLyrics,setIncludeLyrics]=useState(true),[recordOverlay,setRecordOverlay]=useState(false);const [overlayFailed,setOverlayFailed]=useState(false),[unsupported,setUnsupported]=useState(false);const supported=basicSupport()&&!unsupported;
  const canvas=useRef<HTMLCanvasElement|null>(null),canvasStream=useRef<MediaStream|null>(null);
  const canOverlay=overlaySupported()&&!overlayFailed&&props.lyrics.length>0;
@@ -34,7 +37,7 @@ export function VideoKaraoke(props:Props){
  const mounted=useRef(false),generation=useRef(0),camera=useRef<MediaStream|null>(null),preview=useRef<HTMLVideoElement|null>(null),recorder=useRef<MediaRecorder|null>(null),mix=useRef<Awaited<ReturnType<RemoteAudio['createRecordingMix']>>|null>(null),url=useRef(''),chunks=useRef<Blob[]>([]),bytes=useRef(0),stopReason=useRef(''),starting=useRef(false);
  function releaseCanvas(){canvasStream.current?.getTracks().forEach(t=>t.stop());canvasStream.current=null;}
  function release(){releaseCanvas();mix.current?.close();mix.current=null;camera.current?.getTracks().forEach(t=>t.stop());camera.current=null;playbackSession();}
- function clearResult(){if(url.current)URL.revokeObjectURL(url.current);url.current='';setResult(null);}
+ function clearResult(){shareAttempt.current++;shareBusy.current=false;setSharing(false);setShareHint('');if(url.current)URL.revokeObjectURL(url.current);url.current='';setResult(null);}
  function finish(reason=''){if(reason)stopReason.current=reason;const r=recorder.current;if(r&&r.state!=='inactive'){setPhase('finishing');r.stop();latest.current.onStop();}}
  function cancel(){setRecordOverlay(false);generation.current++;starting.current=false;release();latest.current.onMode(false);setPhase('idle');}
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;const r=recorder.current;if(r){r.ondataavailable=null;r.onstop=null;r.onerror=null;if(r.state!=='inactive')r.stop();}release();if(url.current)URL.revokeObjectURL(url.current);}},[]);
@@ -90,15 +93,24 @@ export function VideoKaraoke(props:Props){
    r.ondataavailable=e=>{if(e.data.size){chunks.current.push(e.data);bytes.current+=e.data.size;if(bytes.current>=180*1024*1024&&r.state==='recording')finish('Достигнут предел размера записи.');}};
    r.onerror=e=>{const detail=(e as Event&{error?:DOMException}).error;stopReason.current='Ошибка записи видео'+(detail?': '+detail.name+' — '+detail.message:'.');if(r.state!=='inactive')finish(stopReason.current);};
    r.onstop=()=>{
-    const type=r.mimeType||chunks.current[0]?.type||'video/webm';const parts=chunks.current;chunks.current=[];recorder.current=null;release();if(!mounted.current)return;setRecordOverlay(false);
+    const type=(chunks.current.find(b=>b.type)?.type||r.mimeType||'').split(';')[0].trim().toLowerCase();const parts=chunks.current;chunks.current=[];recorder.current=null;release();if(!mounted.current)return;setRecordOverlay(false);
     latest.current.onStop();latest.current.onMode(false);setError(stopReason.current);
     if(!parts.length){setPhase('idle');setError(stopReason.current||'Видео не записалось. Попробуйте снова.');return;}
-    const name=(latest.current.title.replace(/[^\p{L}\p{N} ._-]/gu,'_').slice(0,80)||'AnyMinus')+'-'+Date.now()+(type.includes('mp4')?'.mp4':'.webm');const file=new File(parts,name,{type});url.current=URL.createObjectURL(file);setResult({url:url.current,file});setPhase('result');
+    if(type!=='video/mp4'&&type!=='video/webm'){setPhase('idle');setError('Не удалось определить формат записанного видео.');return;}
+    const name='AnyMinus-'+Date.now()+(type==='video/mp4'?'.mp4':'.webm');const file=new File(parts,name,{type});url.current=URL.createObjectURL(file);setResult({url:url.current,file});setPhase('result');
    };
    const ok=await props.onStart();if(!mounted.current||recorder.current!==r||r.state!=='recording')return;if(!ok){finish('Не удалось запустить музыку. Закройте результат и повторите запись.');return;}setPhase('recording');
    }catch(e){if(!mounted.current||generation.current!==id)return;const r=recorder.current;if(r&&r.state!=='inactive'){finish('Не удалось начать запись.');return;}recorder.current=null;releaseCanvas();mix.current?.close();mix.current=null;setRecordOverlay(false);setPhase('preview');setError(e instanceof Error?e.name+': '+e.message:'Не удалось начать запись. Повторите попытку.');}finally{if(generation.current===id)starting.current=false;}
  }
- async function share(){if(!result)return;try{await navigator.share({files:[result.file],title:props.title});}catch(e){if(!(e instanceof DOMException&&e.name==='AbortError'))setError('Не удалось поделиться. Сохраните видео как файл.');}}
+ async function share(){
+  if(!result||shareBusy.current)return;
+  if(!canShareFile(result.file)){setShareHint('Отправка этого формата недоступна. Сохраните видео и прикрепите его в мессенджере.');return;}
+  shareBusy.current=true;setSharing(true);setShareHint('Если отправка зависнет, закройте системное окно и прикрепите сохранённый файл в Telegram.');
+  const attempt=++shareAttempt.current;
+  try{await navigator.share({files:[result.file]});}
+  catch(e){if(mounted.current&&shareAttempt.current===attempt&&!(e instanceof DOMException&&e.name==='AbortError'))setShareHint('Не удалось передать файл. Сохраните видео и прикрепите его в мессенджере.');}
+  finally{if(mounted.current&&shareAttempt.current===attempt){shareBusy.current=false;setSharing(false);}}
+ }
  const active=phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing';
  return <div className="video-karaoke" aria-label="Видеокараоке">
   {phase==='idle'&&<><button className="video-karaoke-trigger" type="button" disabled={props.disabled||!supported} onClick={()=>void enable()}><Video size={16}/>Записать видео <span>β</span></button>{!supported&&!error&&<p className="video-karaoke-error" role="status">Ваш телефон или браузер не поддерживает видеокараоке. Попробуйте Chrome или Safari.</p>}</>}
@@ -106,7 +118,7 @@ export function VideoKaraoke(props:Props){
   {active&&<div className="video-karaoke-panel"><div className="video-karaoke-preview"><video ref={preview} autoPlay muted playsInline aria-label="Предпросмотр камеры"/><canvas ref={canvas} className={showOverlay?'video-overlay visible':'video-overlay'} aria-label="Текст в видео" aria-hidden={!showOverlay}/>{phase==='recording'&&<span className="video-karaoke-rec">● REC</span>}</div><div className="video-karaoke-actions">
    {phase==='preview'?<><button type="button" className="video-karaoke-start" onClick={()=>void start()}><Video size={16}/>Начать запись</button><label className="video-overlay-option"><input type="checkbox" checked={includeLyrics&&canOverlay} disabled={!canOverlay} onChange={e=>setIncludeLyrics(e.target.checked)}/>Текст на видео</label><span>{!canOverlay?(overlayFailed||!overlaySupported()?'Наложение не поддерживается':'Нужен синхронный текст'):'Лучше в наушниках'}</span><button type="button" onClick={cancel}><X size={14}/>Отмена</button></>:phase==='finishing'?<span role="status">Сохраняем видео…</span>:<><button type="button" className="video-karaoke-start" disabled={phase==='starting'} onClick={()=>finish()}><Square size={14}/>Остановить</button><span role="status">{phase==='starting'?'Запуск…':'Идёт запись · локально'}</span></>}
   </div></div>}
-  {phase==='result'&&result&&<div className="video-karaoke-panel"><video className="video-karaoke-result" src={result.url} controls playsInline preload="metadata" aria-label="Записанное видео"/><div className="video-karaoke-actions"><a href={result.url} download={result.file.name}><Download size={16}/>Сохранить видео</a>{navigator.canShare?.({files:[result.file]})&&<button type="button" onClick={()=>void share()}><Share2 size={15}/>Поделиться</button>}<button type="button" onClick={()=>{clearResult();setPhase('idle');setError('')}}><X size={14}/>Закрыть</button><span>Видео не отправляется на сервер</span></div></div>}
+  {phase==='result'&&result&&<div className="video-karaoke-panel"><video className="video-karaoke-result" src={result.url} controls playsInline preload="metadata" aria-label="Записанное видео"/><div className="video-karaoke-actions"><a href={result.url} download={result.file.name}><Download size={16}/>Сохранить видео</a>{canShareFile(result.file)&&<button type="button" disabled={sharing} onClick={()=>void share()}><Share2 size={15}/>{sharing?'Открыто меню отправки…':'Поделиться'}</button>}<button type="button" disabled={sharing} onClick={()=>{clearResult();setPhase('idle');setError('')}}><X size={14}/>Закрыть</button><span>{result.file.type==='video/mp4'?'MP4':'WebM'} · {(result.file.size/1048576).toFixed(1)} МБ</span><span>Видео не отправляется на сервер</span><span role="status">{shareHint||(!canShareFile(result.file)?'Сохраните файл и прикрепите его в мессенджере.':appleMobile()&&result.file.type==='video/webm'?'WebM: для Telegram надёжнее сохранить и прикрепить файл вручную.':'Если Telegram зависнет, сохраните файл и прикрепите его из чата.')}</span></div></div>}
   {error&&<p className="video-karaoke-error" role="alert">{error}</p>}
  </div>;
 }

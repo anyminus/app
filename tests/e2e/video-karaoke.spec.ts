@@ -147,3 +147,22 @@ test('Android camera fallback and raw recording when canvas is unsupported',asyn
  expect(await page.evaluate(()=>Reflect.get(window,'__androidMime'))).toMatch(/video\/webm/);
  await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
 });
+
+test('native Apple recording prefers MP4 and shares only the actual file with manual fallback',async({page})=>{
+ await page.addInitScript(()=>{
+ Object.defineProperty(navigator,'platform',{configurable:true,value:'iPhone'});
+ const supports=MediaRecorder.isTypeSupported.bind(MediaRecorder);Reflect.set(window,'__codecAttempts',[]);
+ MediaRecorder.isTypeSupported=(type:string)=>{(Reflect.get(window,'__codecAttempts') as string[]).push(type);return supports(type);};
+ Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
+ Object.defineProperty(navigator,'share',{configurable:true,value:(data:ShareData)=>{const file=data.files?.[0];Reflect.set(window,'__shareData',{keys:Object.keys(data),name:file?.name,type:file?.type,size:file?.size});return new Promise<void>((_,reject)=>{Reflect.set(window,'__rejectShare',()=>reject(new DOMException('Test failure','DataError')));});}});
+ });
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await expect(page.getByRole('button',{name:'Начать запись',exact:true})).toBeVisible();const overlay=page.getByRole('checkbox',{name:'Текст на видео'});if(await overlay.isEnabled())await overlay.uncheck();
+ await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ expect((await page.evaluate(()=>Reflect.get(window,'__codecAttempts') as string[]))[0]).toBe('video/mp4');
+ await page.waitForTimeout(1100);await page.getByRole('button',{name:'Остановить',exact:true}).click();const save=page.getByRole('link',{name:'Сохранить видео'});await expect(save).toBeVisible();
+ await page.getByRole('button',{name:'Поделиться',exact:true}).click();await expect(page.getByRole('button',{name:'Открыто меню отправки…'})).toBeDisabled();await expect(save).toBeVisible();
+ const payload=await page.evaluate(()=>Reflect.get(window,'__shareData') as {keys:string[];name:string;type:string;size:number});
+ expect(payload.keys).toEqual(['files']);expect(payload.type).toMatch(/^video\/(mp4|webm)$/);expect(payload.name).toMatch(/^AnyMinus-\d+\.(mp4|webm)$/);expect(payload.name.endsWith(payload.type.split('/')[1])).toBe(true);expect(payload.size).toBeGreaterThan(1000);
+ await page.evaluate(()=>Reflect.get(window,'__rejectShare')());await expect(page.getByText('Не удалось передать файл. Сохраните видео и прикрепите его в мессенджере.')).toBeVisible();await expect(save).toBeVisible();await expect(page.getByRole('button',{name:'Поделиться',exact:true})).toBeEnabled();
+});

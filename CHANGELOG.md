@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.23
+- Prefer MP4 on native iPhone/iPad for composited and raw capture; normalize the actual recorded MIME type, simplify native file sharing, prevent duplicate share attempts and preserve manual download fallback.
+
 ## 0.5.22
 - Add song title, artist and AnyMinus watermark to composited video using a versioned declarative style template.
 - Handle timeline Home/End explicitly during playback and recording; retain seek regression coverage.
