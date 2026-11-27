@@ -147,3 +147,5 @@ body.karaoke-open .tab-bar{display:none}
 
 /* Audio readiness alone is not proof that synchronized lyrics exist. */
 .track-ready-unverified{color:var(--muted);font-weight:500}
+
+.karaoke-end-panel .karaoke-end-search{justify-content:center;gap:8px;margin-top:4px;background:var(--accent);color:var(--on);font-weight:700}.karaoke-end-search svg{flex:none}

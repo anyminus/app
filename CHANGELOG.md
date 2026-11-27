@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.14
+- Add a global search button below artist links at the end of the song.
+
 ## 0.5.13
 - Stop labeling unverified lyrics as synchronized; honor explicit server unknown and preserve confirmed plain or absent labels.
 

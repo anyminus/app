@@ -70,3 +70,6 @@ For non-ready track rows with confirmed provider LRC, display «Создать �
 
 ## Verified lyric status labels (0.5.13)
 Only explicit LRC gives the ready lyric label; TEXT and NONE retain orange/red; unknown format displays muted «Формат текста уточняется» while stems remain playable. The API now uses null for authoritative unknown; normalization and cache merging preserve explicit null rather than resurrecting stale prior labels. Legacy omitted fields are not a proof of synchronization. Existing non-ready provider hints remain distinct. Update fixture confirmed formats and add regressions for unknown and stale cache. Backend backfill and verification changes documented in Core. No audio or creation changes.
+
+## End-of-song global search (0.5.14)
+Keep artist links and add «Перейти в глобальный поиск» as the final primary-accent action in the end panel. Uses existing search navigation, clears the previous query, and leaves the stopped player through ordinary route disposal. No playback, backend, or artist-link changes. E2E checks navigation and empty search. Release notes include the preceding lyric label fix.
