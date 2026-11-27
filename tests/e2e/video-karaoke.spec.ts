@@ -14,6 +14,12 @@ test('local video capture stays above lyrics and exports a file',async({page})=>
  const top=await camera.boundingBox(),lyrics=await page.getByLabel('Текст песни',{exact:true}).boundingBox();
  expect(top).not.toBeNull();expect(lyrics).not.toBeNull();
  expect(top!.height).toBeLessThanOrEqual(100);expect(top!.y+top!.height).toBeLessThanOrEqual(lyrics!.y);
+ const panel=page.locator('.video-capture-panel'),start=page.getByRole('button',{name:'Начать запись',exact:true}),settings=page.getByRole('button',{name:'Настройки звука',exact:true}),cancel=page.getByRole('button',{name:'Отмена',exact:true});
+ for(const width of [390,320]){
+  await page.setViewportSize({width,height:844});const a=(await start.boundingBox())!,b=(await settings.boundingBox())!,p=(await panel.boundingBox())!,d=(await cancel.boundingBox())!;
+  expect(Math.abs(a.y-b.y)).toBeLessThanOrEqual(12);expect(a.x+a.width).toBeLessThanOrEqual(b.x+1);expect(d.x).toBeGreaterThanOrEqual(b.x-1);expect(p.height).toBeLessThanOrEqual(160);expect(p.x+p.width).toBeLessThanOrEqual(width);
+ }
+ await page.setViewportSize({width:390,height:844});
  const play=page.getByRole('button',{name:'Воспроизвести',exact:true});await expect(play).toBeEnabled();await play.click();
  await expect(page.getByText('● REC',{exact:true})).toBeVisible();
  await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled();
@@ -423,7 +429,7 @@ test('compact recording settings keep compensation above collapsed diagnostics o
  const panel=page.getByRole('region',{name:'Настройки звука видеозаписи'}),music=panel.getByRole('slider',{name:'Музыка в записи'}),voice=panel.getByRole('slider',{name:'Голос в записи'}),auto=panel.getByRole('button',{name:'Авто',exact:true});
  await expect(panel).toBeVisible();await expect(auto).toBeInViewport({ratio:1});await expect(panel.locator('details')).not.toHaveAttribute('open','');
  const geometry=await panel.evaluate(el=>{const sliders=el.querySelectorAll('input[type=range]'),first=sliders[0].getBoundingClientRect(),second=sliders[1].getBoundingClientRect(),mode=el.querySelector('.video-sync-modes')!.getBoundingClientRect(),box=el.getBoundingClientRect();return {gap:second.top-first.top,modeBottom:mode.bottom,panelBottom:box.bottom,scroll:el.scrollTop}});
- expect(geometry.gap).toBeLessThan(54);expect(geometry.modeBottom).toBeLessThanOrEqual(geometry.panelBottom);expect(geometry.scroll).toBe(0);
+ expect(geometry.gap).toBeLessThan(54);const ml=(await music.boundingBox())!,vl=(await voice.boundingBox())!;expect(ml.x+ml.width).toBeLessThanOrEqual(vl.x+1);expect(Math.abs(ml.y-vl.y)).toBeLessThan(20);expect(geometry.modeBottom).toBeLessThanOrEqual(geometry.panelBottom);expect(geometry.scroll).toBe(0);
  await expect(music).toHaveCSS('--progress','55%');await expect(voice).toHaveCSS('--progress','100%');await music.fill('32');await expect(music).toHaveCSS('--progress','32%');
  await panel.getByRole('button',{name:'Вручную',exact:true}).click();await expect(panel.getByRole('slider',{name:'Компенсация задержки в миллисекундах'})).toBeInViewport({ratio:1});
 });

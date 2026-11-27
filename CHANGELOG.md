@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.85
+- Compact recording preview, active controls and result actions into two columns beside the camera thumbnail. Keep existing labels, toggles, recording state and export behavior. Group recording levels and voice effects in two-column grids, keep compensation full width and diagnostics collapsed; cap settings height for lyrics. Extend mobile geometry regression at 320/390px.
+
 ## 0.5.83
 - Add local recent search history below the global search input when no valid query is entered. Save only dispatched debounced searches, cap at 20 unique case-insensitive entries, replay on tap, remove individually or clear all. No new server request or server-side history storage. Add translations and model/browser tests.
 

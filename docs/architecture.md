@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Compact recording controls (0.5.85)
+The existing recorder remains mounted above lyrics. A responsive two-column control grid beside the aspect-ratio-preserving thumbnail places Start and Sound settings on the first row, options and Cancel below, and guidance on its own full-width row. Recording/finishing and result controls also reuse available width. Recording settings use paired music/voice and effects sliders, a full-width delay selector and collapsed diagnostics; settings scroll internally at max 42dvh (32dvh short landscape). Existing callbacks, recorder graph, privacy, synchronization and optional mask behavior are unchanged. Browser regression checks adjacent controls and compact geometry at 320/390px, paired sliders and accessible compensation.
+
 ## Local search history (0.5.83)
 Global search history is stored in `anyminus:search-history-v1` (localStorage), separate from playback history. `useCatalog` calls a stable optional observer when its existing debounced search is dispatched, not for every keystroke or for home/artist loading. `src/searchHistory.mjs` validates trimmed 2–200 character queries, deduplicates case-insensitively, caps at 20 most recent entries. Below the search field, history is shown for queries shorter than two characters; clicking an entry fills the same input and runs the existing search path. Individual deletion and clear-all are local; the history collection is not sent to the API. All five UI languages supported. Model and e2e regressions cover ordering, replay, persistence and deletion.
 
