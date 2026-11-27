@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.45
+- Show exact artist matches above search songs, deduplicated by verified artist ID, with case-insensitive matching and direct artist navigation.
+
 ## 0.5.44
 - Show real byte progress for both stems and combined download; resume interrupted downloads with verified HTTP ranges, refresh media permissions, pause downloads in background/offline and continue on return.
 

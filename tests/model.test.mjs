@@ -76,3 +76,9 @@ test('interlude countdown requires a verified gap strictly longer than ten secon
  assert.equal(interludeCountdown(lines,0,2.99),null);assert.equal(interludeCountdown(lines,0,3),12);assert.equal(interludeCountdown(lines,0,7.2),8);assert.equal(interludeCountdown(lines,0,14.99),1);assert.equal(interludeCountdown(lines,0,15),null);assert.equal(interludeCountdown(lines,0,3,2),6);
  assert.equal(interludeCountdown(lines,1,17),null);assert.equal(interludeCountdown(lines,2,30),15);assert.equal(interludeCountdown(lines,3,50),null);assert.equal(interludeCountdown(lines,4,63),null);assert.equal(interludeCountdown(lines,-1,0),null);assert.equal(interludeCountdown([{startMs:0,endMs:0},{startMs:20000,endMs:21000}],0,5),null);
 });
+
+import {exactSearchArtists} from '../src/model.mjs';
+test('exact search artist suggestion prefers verified individual credits and deduplicates IDs',()=>{
+ const tracks=[{artist:'Soldatov',title:'Other'},{artist:'Soldatov, Guest',artistCredits:[{name:'Soldatov',author_id:'42'},{name:'Guest',author_id:'43'}]},{artist:'Soldatov',artistCredits:[{name:'Soldatov',author_id:'42'}]},{artist:'Other',title:'Soldatov'}];
+ assert.deepEqual(exactSearchArtists('  SOLDATOV ',tracks),[{name:'Soldatov',author_id:'42'}]);assert.deepEqual(exactSearchArtists('Sold',tracks),[]);assert.deepEqual(exactSearchArtists('Guest',tracks),[{name:'Guest',author_id:'43'}]);assert.deepEqual(exactSearchArtists('Other title',[{artist:'Other',title:'Other title'}]),[]);assert.deepEqual(exactSearchArtists('soldatov',[{artist:'Soldatov'}]),[{name:'Soldatov'}]);assert.deepEqual(exactSearchArtists('Guest',[{artist:'Soldatov, Guest'}]),[]);
+});
