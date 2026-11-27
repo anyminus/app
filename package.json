@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --test tests/model.test.mjs",
+    "test": "node --test tests/model.test.mjs tests/face-mask.test.mjs",
     "test:e2e": "playwright test",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build -o dist/storybook"
+    "build-storybook": "storybook build -o dist/storybook",
+    "prebuild": "node scripts/prepare-face-models.mjs",
+    "predev": "node scripts/prepare-face-models.mjs"
   },
   "dependencies": {
     "signalsmith-stretch": "1.3.2",

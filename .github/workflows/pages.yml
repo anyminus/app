@@ -1,7 +1,7 @@
 name: Prototype CI and Pages
 on:
   push:
-    branches: [main]
+    branches: [main, prototype/face-masks]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -56,12 +56,17 @@ jobs:
           npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - run: npm run build-storybook
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/prototype/face-masks'
+        with:
+          name: face-mask-preview
+          path: dist
       - uses: actions/upload-pages-artifact@v3
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') || (github.ref == 'refs/heads/prototype/face-masks' && github.event_name == 'workflow_dispatch')
         with:
           path: dist
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') || (github.ref == 'refs/heads/prototype/face-masks' && github.event_name == 'workflow_dispatch')
     needs: build
     runs-on: ubuntu-24.04
     environment:

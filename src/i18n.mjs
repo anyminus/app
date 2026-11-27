@@ -1,6 +1,9 @@
 export const languages=[{code:'ru',name:'Русский'},{code:'en',name:'English'},{code:'de',name:'Deutsch'},{code:'es',name:'Español'},{code:'el',name:'Ελληνικά'}];
 export const languageKey='anyminus:language';
 const dictionary={
+ "Маска: ноты": ["Mask: notes","Maske: Noten","Máscara: notas","Μάσκα: νότες"],
+ "Загрузка маски…": ["Loading mask…","Maske wird geladen…","Cargando máscara…","Φόρτωση μάσκας…"],
+ "Маска недоступна. Запись без маски.": ["Mask unavailable. Recording without mask.","Maske nicht verfügbar. Aufnahme ohne Maske.","Máscara no disponible. Grabación sin máscara.","Η μάσκα δεν είναι διαθέσιμη. Εγγραφή χωρίς μάσκα."],
  "Главная": ["Home","Startseite","Inicio","Αρχική"],
  "Поиск": ["Search","Suche","Buscar","Αναζήτηση"],
  "Любимое": ["Favorites","Favoriten","Favoritos","Αγαπημένα"],
