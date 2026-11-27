@@ -96,3 +96,6 @@ body.karaoke-open .tab-bar{display:none}
 .karaoke-lyrics .lyric-text{display:block;transform-origin:left center;transform:scale(.75);transition:transform 480ms cubic-bezier(.18,.78,.24,1)}
 .karaoke-lyrics .lyric.current .lyric-text{transform:scale(1)}
 @media(prefers-reduced-motion:reduce){.karaoke-lyrics .lyric,.karaoke-lyrics .lyric-text{transition:none!important}}
+
+/* Plain lyrics are available, but without timing; warm accent in both themes. */
+.app{--lyrics-plain:#e1a56f}.app.light{--lyrics-plain:#a65b22}.track-ready.track-ready-plain{color:var(--lyrics-plain)}

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.5
+- Mark ready songs with confirmed unsynchronized lyrics as «Текст без таймкодов» in a muted orange theme accent; timed/unknown retain the ready label. Propagate optional stored format from catalog and popularity, refresh it when actual lyrics load.
+
 ## 0.4.4
 - Smooth timed karaoke lyric transitions with 75% inactive and 100% active text, left-anchored scale, damped spring-like scrolling and reduced-motion support.
 - Fix strict Playwright selector in the artist ID regression test (prior build blocked publication).

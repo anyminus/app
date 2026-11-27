@@ -10,7 +10,7 @@ import {effectiveVolume} from './mixer.mjs';
 import {formatTime} from './model.mjs';
 type Job={state:string;pairOperationId:string|null;retryable:boolean};
 type Line={text:string;startMs:number;endMs:number|null};
-type Props={telegramAuthorized:boolean;telegramBusy:boolean;telegramError:string;getTelegramToken:()=>string|null;onTelegramLogin:()=>void;onTelegramLogout:()=>void;lyricsSubscribed:boolean;onToggleLyricsSubscription:()=>void;onLyricsAvailable:()=>void;onBack:()=>void;track:LiveTrack;takeLaunch:(id:string)=>{id:string;audio:RemoteAudio|null}|null;onReady:(pair:string)=>void;liked:boolean;onLike:()=>void;onShare:()=>void;onArtist:(credit?:{author_id:string;name:string})=>void;onPlayed:()=>void;font:number;autoScroll:boolean;music:number;vocals:number;musicMuted:boolean;vocalsMuted:boolean;onMusic:(n:number)=>void;onVocals:(n:number)=>void;onToggleMusic:()=>void;onToggleVocals:()=>void};
+type Props={telegramAuthorized:boolean;telegramBusy:boolean;telegramError:string;getTelegramToken:()=>string|null;onTelegramLogin:()=>void;onTelegramLogout:()=>void;lyricsSubscribed:boolean;onToggleLyricsSubscription:()=>void;onLyricsAvailable:(format?:'TEXT'|'LRC')=>void;onBack:()=>void;track:LiveTrack;takeLaunch:(id:string)=>{id:string;audio:RemoteAudio|null}|null;onReady:(pair:string)=>void;liked:boolean;onLike:()=>void;onShare:()=>void;onArtist:(credit?:{author_id:string;name:string})=>void;onPlayed:()=>void;font:number;autoScroll:boolean;music:number;vocals:number;musicMuted:boolean;vocalsMuted:boolean;onMusic:(n:number)=>void;onVocals:(n:number)=>void;onToggleMusic:()=>void;onToggleVocals:()=>void};
 // Temporary owner-approved DEV rollback; restore after verified browser login.
 const TELEGRAM_CREATION_REQUIRED=false;
 const statusText:Record<string,string>={none:'Караоке ещё не создано',queued:'В очереди',running:'Обработка дорожек',ready:'Караоке готово',failed:'Обработка не удалась'};
@@ -44,7 +44,7 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  async function load(){attempts++;controller=new AbortController();const c=controller;const deadline=window.setTimeout(()=>c.abort(),18000);setLyricLoading(true);
  let retryable=false;
  try{const payload=await api!.storedLyrics(lyricPair,undefined,c.signal);if(disposed)return;const result=normalizeStoredLyrics(payload,Math.round(length*1000));
- if(result.lines.length||result.text){setLyrics(result.lines);setPlainLyrics(result.text);setLyricState('');setCanSubscribe(false);onLyricsAvailable();}
+ if(result.lines.length||result.text){setLyrics(result.lines);setPlainLyrics(result.text);setLyricState('');setCanSubscribe(false);onLyricsAvailable(result.lines.length?'LRC':'TEXT');}
  else if(result.state==='absent'){setCanSubscribe(true);setLyricState('Текст отсутствует в базе');}
  else if(result.state==='transient_error'){retryable=true;setCanSubscribe(true);setLyricState('Текст пока не готов');}
  else setLyricState('API не вернул строки или обычный текст');

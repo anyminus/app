@@ -15,3 +15,6 @@ GET /demo/artists/popular?name=… returns canonical artistId and optional nextC
 
 ## 0.4.3 artist identities
 New artist hashes use `#/artist/<encoded name>?author_id=<numeric SDK Artist.id>`. ID-qualified popularity requests use `artistId` from page one; share links preserve it. Search/popularity/metadata carry `artistCredits`, and missing legacy ready credits are looked up by track IDs (up to 20 at a time). Same-name artists with different IDs are not merged on ID-qualified routes; unresolved legacy names remain supported. No database schema change. Live acceptance pending.
+
+## 0.4.5 catalog lyrics format
+Optional `lyricsFormat: TEXT | LRC` on verified ready catalog and ready artist popularity rows. TEXT maps to “Текст без таймкодов” and the warm theme accent; LRC and unknown keep the previous readiness label. Not inferred from availability flags. Browser cache retains known format for the same ready pair; real loaded lyrics update the cached format. No per-track fetch on list rendering. Backend requires additive 0045 read-only receipt projection. Real acceptance pending.
