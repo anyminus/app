@@ -91,7 +91,7 @@ test('artist automatically loads every catalog page and displays all songs in ov
 test('missing lyrics can be subscribed to locally and notify when available on revisit',async({page})=>{
  const api=await mockApi(page);let available=false;
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:available?{state:'available',format:'LRC',timing:'line',lines:[{text:'Ready line',startMs:100,endMs:900,startOrigin:'source'}]}:{state:'absent',format:'LRC',timing:'none',lines:[]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
- await page.goto('/#/track/101');await expect(page.getByText('Текст отсутствует в базе',{exact:true})).toBeVisible();
+ await page.goto('/#/track/101');await expect(page.getByText('Текст отсутствует в базе',{exact:true})).toBeVisible();await expect(page.getByText('Нажмите на любую строку, чтобы перейти к ней',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Подписаться на обновление',exact:true}).click();await expect(page.getByRole('button',{name:'Вы подписаны · отменить'})).toBeVisible();expect(api.enqueued).toBe(0);
  await page.reload();await expect(page.getByRole('button',{name:'Вы подписаны · отменить'})).toBeVisible();
  available=true;await page.getByRole('button',{name:'Назад',exact:true}).click();

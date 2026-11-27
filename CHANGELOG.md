@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.3
+- Add a permanent, compact tap-to-seek hint above timed lyrics, including focus mode and long-intro countdown.
+
 ## 0.5.2
 - Notify all open app instances when a newer successfully published Pages version is detected; manual refresh or dismiss, without stopping playback.
 - Serve the upstream pitch AudioWorklet as an unbundled same-origin asset to avoid serialized/minified function startup failures.
