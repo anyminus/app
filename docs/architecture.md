@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## App viewport zoom policy (0.5.79)
+The app starts at 1x and declares minimum/maximum scale 1 and user-scalable=no in index.html. `src/zoomLock.ts` installs one global listener set before React mounts: cancel Safari pinch gestures, multi-touch movement, modified wheel and browser zoom keyboard shortcuts when cancelable. CSS defaults to pan-only touch action, preserves explicit drag/timeline behavior, and gives coarse-pointer text controls a minimum 16px font to avoid iOS focus zoom. Ordinary single-touch scroll, unmodified wheel and application lyric-size settings remain available. Browser menu zoom, preexisting browser zoom preferences and OS accessibility magnification cannot be reliably controlled by a web page. Regression: `tests/e2e/zoom-lock.spec.ts`; real iOS Safari acceptance is still required.
+
 The catalog, search, track metadata, karaoke status, audio and lyrics use the configured HTTPS API. No fictional content or generated audio in the runtime. Browser preferences and real track references are local until authenticated server synchronization is available. API errors are explicit. Design system uses semantic CSS variables and reusable components; the player uses one clock and two gain nodes.
 
 ## Karaoke line motion (0.4.4)

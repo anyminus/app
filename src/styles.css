@@ -244,3 +244,8 @@ body.karaoke-open .tab-bar{display:none}
 
 /* Compact recording trigger belongs to the header; recorder panels stay below it. */
 .karaoke-video-trigger-host{flex:none;display:flex;align-items:center}.karaoke-video-trigger-host:empty,.video-karaoke:empty{display:none}.karaoke-video-trigger-host .video-karaoke-trigger{display:flex;align-items:center;justify-content:center;width:44px;height:40px;padding:0;gap:3px;border-radius:10px;touch-action:manipulation}.karaoke-video-trigger-host .video-karaoke-trigger:disabled{opacity:.5;cursor:default}.karaoke-video-trigger-host .video-karaoke-trigger svg{flex:none}.karaoke-mix-tools>.mixer,.karaoke-mix-tools>.karaoke-pitch{background:transparent;box-shadow:none}
+
+/* App viewport: preserve one-finger scrolling and slider dragging, not page zoom. */
+:where(*){touch-action:pan-x pan-y}
+:where(input[type=range]){touch-action:none}
+@media (pointer:coarse){input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),textarea,select{font-size:16px!important}}

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.79
+- Lock page-level zoom at the initial 1x viewport across routes using viewport caps, pan-only touch action, Safari gesture and modified wheel/keyboard guards. Keep ordinary scrolling and range dragging. Avoid mobile input-focus zoom with 16px controls. Browser/OS accessibility zoom is outside page control; physical Safari verification remains necessary.
+
 ## 0.5.78
 - Show only the stored karaoke label in non-home ready track rows; remove redundant lyric-format line. Preserve the home plain-lyrics exception and uncreated-track availability/queue statuses.
 
