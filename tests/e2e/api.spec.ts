@@ -35,7 +35,7 @@ test('fresh search renders confirmed ready badges before selection and plays wit
  expect(api.requests.filter(p=>p.includes('/karaoke/status')||p==='/demo/auth')).toEqual([]);
  await rows.nth(0).getByRole('button',{name:'Ready from search',exact:true}).click();
  await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();
- expect(playbackBody).toEqual({pairOperationId:pair,providerTrackId:'101'});expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+ expect(playbackBody).toEqual({pairOperationId:pair,providerTrackId:'101',mediaTicket:true});expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
  expect(api.requests.filter(p=>p.includes('/karaoke/status')||p==='/demo/auth')).toEqual([]);
 });
 test('unknown search readiness retains status check on selection and does not create automatically',async({page})=>{

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.60
+- Align the exact ready-track playback contract assertion with the explicit mediaTicket opt-in; keep all behavioral checks. No runtime changes from 0.5.59.
+
 ## 0.5.59
 - Fix TypeScript inference for the optional media ticket argument in stored lyrics; keep cookie-independent download regression.
 - Constrain pitch/speed panels and stepper buttons with explicit shrinkable grid tracks and reset native button padding. Test seven viewport sizes and four label lengths.

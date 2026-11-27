@@ -257,3 +257,7 @@ New Telegram recipients cannot load any song while established users can. Produc
 
 ## Responsive stepper / CI correction (0.5.59)
 Owner screenshot: plus/minus overflow the pitch/speed cards on a narrow iPhone Safari viewport. Reset native button sizing and padding, explicitly shrink both nested grid tracks, wrap localized titles, constrain mixer input widths. Preserve existing portrait/landscape layout breakpoints and test panel containment and equal buttons across seven viewport sizes and four label lengths. CI 46054369680 failed TS2345 because JS optional default inferred undefined; annotate storedLyrics mediaTicket as optional string. No security changes. Physical Safari and current CI pending.
+
+
+## Playback contract CI correction (0.5.60)
+CI 46054667150: 115/116 E2E passed, including the new layout and cookie-free mock regression. The remaining assertion expected the old playback request body without mediaTicket:true; update exact expected request while retaining no-auth/no-status/no-enqueue checks. Production diagnostic 46055067935 independently confirmed opaque ticket issuance and both HTTP 206 range requests without cookies. Full frontend deployment and physical iPhone acceptance pending.
