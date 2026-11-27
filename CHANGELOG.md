@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4
+- Smooth timed karaoke lyric transitions with 75% inactive and 100% active text, left-anchored scale, damped spring-like scrolling and reduced-motion support.
+- Fix strict Playwright selector in the artist ID regression test (prior build blocked publication).
+
 ## 0.4.3
 - Artist deep links carry the verified Yandex `author_id` alongside the display name. Each credited artist has its own link; legacy catalog tracks resolve IDs lazily. ID-qualified ready lists require provider-verified membership; name-only legacy routes remain compatible.
 

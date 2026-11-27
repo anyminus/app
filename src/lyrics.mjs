@@ -5,3 +5,7 @@ export function normalizeStoredLyrics(payload,durationMs){
  return {state:payload.state,lines,text};
 }
 export function retryLyricsStatus(status){return status===0||status===408||status===429||status>=500}
+
+// Normalized critically damped spring-like curve. No overshoot, bounded 0..1.
+/** @param {number} progress */
+export function lyricScrollEase(progress){const t=Math.max(0,Math.min(1,progress));const curve=x=>1-(1+7*x)*Math.exp(-7*x);return t===0?0:t===1?1:curve(t)/curve(1)}

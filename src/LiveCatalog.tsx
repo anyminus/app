@@ -4,7 +4,7 @@ import {normalizeJob,mediaUrl} from './api.mjs';
 import {api,origin,coverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
 import {useSystemMedia} from './useSystemMedia';
-import {normalizeStoredLyrics,retryLyricsStatus} from './lyrics.mjs';
+import {normalizeStoredLyrics,retryLyricsStatus,lyricScrollEase} from './lyrics.mjs';
 import {Mixer,Artwork,IconButton,ArtistLinks} from './components';
 import {effectiveVolume} from './mixer.mjs';
 import {formatTime} from './model.mjs';
@@ -61,15 +61,40 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  const lyricRef=useRef<HTMLDivElement>(null);const [focus,setFocus]=useState(false);
  // Lock the page itself. Only the independent lyrics viewport may scroll.
  const playerVisible=playerReady||loadingAudio||job?.state==='ready';useLayoutEffect(()=>{if(!playerVisible)return;document.body.classList.add('karaoke-open');window.scrollTo(0,0);return()=>document.body.classList.remove('karaoke-open')},[playerVisible]);
+ const lyricFrame=useRef<number|null>(null);
+ function stopLyricMotion(){if(lyricFrame.current!==null){cancelAnimationFrame(lyricFrame.current);lyricFrame.current=null}}
  function centerLine(smooth:boolean){
-   const viewport=lyricRef.current, line=viewport?.querySelector<HTMLElement>('[data-active="true"]');
+   stopLyricMotion();
+   const viewport=lyricRef.current,line=viewport?.querySelector<HTMLElement>('[data-active="true"]');
    if(!viewport||!line)return;
+   // Measure the unscaled button, not the transformed text. Wrapped lines keep stable geometry.
    const delta=line.getBoundingClientRect().top-viewport.getBoundingClientRect().top+(line.offsetHeight-viewport.clientHeight)/2;
-   viewport.scrollTo({top:Math.max(0,viewport.scrollTop+delta),behavior:smooth&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches?'smooth':'instant'});
+   const target=Math.max(0,Math.min(viewport.scrollHeight-viewport.clientHeight,viewport.scrollTop+delta));
+   const from=viewport.scrollTop;
+   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+   if(!smooth||reduced.matches||Math.abs(target-from)<1){viewport.scrollTop=target;return}
+   const duration=480;
+   let started:number|null=null;
+   const tick=(now:number)=>{
+     if(!viewport.isConnected||reduced.matches){lyricFrame.current=null;if(viewport.isConnected)viewport.scrollTop=target;return}
+     if(started===null)started=now;
+     const progress=Math.min(1,(now-started)/duration);
+     viewport.scrollTop=from+(target-from)*lyricScrollEase(progress);
+     if(progress<1)lyricFrame.current=requestAnimationFrame(tick);
+     else{viewport.scrollTop=target;lyricFrame.current=null}
+   };
+   lyricFrame.current=requestAnimationFrame(tick);
  }
- useLayoutEffect(()=>{if(playerReady&&autoScroll)centerLine(false)},[playerReady,focus,lyrics,autoScroll,font]);
- useEffect(()=>{if(playerReady&&autoScroll)centerLine(true)},[active]);
- useEffect(()=>{const el=lyricRef.current;if(!playerReady||!autoScroll||!el||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>centerLine(false));observer.observe(el);return()=>observer.disconnect()},[playerReady,autoScroll]);
+ useLayoutEffect(()=>{if(playerReady&&autoScroll)centerLine(false);else stopLyricMotion()},[playerReady,focus,lyrics,autoScroll,font]);
+ useEffect(()=>{if(playerReady&&autoScroll)centerLine(true);return stopLyricMotion},[active,playerReady,autoScroll]);
+ useEffect(()=>{
+   const el=lyricRef.current;if(!playerReady||!autoScroll||!el)return;
+   let width=el.clientWidth,height=el.clientHeight;
+   const observer=typeof ResizeObserver==='undefined'?null:new ResizeObserver(()=>{if(width===el.clientWidth&&height===el.clientHeight)return;width=el.clientWidth;height=el.clientHeight;centerLine(false)});
+   observer?.observe(el);
+   el.addEventListener('wheel',stopLyricMotion,{passive:true});el.addEventListener('touchstart',stopLyricMotion,{passive:true});
+   return()=>{observer?.disconnect();el.removeEventListener('wheel',stopLyricMotion);el.removeEventListener('touchstart',stopLyricMotion);stopLyricMotion()};
+ },[playerReady,autoScroll]);
 
  // Use the same two-stem clock for the screen and operating-system controls.
  async function startPlayback(){const a=audio.current;if(!a||!playerReady||loadingAudio)return;try{if(a.playing)return;const version=selectionVersion.current;const m=mixerRef.current;a.setVolumes(effectiveVolume(m.music,m.musicMuted),effectiveVolume(m.vocals,m.vocalsMuted));await a.play();if(audio.current!==a||version!==selectionVersion.current)return;setError('');setPlaying(a.playing);setPosition(a.position);onPlayed()}catch(e){showError(e)}}
@@ -87,7 +112,7 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  <button className="icon-button karaoke-focus-toggle" type="button" aria-label={focus?'Показать плеер':'Только текст'} aria-pressed={focus} title={focus?'Обычный режим':'Полноэкранный текст'} onClick={()=>setFocus(v=>!v)}>{focus?<Minimize2 size={21}/>:<Maximize2 size={21}/>}</button>
  </header>
  <div className={'karaoke-lyrics'+(lyrics.length?' timed':'')} ref={lyricRef} aria-label="Текст песни" style={{'--lyric-size':font+'px'} as React.CSSProperties}>
- {lyrics.length?lyrics.map((l,i)=><button type="button" className={'lyric '+(i===active?'current':i<active?'past':'future')} data-active={i===active} aria-current={i===active?'true':undefined} key={i} onClick={()=>void seek(l.startMs/1000)}>{l.text}</button>):plainLyrics?<><p className="metadata">Текст без синхронизации</p><p className="plain-lyrics">{plainLyrics}</p></>:<div className="karaoke-lyrics-empty"><p className="metadata" role="status">{!playerReady?(error&&!loadingAudio?'Не удалось загрузить дорожки':'Загружаем дорожки…'):lyricState||'Загрузка текста…'}</p>{!playerReady&&error&&!loadingAudio&&<button className="secondary" onClick={()=>void openPlayer()}>Повторить загрузку дорожек</button>}{playerReady&&canSubscribe&&<><button className="secondary lyric-subscribe" aria-pressed={lyricsSubscribed} onClick={onToggleLyricsSubscription}><Bell size={18}/>{lyricsSubscribed?'Вы подписаны · отменить':'Подписаться на обновление'}</button><p className="metadata lyric-subscribe-note">{lyricsSubscribed?'Сообщим в ANYMINUS, когда текст появится. Проверка при открытом сайте.':'Уведомим в ANYMINUS, когда текст будет доступен.'}</p></>}{playerReady&&lyricState&&lyricState!=='Текст отсутствует в базе'&&<button className="text-button" disabled={lyricLoading} onClick={()=>setLyricRetry(n=>n+1)}>Повторить загрузку текста</button>}</div>}
+ {lyrics.length?lyrics.map((l,i)=><button type="button" className={'lyric '+(i===active?'current':i<active?'past':'future')} data-active={i===active} aria-current={i===active?'true':undefined} key={i} onClick={()=>void seek(l.startMs/1000)}><span className="lyric-text">{l.text}</span></button>):plainLyrics?<><p className="metadata">Текст без синхронизации</p><p className="plain-lyrics">{plainLyrics}</p></>:<div className="karaoke-lyrics-empty"><p className="metadata" role="status">{!playerReady?(error&&!loadingAudio?'Не удалось загрузить дорожки':'Загружаем дорожки…'):lyricState||'Загрузка текста…'}</p>{!playerReady&&error&&!loadingAudio&&<button className="secondary" onClick={()=>void openPlayer()}>Повторить загрузку дорожек</button>}{playerReady&&canSubscribe&&<><button className="secondary lyric-subscribe" aria-pressed={lyricsSubscribed} onClick={onToggleLyricsSubscription}><Bell size={18}/>{lyricsSubscribed?'Вы подписаны · отменить':'Подписаться на обновление'}</button><p className="metadata lyric-subscribe-note">{lyricsSubscribed?'Сообщим в ANYMINUS, когда текст появится. Проверка при открытом сайте.':'Уведомим в ANYMINUS, когда текст будет доступен.'}</p></>}{playerReady&&lyricState&&lyricState!=='Текст отсутствует в базе'&&<button className="text-button" disabled={lyricLoading} onClick={()=>setLyricRetry(n=>n+1)}>Повторить загрузку текста</button>}</div>}
  </div>
  <div className="karaoke-dock">
  <div className="karaoke-timeline"><div className="time-label"><span>{formatTime(position)}</span><span>{formatTime(length||((selected.durationMs??0)/1000))}</span></div><input disabled={!playerReady||loadingAudio} type="range" min="0" max={length} step=".1" value={position} aria-label="Позиция песни" style={{'--progress':(length?position/length*100:0)+'%'} as React.CSSProperties} onChange={e=>void seek(+e.target.value)}/></div>

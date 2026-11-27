@@ -13,3 +13,16 @@ test('karaoke fits the viewport, follows lyrics without page scroll, keeps contr
  await page.getByRole('button',{name:'Только текст',exact:true}).click();await fits(play);await fits(slider);await page.getByRole('button',{name:'Воспроизвести',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
  await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('navigation')).toBeVisible();await expect(page.locator('body')).not.toHaveClass(/karaoke-open/);
 });
+
+test('active lyric scales to 100 percent and inactive lyrics to 75 percent with smooth motion',async({page})=>{
+ await mockApi(page);await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,async r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:Array.from({length:7},(_,i)=>({text:'Motion line '+i,startMs:i*1000,endMs:(i+1)*1000,startOrigin:'source'}))},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
+ const lines=page.locator('.karaoke-lyrics .lyric');await expect(lines).toHaveCount(7);const slider=page.getByRole('slider',{name:'Позиция песни'});await slider.fill('0');await expect(lines.nth(0)).toHaveAttribute('aria-current','true');
+ const scale=(i:number)=>lines.nth(i).locator('.lyric-text').evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a);
+ await expect.poll(()=>scale(0)).toBeCloseTo(1,2);await expect.poll(()=>scale(1)).toBeCloseTo(.75,2);
+ expect(await lines.nth(0).locator('.lyric-text').evaluate(el=>getComputedStyle(el).transitionDuration)).not.toBe('0s');
+ await slider.fill('4');await expect(lines.nth(4)).toHaveAttribute('aria-current','true');await expect.poll(()=>scale(4)).toBeCloseTo(1,2);await expect.poll(()=>scale(0)).toBeCloseTo(.75,2);
+ await expect.poll(()=>page.locator('.karaoke-lyrics').evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.evaluate(()=>window.scrollY)).toBe(0);
+ await page.emulateMedia({reducedMotion:'reduce'});await slider.fill('2');await expect(lines.nth(2)).toHaveAttribute('aria-current','true');await expect.poll(()=>scale(2)).toBeCloseTo(1,2);await expect(lines.nth(2).locator('.lyric-text')).toHaveCSS('transition-duration','0s');
+});

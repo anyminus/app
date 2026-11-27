@@ -42,3 +42,6 @@ test('artist credit matching is exact, case and whitespace normalized, and inclu
 
 import {artistPath} from '../src/model.mjs';
 test('artist links keep unique provider IDs and old links remain readable',()=>{assert.equal(artistPath('Дельфин','42'),'/artist/'+encodeURIComponent('Дельфин')+'?author_id=42');assert.deepEqual(parseRoute('#'+artistPath('Дельфин','42')),{page:'artist',id:'Дельфин',author_id:'42'});assert.deepEqual(parseRoute('#/artist/Dolphin?author_id=bad'),{page:'artist',id:'Dolphin'});assert.notEqual(artistPath('Дельфин','42'),artistPath('Дельфин','43'));});
+
+import {lyricScrollEase} from '../src/lyrics.mjs';
+test('lyric spring scroll easing is bounded, monotone and exact at endpoints',()=>{assert.equal(lyricScrollEase(-1),0);assert.equal(lyricScrollEase(0),0);assert.equal(lyricScrollEase(1),1);assert.equal(lyricScrollEase(2),1);let prev=0;for(let i=1;i<=100;i++){const v=lyricScrollEase(i/100);assert.ok(v>=prev&&v<=1);prev=v}assert.ok(lyricScrollEase(.5)>.5)});

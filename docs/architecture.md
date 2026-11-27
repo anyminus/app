@@ -1,3 +1,6 @@
 # Frontend architecture
 
 The catalog, search, track metadata, karaoke status, audio and lyrics use the configured HTTPS API. No fictional content or generated audio in the runtime. Browser preferences and real track references are local until authenticated server synchronization is available. API errors are explicit. Design system uses semantic CSS variables and reusable components; the player uses one clock and two gain nodes.
+
+## Karaoke line motion (0.4.4)
+The audio clock and active-line selection are unchanged. Timed lyrics use a 100% visual scale for the active line, 75% for every other line, left-anchored inner text transforms, and 480 ms eased transitions. Button layout remains fixed so wrapping and scroll geometry do not jump. Automatic centering uses a normalized critically damped spring-like requestAnimationFrame curve over 480 ms (inspired by https://animejs.com/easing-editor/spring/default, without a new runtime dependency). New active lines retarget from the actual scroll position; unmount, disabled autoscroll, wheel and touch cancel pending scroll. Resize/focus changes center without animation. Reduced-motion preferences disable transitions and use immediate centering. Plain unsynchronized lyrics, click-to-seek and audio/lyrics synchronization are unchanged. Browser tests cover scale, scroll isolation and reduced motion.
