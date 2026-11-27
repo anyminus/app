@@ -1,3 +1,4 @@
+import {t as trUi} from './i18n.mjs';
 import {useEffect,useRef,useState} from 'react';
 import {apiOrigin,createDemoApi,normalizeTracks,normalizeArtistCredits,normalizeJob,ApiError} from './api.mjs';
 import {trackArtworkUrl} from './artwork.mjs';
@@ -42,12 +43,12 @@ export function useCatalog(query:string|null,artist:string|null=null,authorId?:s
    }else if(matches.length)setItems(old=>[...old,...matches]);
    const candidate=page.nextCursor;
    if(candidate===null||candidate===undefined)break;
-   if(typeof candidate!=='string'||!isTrackId(candidate)||seen.has(candidate))throw Error('Некорректная пагинация каталога');
+   if(typeof candidate!=='string'||!isTrackId(candidate)||seen.has(candidate))throw Error(trUi('Некорректная пагинация каталога'));
    seen.add(candidate);next=candidate;
   }while(true);
  }
- useEffect(()=>{const c=new AbortController();ctrl.current=c;moreBusy.current=false;seenHomeCursors.current.clear();homeSeed.current=query===null&&artist===null?crypto.randomUUID():undefined;const seed=homeSeed.current;setItems([]);setCursor(null);setError('');if(artist===null&&query!==null&&query.trim().length<2){setLoading(false);return()=>{c.abort();ctrl.current?.abort()}}setLoading(true);const t=window.setTimeout(async()=>{try{if(artist!==null){await loadArtist(c.signal);return}const r=query===null?await api.catalog(null,c.signal,seed):await api.search(query,c.signal);if(!c.signal.aborted){setItems(normalizeTracks(r,query===null));setCursor(query===null&&typeof r.nextCursor==='string'?r.nextCursor:null);}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(!c.signal.aborted)setLoading(false)}},artist!==null||query===null?0:650);return()=>{clearTimeout(t);c.abort();ctrl.current?.abort()}},[query,artist,authorId,retry]);
- async function more(){if(artist!==null||query!==null||!cursor||loading||moreBusy.current)return;moreBusy.current=true;const seed=homeSeed.current;const c=new AbortController();ctrl.current=c;setLoading(true);setError('');try{const r=await api.catalog(cursor,c.signal,seed);if(!c.signal.aborted){setItems(old=>{const seen=new Set(old.map(t=>t.providerTrackId));return [...old,...(normalizeTracks(r,true) as LiveTrack[]).filter(t=>{if(seen.has(t.providerTrackId))return false;seen.add(t.providerTrackId);return true})]});seenHomeCursors.current.add(cursor);const next=typeof r.nextCursor==='string'&&isTrackId(r.nextCursor)&&!seenHomeCursors.current.has(r.nextCursor)?r.nextCursor:null;setCursor(next)}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:'API недоступен')}finally{if(ctrl.current===c){moreBusy.current=false;if(!c.signal.aborted)setLoading(false)}}}
+ useEffect(()=>{const c=new AbortController();ctrl.current=c;moreBusy.current=false;seenHomeCursors.current.clear();homeSeed.current=query===null&&artist===null?crypto.randomUUID():undefined;const seed=homeSeed.current;setItems([]);setCursor(null);setError('');if(artist===null&&query!==null&&query.trim().length<2){setLoading(false);return()=>{c.abort();ctrl.current?.abort()}}setLoading(true);const t=window.setTimeout(async()=>{try{if(artist!==null){await loadArtist(c.signal);return}const r=query===null?await api.catalog(null,c.signal,seed):await api.search(query,c.signal);if(!c.signal.aborted){setItems(normalizeTracks(r,query===null));setCursor(query===null&&typeof r.nextCursor==='string'?r.nextCursor:null);}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:trUi('API недоступен'))}finally{if(!c.signal.aborted)setLoading(false)}},artist!==null||query===null?0:650);return()=>{clearTimeout(t);c.abort();ctrl.current?.abort()}},[query,artist,authorId,retry]);
+ async function more(){if(artist!==null||query!==null||!cursor||loading||moreBusy.current)return;moreBusy.current=true;const seed=homeSeed.current;const c=new AbortController();ctrl.current=c;setLoading(true);setError('');try{const r=await api.catalog(cursor,c.signal,seed);if(!c.signal.aborted){setItems(old=>{const seen=new Set(old.map(t=>t.providerTrackId));return [...old,...(normalizeTracks(r,true) as LiveTrack[]).filter(t=>{if(seen.has(t.providerTrackId))return false;seen.add(t.providerTrackId);return true})]});seenHomeCursors.current.add(cursor);const next=typeof r.nextCursor==='string'&&isTrackId(r.nextCursor)&&!seenHomeCursors.current.has(r.nextCursor)?r.nextCursor:null;setCursor(next)}}catch(e){if(!c.signal.aborted)setError(e instanceof Error?e.message:trUi('API недоступен'))}finally{if(ctrl.current===c){moreBusy.current=false;if(!c.signal.aborted)setLoading(false)}}}
  return {items,cursor,error,loading,retry:()=>setRetry(v=>v+1),more};
 }
 function transient(e:unknown){return e instanceof ApiError&&(e.status===0||e.status===408||[500,502,503,504].includes(e.status))}
@@ -70,29 +71,29 @@ async function providerMetadata(id:string,signal:AbortSignal):Promise<LiveTrack>
  const auth=await api.auth(signal);
  const raw=await api.metadata(id,auth.accessToken,signal);
  const match=normalizeTracks({items:[{...raw,providerTrackId:id}]})[0] as LiveTrack|undefined;
- if(!match||!match.title.trim()||!match.artist.trim())throw Error('Метаданные песни недоступны');
+ if(!match||!match.title.trim()||!match.artist.trim())throw Error(trUi('Метаданные песни недоступны'));
  return match;
 }
 export async function recoverTrackMetadata(id:string,signal:AbortSignal):Promise<LiveTrack>{
- if(!isTrackId(id))throw Error('Песня не найдена');
+ if(!isTrackId(id))throw Error(trUi('Песня не найдена'));
  // Prefer the stored catalog; the provider is a fallback.
  try{const track=await findCatalogTrack(id,signal);if(track)return track}catch(e){if(signal.aborted||e instanceof ApiError&&e.status===429)throw e}
  return providerMetadata(id,signal);
 }
 export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrack>{
- if(!isTrackId(id))throw Error('Песня не найдена');
+ if(!isTrackId(id))throw Error(trUi('Песня не найдена'));
  let catalogUnavailable=false;
  try{const ready=await findCatalogTrack(id,signal);if(ready)return ready}catch(e){if(signal.aborted||e instanceof ApiError&&e.status===429)throw e;catalogUnavailable=true}
  // Session creation is safe to retry once for a transient gateway failure,
  // but never retry a rate limit or enqueue a karaoke job here.
  const auth=await retryRead(()=>api.auth(signal),signal);
- if(!auth||typeof auth!=='object'||!('accessToken' in auth)||typeof auth.accessToken!=='string')throw Error('Не удалось авторизоваться');
+ if(!auth||typeof auth!=='object'||!('accessToken' in auth)||typeof auth.accessToken!=='string')throw Error(trUi('Не удалось авторизоваться'));
  const accessToken=auth.accessToken;
  try{
   const meta=await retryRead(()=>api.metadata(id,accessToken,signal),signal);
   const track=normalizeTracks({items:[{...meta,providerTrackId:id}]})[0] as LiveTrack|undefined;
   if(track&&track.title.trim()&&track.artist.trim())return track;
-  throw Error('Метаданные песни недоступны');
+  throw Error(trUi('Метаданные песни недоступны'));
  }catch(e){
   if(signal.aborted)throw e;
   if(e instanceof ApiError&&![0,404,408,429,500,502,503,504].includes(e.status))throw e;
@@ -104,7 +105,7 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
   if(catalogUnavailable)try{fromCatalog=await findCatalogTrack(id,signal)}catch(cause){if(signal.aborted)throw cause}
   if(signal.aborted)throw signal.reason;
   const duration=Number(raw.durationSeconds);
-  return {providerTrackId:id,title:fromCatalog?.title??'Караоке',artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog,coverUrl:fromCatalog?.coverUrl??null};
+  return {providerTrackId:id,title:fromCatalog?.title??trUi('Караоке'),artist:fromCatalog?.artist??'',durationMs:fromCatalog?.durationMs??(Number.isFinite(duration)&&duration>0?Math.round(duration*1000):null),pairOperationId:job.pairOperationId,metadataUnavailable:!fromCatalog,coverUrl:fromCatalog?.coverUrl??null};
  }
 }
 
@@ -117,18 +118,18 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
   async function load(c:AbortController,artistName:string,previous:ArtistPopularResult){
    if(c.signal.aborted||busy.current)return;
    busy.current=true;setResult({...previous,error:'',loading:true});
-   const deadline=window.setTimeout(()=>{if(active.current===c&&!c.signal.aborted){c.abort();busy.current=false;setResult({...previous,error:'Время ожидания популярных песен истекло',loading:false})}},20000);
+   const deadline=window.setTimeout(()=>{if(active.current===c&&!c.signal.aborted){c.abort();busy.current=false;setResult({...previous,error:trUi('Время ожидания популярных песен истекло'),loading:false})}},20000);
    try{
     const cursor=previous.cursor;
     const payload=await api.artistPopular(artistName,c.signal,previous.artistId??authorId,cursor??undefined);
-    if(!isTrackId(payload.artistId)||((previous.artistId??authorId)&&(previous.artistId??authorId)!==payload.artistId))throw Error('Некорректный ответ артиста');
+    if(!isTrackId(payload.artistId)||((previous.artistId??authorId)&&(previous.artistId??authorId)!==payload.artistId))throw Error(trUi('Некорректный ответ артиста'));
     const seen=new Set(previous.items.map(t=>t.providerTrackId));
     const items=(normalizeTracks(payload) as LiveTrack[]).filter(t=>{if(seen.has(t.providerTrackId))return false;seen.add(t.providerTrackId);return true});
     const next=payload.nextCursor;
-    if(next!==undefined&&next!==null&&(typeof next!=='string'||!['20','40','60','80'].includes(next)||Number(next)!==Number(cursor??0)+20))throw Error('Некорректная пагинация артиста');
+    if(next!==undefined&&next!==null&&(typeof next!=='string'||!['20','40','60','80'].includes(next)||Number(next)!==Number(cursor??0)+20))throw Error(trUi('Некорректная пагинация артиста'));
     if(!c.signal.aborted&&active.current===c)setResult({name:artistName,artistId:payload.artistId,items:[...previous.items,...items],cursor:typeof next==='string'?next:null,error:'',loading:false});
    }catch(e){
-    if(!c.signal.aborted&&active.current===c)setResult({...previous,error:e instanceof ApiError&&[404,501].includes(e.status)?'Популярные песни пока недоступны: требуется обновление API.':e instanceof Error?e.message:'Не удалось загрузить популярные песни',loading:false});
+    if(!c.signal.aborted&&active.current===c)setResult({...previous,error:e instanceof ApiError&&[404,501].includes(e.status)?trUi('Популярные песни пока недоступны: требуется обновление API.'):e instanceof Error?e.message:trUi('Не удалось загрузить популярные песни'),loading:false});
    }finally{clearTimeout(deadline);if(active.current===c)busy.current=false}
   }
   useEffect(()=>{

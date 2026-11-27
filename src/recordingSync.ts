@@ -1,3 +1,4 @@
+import {t as trUi} from './i18n.mjs';
 export type SyncMode='auto'|'manual'|'off';
 export type SyncSettings={mode:SyncMode;manualMs:number};
 export type AudioDiagnostics={micLabel:string;inputMs:number|null;baseMs:number|null;outputMs:number|null;sampleRate:number|null;micRate:number|null;channels:number|null;sinkId:string|null};
@@ -7,7 +8,7 @@ export function boundedDelay(ms:number){return Number.isFinite(ms)?Math.max(0,Ma
 export function readAudioDiagnostics(ctx:AudioContext|null,track?:MediaStreamTrack):AudioDiagnostics{
  let s:MediaTrackSettings&{latency?:number}={};try{s=track?.getSettings()??{};}catch{}
  const sink=(ctx as (AudioContext&{sinkId?:unknown})|null)?.sinkId;
- return {micLabel:track?.label||'Не определён',inputMs:validMs(s.latency),baseMs:validMs(ctx?.baseLatency),outputMs:validMs(ctx?.outputLatency),sampleRate:ctx?.sampleRate??null,micRate:s.sampleRate??null,channels:s.channelCount??null,sinkId:typeof sink==='string'&&sink!==''&&sink!=='default'&&sink!=='communications'?sink:null};
+ return {micLabel:track?.label||trUi('Не определён'),inputMs:validMs(s.latency),baseMs:validMs(ctx?.baseLatency),outputMs:validMs(ctx?.outputLatency),sampleRate:ctx?.sampleRate??null,micRate:s.sampleRate??null,channels:s.channelCount??null,sinkId:typeof sink==='string'&&sink!==''&&sink!=='default'&&sink!=='communications'?sink:null};
 }
 export function resolveDelay(settings:SyncSettings,info:AudioDiagnostics){
  if(settings.mode==='off')return 0;

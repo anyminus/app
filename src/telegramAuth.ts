@@ -1,3 +1,4 @@
+import {t as trUi} from './i18n.mjs';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {api} from './catalog';
 type WebApp={initData?:string;ready?:()=>void;openTelegramLink?:(url:string)=>void};
@@ -8,7 +9,7 @@ let sdk:Promise<void>|null=null;
 function loadSdk(){
  if(webApp())return Promise.resolve();
  if(!sdk)sdk=new Promise<void>((resolve,reject)=>{
-  const script=document.createElement('script');script.src='https://telegram.org/js/telegram-web-app.js?65';script.async=true;script.onload=()=>resolve();script.onerror=()=>{sdk=null;script.remove();reject(Error('Не удалось загрузить Telegram'))};document.head.appendChild(script);
+  const script=document.createElement('script');script.src='https://telegram.org/js/telegram-web-app.js?65';script.async=true;script.onload=()=>resolve();script.onerror=()=>{sdk=null;script.remove();reject(Error(trUi('Не удалось загрузить Telegram')))};document.head.appendChild(script);
  });
  return sdk;
 }
@@ -33,7 +34,7 @@ export function useTelegramAuth(){
   const task=(async()=>{try{
    const response=await api.telegram(initData,c.signal);
    if(c.signal.aborted||generation.current!==version)return;
-   if(!validSession(response))throw Error('Некорректный ответ авторизации');
+   if(!validSession(response))throw Error(trUi('Некорректный ответ авторизации'));
    // Display name is read only after the backend accepted the signed initData. It never grants permissions.
    let name='Telegram';let start='';
    try{const params=new URLSearchParams(initData),user=JSON.parse(params.get('user')||'{}');name=[user.first_name,user.last_name].filter(v=>typeof v==='string').join(' ').trim().slice(0,100)||'Telegram';start=params.get('start_param')||''}catch{}
@@ -41,7 +42,7 @@ export function useTelegramAuth(){
    ref.current=next;setSession(next);
    if(!location.hash.startsWith('#/')&&/^track_\d{1,20}$/.test(start))location.hash='#/track/'+start.slice(6);
    else if(!location.hash.startsWith('#/')&&start==='profile')location.hash='#/profile';
-  }catch(e){if(generation.current===version){ref.current=null;setSession(null);setError(e instanceof Error&&'status' in e&&e.status===401?'Telegram не подтвердил вход. Откройте мини-приложение заново.':'Не удалось войти через Telegram. Попробуйте ещё раз.')}}
+  }catch(e){if(generation.current===version){ref.current=null;setSession(null);setError(e instanceof Error&&'status' in e&&e.status===401?trUi('Telegram не подтвердил вход. Откройте мини-приложение заново.'):trUi('Не удалось войти через Telegram. Попробуйте ещё раз.'))}}
   finally{clearTimeout(timer);if(generation.current===version)setBusy(false)}
   })();inflight.current=task;try{await task}finally{if(inflight.current===task)inflight.current=null}
  },[]);
@@ -57,7 +58,7 @@ export function useTelegramAuth(){
    for(const key of ['code','state','error','error_description','iss','session_state'])clean.searchParams.delete(key);
    history.replaceState(history.state,'',clean.pathname+clean.search+clean.hash);
    if(!pending||!code||!state||state!==pending.state||typeof pending.verifier!=='string'||!Number.isFinite(pending.expires)||pending.expires<=Date.now()){
-    setError('Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.');location.hash=safeHash(pending?.returnHash);return;
+    setError(trUi('Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.'));location.hash=safeHash(pending?.returnHash);return;
    }
    const version=generation.current,c=new AbortController();controller.current=c;setBusy(true);
    const timer=window.setTimeout(()=>c.abort(),18000);
@@ -65,10 +66,10 @@ export function useTelegramAuth(){
    void (async()=>{try{
     const response=await api.telegramExchange(code,state,pending!.verifier,c.signal);
     if(c.signal.aborted||version!==generation.current)return;
-    if(!validSession(response))throw Error('Некорректный ответ авторизации');
+    if(!validSession(response))throw Error(trUi('Некорректный ответ авторизации'));
     const next={token:response.accessToken,expires:Date.now()+response.expiresIn*1000,name:typeof response.name==='string'?response.name.slice(0,100)||'Telegram':'Telegram'};
     ref.current=next;setSession(next);
-   }catch{if(version===generation.current)setError('Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.')}
+   }catch{if(version===generation.current)setError(trUi('Не удалось подтвердить вход через Telegram. Попробуйте ещё раз.'))}
    finally{clearTimeout(timer);if(version===generation.current){setBusy(false);location.hash=returnHash}}})();
    return;
   }
@@ -77,7 +78,7 @@ export function useTelegramAuth(){
   void loadSdk().then(()=>{if(cancelled)return;webApp()?.ready?.();const data=webApp()?.initData;if(data)void authenticate(data)}).catch(()=>{});
   return()=>{cancelled=true};
  },[authenticate]);
- useEffect(()=>{if(!session)return;const t=window.setTimeout(()=>{if(ref.current===session){ref.current=null;setSession(null);setError('Сессия истекла. Войдите через Telegram снова.')}},Math.max(0,session.expires-Date.now()));return()=>clearTimeout(t)},[session]);
+ useEffect(()=>{if(!session)return;const t=window.setTimeout(()=>{if(ref.current===session){ref.current=null;setSession(null);setError(trUi('Сессия истекла. Войдите через Telegram снова.'))}},Math.max(0,session.expires-Date.now()));return()=>clearTimeout(t)},[session]);
  async function login(trackId?:string){
   if(busy)return;
   setError('');
@@ -91,10 +92,10 @@ export function useTelegramAuth(){
    const result=await api.telegramStart(challenge,c.signal);
    if(c.signal.aborted||version!==generation.current)return;
    const url=new URL(result.url);
-   if(url.origin!=='https://oauth.telegram.org'||url.pathname!=='/auth'||url.username||url.password||url.hash||typeof result.state!=='string'||!result.state||url.searchParams.get('state')!==result.state||url.searchParams.get('code_challenge')!==challenge||url.searchParams.get('code_challenge_method')!=='S256'||url.searchParams.get('redirect_uri')!==CALLBACK||!Number.isFinite(result.expiresIn)||result.expiresIn<=0||result.expiresIn>600)throw Error('Некорректный ответ Telegram');
+   if(url.origin!=='https://oauth.telegram.org'||url.pathname!=='/auth'||url.username||url.password||url.hash||typeof result.state!=='string'||!result.state||url.searchParams.get('state')!==result.state||url.searchParams.get('code_challenge')!==challenge||url.searchParams.get('code_challenge_method')!=='S256'||url.searchParams.get('redirect_uri')!==CALLBACK||!Number.isFinite(result.expiresIn)||result.expiresIn<=0||result.expiresIn>600)throw Error(trUi('Некорректный ответ Telegram'));
    const pending:Pending={state:result.state,verifier,returnHash:trackId&&/^\d{1,20}$/.test(trackId)?'#/track/'+trackId:'#/profile',expires:Date.now()+result.expiresIn*1000};
    sessionStorage.setItem(PENDING,JSON.stringify(pending));location.assign(url.href);
-  }catch(e){if(version===generation.current)setError(e instanceof Error&&'status' in e&&e.status===503?'Вход через Telegram пока не настроен.':'Не удалось открыть вход через Telegram. Попробуйте ещё раз.')}
+  }catch(e){if(version===generation.current)setError(e instanceof Error&&'status' in e&&e.status===503?trUi('Вход через Telegram пока не настроен.'):trUi('Не удалось открыть вход через Telegram. Попробуйте ещё раз.'))}
   finally{clearTimeout(timer);if(version===generation.current)setBusy(false)}
  }
  return {session,busy,error,login,logout,getToken};

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.46
+- Localize interface in Russian, English, German and Spanish; detect device language automatically and persist explicit selection in Profile. Keep song titles, artists and lyrics unchanged.
+
 ## 0.5.45
 - Show exact artist matches above search songs, deduplicated by verified artist ID, with case-insensitive matching and direct artist navigation.
 

@@ -1,3 +1,4 @@
+import {t as trUi} from './i18n.mjs';
 // Bytes stay only in the current player; no persistent or shared media cache.
 const LIMIT=19000000,IDLE_MS=45000;
 export type DownloadPhase='connecting'|'loading'|'waiting'|'retrying'|'done'|'decoding';
@@ -5,7 +6,7 @@ export type StemProgress={received:number;total:number|null;phase:DownloadPhase}
 export type DownloadProgress={stems:StemProgress[];phase:DownloadPhase};
 type Stem={parts:Uint8Array<ArrayBuffer>[];received:number;total:number|null;done:boolean;phase:DownloadPhase};
 const available=()=>!document.hidden&&navigator.onLine!==false;
-const check=(signal:AbortSignal)=>{if(signal.aborted)throw signal.reason??new DOMException('Отменено','AbortError')};
+const check=(signal:AbortSignal)=>{if(signal.aborted)throw signal.reason??new DOMException(trUi('Отменено'),'AbortError')};
 class PermanentError extends Error{}
 function wait(ms:number,signal:AbortSignal){return new Promise<void>((resolve,reject)=>{check(signal);const finish=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);resolve()};const abort=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);reject(signal.reason)};const timer=window.setTimeout(finish,ms);signal.addEventListener('abort',abort,{once:true})})}
 export async function waitForForeground(signal:AbortSignal){
@@ -38,7 +39,7 @@ export class StemDownload {
    const tasks=this.stems.map((stem,i)=>this.download(stem,this.urls[i],group.signal,emit,renew).catch(e=>{if(!group.signal.aborted){firstError=e;group.abort(e)}throw e}));
    const outcomes=await Promise.allSettled(tasks);check(signal);
    if(firstError!==undefined)throw firstError;
-   if(outcomes.some(o=>o.status==='rejected'))throw Error('Загрузка прервана');
+   if(outcomes.some(o=>o.status==='rejected'))throw Error(trUi('Загрузка прервана'));
    clearTimeout(timer);publish(this.snapshot('decoding'));
    return this.stems.map(s=>{const bytes=new Uint8Array(s.received);let offset=0;for(const part of s.parts){bytes.set(part,offset);offset+=part.byteLength}return bytes});
   }finally{clearTimeout(timer);signal.removeEventListener('abort',abort);group.abort()}
@@ -59,40 +60,40 @@ export class StemDownload {
    if(signal.aborted)cancel();background();
    let reader:ReadableStreamDefaultReader<Uint8Array>|undefined;
    try{
-    if(needsRenew){await renew();needsRenew=false;check(signal);if(attempt.signal.aborted)throw Error('Загрузка приостановлена')}
+    if(needsRenew){await renew();needsRenew=false;check(signal);if(attempt.signal.aborted)throw Error(trUi('Загрузка приостановлена'))}
     arm();const offset=s.received;s.phase=offset?'retrying':'loading';emit(true);
     const res=await fetch(url,{credentials:'include',cache:'no-store',redirect:'error',signal:attempt.signal,...(offset?{headers:{Range:'bytes='+offset+'-'}}:{})});
-    if(!res.ok||!res.body){await res.body?.cancel().catch(()=>{});if(res.status===416&&offset&&s.total===offset){reset(s);throw Error('Проверяем полноту дорожки повторно')}if(res.status>=400&&res.status<500&&![401,403,404,408,429].includes(res.status))throw new PermanentError('Дорожка недоступна (HTTP '+res.status+')');throw Error('Сервер не отдал дорожку (HTTP '+res.status+')')}
+    if(!res.ok||!res.body){await res.body?.cancel().catch(()=>{});if(res.status===416&&offset&&s.total===offset){reset(s);throw Error(trUi('Проверяем полноту дорожки повторно'))}if(res.status>=400&&res.status<500&&![401,403,404,408,429].includes(res.status))throw new PermanentError(trUi('Дорожка недоступна (HTTP ')+res.status+')');throw Error(trUi('Сервер не отдал дорожку (HTTP ')+res.status+')')}
     reader=res.body.getReader();
     let expectedEnd:number|null=null;
     const lengthValue=res.headers.get('content-length');const size=lengthValue&&/^\d+$/.test(lengthValue)?Number(lengthValue):null;
     if(res.status===206){
      const match=res.headers.get('content-range')?.match(/^bytes (\d+)-(\d+)\/(\d+)$/);
-     if(!match)throw new PermanentError('Сервер вернул неверный диапазон дорожки');
+     if(!match)throw new PermanentError(trUi('Сервер вернул неверный диапазон дорожки'));
      const [from,to,total]=match.slice(1).map(Number);
-     if(from!==offset||to<from||to>=total||!Number.isSafeInteger(total)||total>LIMIT||(size!==null&&size!==to-from+1)||(s.total!==null&&s.total!==total)){reset(s);throw new PermanentError('Размер или диапазон дорожки изменился. Повторите загрузку.')}
+     if(from!==offset||to<from||to>=total||!Number.isSafeInteger(total)||total>LIMIT||(size!==null&&size!==to-from+1)||(s.total!==null&&s.total!==total)){reset(s);throw new PermanentError(trUi('Размер или диапазон дорожки изменился. Повторите загрузку.'))}
      s.total=total;expectedEnd=to+1;
     }else if(res.status===200){
      // Server ignored Range; discard old prefix, never append a full response.
      if(offset)reset(s);s.total=size;expectedEnd=size;
-     if(size!==null&&(!Number.isSafeInteger(size)||size<=0||size>LIMIT))throw new PermanentError('Дорожка превышает допустимый размер 19 МБ');
-    }else throw new PermanentError('Некорректный ответ сервера');
+     if(size!==null&&(!Number.isSafeInteger(size)||size<=0||size>LIMIT))throw new PermanentError(trUi('Дорожка превышает допустимый размер 19 МБ'));
+    }else throw new PermanentError(trUi('Некорректный ответ сервера'));
     s.phase='loading';emit(true);
     while(true){
-     arm();const chunk=await reader.read();check(signal);if(attempt.signal.aborted)throw Error('Загрузка прервана');if(chunk.done)break;
+     arm();const chunk=await reader.read();check(signal);if(attempt.signal.aborted)throw Error(trUi('Загрузка прервана'));if(chunk.done)break;
      const next=s.received+chunk.value.byteLength;
-     if(next>LIMIT||(expectedEnd!==null&&next>expectedEnd)){reset(s);throw new PermanentError('Некорректный размер дорожки')}
+     if(next>LIMIT||(expectedEnd!==null&&next>expectedEnd)){reset(s);throw new PermanentError(trUi('Некорректный размер дорожки'))}
      if(chunk.value.byteLength){s.parts.push(new Uint8Array(chunk.value));s.received=next;failures=0;emit()}
     }
-    if(expectedEnd!==null&&s.received!==expectedEnd)throw Error('Дорожка получена не полностью');
+    if(expectedEnd!==null&&s.received!==expectedEnd)throw Error(trUi('Дорожка получена не полностью'));
     if(s.total!==null&&s.received<s.total){failures=0;continue}
-    if(!s.received)throw Error('Пустая дорожка');s.total=s.received;s.done=true;s.phase='done';emit(true);
+    if(!s.received)throw Error(trUi('Пустая дорожка'));s.total=s.received;s.done=true;s.phase='done';emit(true);
    }catch(e){
     check(signal);
     if(e instanceof PermanentError)throw e;
     needsRenew=true;
     if(paused||!available()){s.phase='waiting';emit(true);continue}
-    failures++;if(failures>=4)throw Error('Связь прервана. Повторите загрузку — полученные данные сохранены.');
+    failures++;if(failures>=4)throw Error(trUi('Связь прервана. Повторите загрузку — полученные данные сохранены.'));
     s.phase='retrying';emit(true);
    }finally{clearTimeout(timer);attempt.abort();signal.removeEventListener('abort',cancel);document.removeEventListener('visibilitychange',background);window.removeEventListener('offline',background);if(reader){void reader.cancel().catch(()=>{});reader.releaseLock()}}
   }
