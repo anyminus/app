@@ -297,3 +297,7 @@ Dedicated /demo/artist-artwork/<canonical ID> route and independent cache; lazy 
 
 ## Lyrics presentation and artist navigation (0.5.69)
 Owner requested four UI changes. Confirmed NONE hides creation/login CTA and guards enqueue; original playback remains. Unknown provider capability remains distinct from confirmed NONE. Immediate adjacent lyrics use full active font size, remote lines retain 75%; interlude neighbors retain full size. Existing normal-player intro eligibility (>10 s) unchanged; numeric seconds appear as first lyric row, no visible labels; video countdown unchanged. Artist tabs popular then ready, default ready retained for new artists; persist per artist identity/name up to 100 selections in local storage. No backend or storage mutations. Updated Playwright assertions for prior stale readiness bug, neighbors, numeric countdown and restored tab. CI pending.
+
+
+## Artist default tab (0.5.70)
+Owner clarified that Popular songs is the default for artists without a saved selection. Existing explicit choices remain authoritative; switching artists does not carry another artist's tab choice. Updated browser regression tests to verify first visit, return, reload, and independent artist selection. No backend changes.

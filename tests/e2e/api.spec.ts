@@ -50,7 +50,7 @@ test('unknown search readiness retains status check on selection and does not cr
 test('artist pages find ready songs beyond the first catalog page and include collaborations',async({page})=>{
  const api=await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';const cursors:string[]=[];
  await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>{const c=new URL(r.request().url()).searchParams.get('cursor');cursors.push(c??'first');return r.fulfill({json:{items:c?[{providerTrackId:'102',title:'Solo',artist:'ДЕЛЬФИН',durationSeconds:8,pairOperationId:pair,lyricsFormat:'LRC'},{providerTrackId:'103',title:'Collaboration',artist:'Другой, Дельфин',durationSeconds:8,pairOperationId:pair,lyricsFormat:'LRC'},{providerTrackId:'104',title:'Wrong artist',artist:'Дельфинчик',durationSeconds:8,pairOperationId:pair}]:[{providerTrackId:'101',title:'Unrelated',artist:'Other artist',durationSeconds:8,pairOperationId:pair}],nextCursor:c?null:'101'},headers:{'Access-Control-Allow-Origin':'*'}})});
- await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await expect(page.locator('.track-row')).toHaveCount(2);await expect(page.getByRole('button',{name:'Solo',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Collaboration',exact:true})).toBeVisible();await expect(page.getByText('Текст с таймкодами',{exact:true})).toHaveCount(2);expect(cursors).toEqual(['first','101']);
+ await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await page.getByRole('button',{name:'Готовые караоке',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(2);await expect(page.getByRole('button',{name:'Solo',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Collaboration',exact:true})).toBeVisible();await expect(page.getByText('Текст с таймкодами',{exact:true})).toHaveCount(2);expect(cursors).toEqual(['first','101']);
  await page.getByRole('button',{name:'Collaboration',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();expect(api.media).toBe(2);expect(api.enqueued).toBe(0);expect(api.requests).not.toContain('/demo/karaoke/status');
 });
 
@@ -58,9 +58,7 @@ test('artist tabs separate ready database tracks and SDK popularity order',async
  const api=await mockApi(page);const pair='00000000-0000-4000-8000-000000000001';let popularCalls=0;
  await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'101',title:'Ready song',artist:'Дельфин',durationSeconds:8,pairOperationId:pair}],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
  await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>{popularCalls++;expect(new URL(r.request().url()).searchParams.get('name')).toBe('Дельфин');return r.fulfill({json:{artistId:'42',name:'Дельфин',nextCursor:null,items:[{providerTrackId:'102',title:'Most popular',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'unknown'}},{providerTrackId:'101',title:'Ready song',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:pair}},{providerTrackId:'103',title:'Popular only',artist:'Дельфин',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:pair}}]},headers:{'Access-Control-Allow-Origin':'*'}})});
- await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await expect(page.getByRole('button',{name:'Ready song',exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'Популярные песни',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Обзор',exact:true})).toHaveCount(0);expect(popularCalls).toBe(0);
- await page.getByRole('button',{name:'Популярные песни',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(3);
+ await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await expect(page.getByRole('button',{name:'Популярные песни',exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('button',{name:'Обзор',exact:true})).toHaveCount(0);await expect(page.locator('.track-row')).toHaveCount(3);
  await expect(page.locator('.track-row').nth(0).getByRole('button',{name:'Most popular',exact:true})).toBeVisible();await expect(page.locator('.track-row').nth(1).getByRole('button',{name:'Ready song',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Готовые караоке',exact:true}).click();await expect(page.locator('.track-row')).toHaveCount(1);await expect(page.getByRole('button',{name:'Popular only',exact:true})).toHaveCount(0);
  expect(api.requests).not.toContain('/demo/search');expect(popularCalls).toBe(1);
@@ -69,8 +67,7 @@ test('artist tabs separate ready database tracks and SDK popularity order',async
 
 test('unreleased popularity API shows a clear error, not search results',async({page})=>{
  const api=await mockApi(page);await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>r.fulfill({status:404,json:{},headers:{'Access-Control-Allow-Origin':'*'}}));
- await page.goto('/#/artist/'+encodeURIComponent('Test artist'));await expect(page.getByRole('button',{name:'Test song one',exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Популярные песни',exact:true}).click();await expect(page.getByRole('alert')).toContainText('требуется обновление API');await expect(page.locator('.track-row')).toHaveCount(0);expect(api.requests).not.toContain('/demo/search');
+ await page.goto('/#/artist/'+encodeURIComponent('Test artist'));await expect(page.getByRole('button',{name:'Популярные песни',exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('alert')).toContainText('требуется обновление API');await expect(page.locator('.track-row')).toHaveCount(0);await page.getByRole('button',{name:'Готовые караоке',exact:true}).click();await expect(page.getByRole('button',{name:'Test song one',exact:true})).toBeVisible();expect(api.requests).not.toContain('/demo/search');
 });
 
 test('artist automatically loads every catalog page and displays all songs in overview',async({page})=>{
@@ -80,7 +77,7 @@ test('artist automatically loads every catalog page and displays all songs in ov
   return r.fulfill({json:{items:[{providerTrackId:String(2000+i),title:'Artist song '+i,artist:'Дельфин',durationSeconds:8,pairOperationId:pair}],nextCursor:i<11?String(1001+i):null},headers:{'Access-Control-Allow-Origin':'*'}});
  });
  await page.route(/^https:\/\/[^/]+\/demo\/search(?:\?|$)/,r=>r.fulfill({json:{items:[],nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
- await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));
+ await page.goto('/#/artist/'+encodeURIComponent('Дельфин'));await page.getByRole('button',{name:'Готовые караоке',exact:true}).click();
  await expect(page.locator('.track-row')).toHaveCount(12);
  await expect(page.getByRole('button',{name:'Artist song 11',exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Загрузить ещё',exact:true})).toHaveCount(0);
@@ -191,6 +188,6 @@ test('artist tab order and last selected tab survive track navigation and reload
  await page.route(/^https:\/\/[^/]+\/demo\/karaoke\/status(?:\?|$)/,r=>r.fulfill({json:{state:'none'},headers}));
  await page.goto('/#/artist/Test?author_id=42');
  const tabs=page.locator('.artist-tabs button');await expect(tabs.nth(0)).toHaveText('Популярные песни');await expect(tabs.nth(1)).toHaveText('Готовые караоке');
- await tabs.nth(0).click();await page.getByRole('button',{name:'Popular song',exact:true}).click();await expect(page.getByText('Караоке ещё не создано')).toBeVisible();await page.getByRole('button',{name:'Назад',exact:true}).click();
- await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('button',{name:'Popular song',exact:true})).toBeVisible();await page.reload();await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');
+ await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');await page.getByRole('button',{name:'Popular song',exact:true}).click();await expect(page.getByText('Караоке ещё не создано')).toBeVisible();await page.getByRole('button',{name:'Назад',exact:true}).click();
+ await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('button',{name:'Popular song',exact:true})).toBeVisible();await tabs.nth(1).click();await expect(tabs.nth(1)).toHaveAttribute('aria-pressed','true');await page.reload();await expect(tabs.nth(1)).toHaveAttribute('aria-pressed','true');await page.goto('/#/artist/Other?author_id=43');await expect(tabs.nth(0)).toHaveAttribute('aria-pressed','true');
 });

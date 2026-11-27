@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.70
+- Open popular songs by default for new artist pages; retain explicitly selected ready/popular tab per artist. Update regression tests.
+
 ## 0.5.69
 - Hide karaoke creation for confirmed provider NONE and explain future lyrics support; guard enqueue. Keep immediate previous/next lyrics at active font size, preserve colors. Intro countdown is an ordinary numeric lyric row in seconds. Swap artist tabs and persist last choice per artist. Fix obsolete search-ready test fixture.
 
