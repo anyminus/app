@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.51
+- Correct autoplay regression fixture to use distinct immutable media pair IDs per song; verify separate downloads for distinct pairs and cache reuse on reopening the first song. No audio runtime changes.
+
 ## 0.5.50
 - Add bounded IndexedDB stem cache, persist partial checkpoints and completed stems across reloads, retain fresh playback authorization, show cached bytes and profile cache clearing.
 
