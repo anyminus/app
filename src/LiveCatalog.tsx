@@ -31,7 +31,7 @@ export function LiveCatalog({telegramAuthorized,telegramBusy,telegramError,getTe
  if(c.signal.aborted||version!==selectionVersion.current)return;
  if(keepQueued&&next.state==='none'){poll(t,key,c,version);return}
  setJob(next);setError('');
- if(next.state==='ready'&&next.pairOperationId){setResolvedFormat(next.lyricsFormat??(t.pairOperationId===next.pairOperationId?t.lyricsFormat:undefined));onReady(next.pairOperationId,next.lyricsFormat);await openPlayer(next.pairOperationId,audio.current)}
+ if(next.state==='ready'&&next.pairOperationId){setResolvedFormat(next.lyricsFormat!==undefined?next.lyricsFormat:(t.pairOperationId===next.pairOperationId?t.lyricsFormat:undefined));onReady(next.pairOperationId,next.lyricsFormat);await openPlayer(next.pairOperationId,audio.current)}
  else if(next.state==='queued'||next.state==='running')poll(t,key,c,version);
  else releaseAudio();
  }

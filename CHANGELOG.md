@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.13
+- Stop labeling unverified lyrics as synchronized; honor explicit server unknown and preserve confirmed plain or absent labels.
+
 ## 0.5.12
 - Label unprepared songs with timed lyrics as «Создать караоке» in track lists.
 

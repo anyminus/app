@@ -1,6 +1,6 @@
 import type {Page} from '@playwright/test';
 export const pair='00000000-0000-4000-8000-000000000001';
-export const songs=[{providerTrackId:'101',title:'Test song one',artist:'Test artist',durationSeconds:8,pairOperationId:pair},{providerTrackId:'102',title:'Test song two',artist:'Test artist',durationSeconds:8,pairOperationId:pair},{providerTrackId:'103',title:'Test song three',artist:'Other artist',durationSeconds:8,pairOperationId:pair}];
+export const songs=[{providerTrackId:'101',title:'Test song one',artist:'Test artist',durationSeconds:8,pairOperationId:pair,lyricsFormat:'LRC'},{providerTrackId:'102',title:'Test song two',artist:'Test artist',durationSeconds:8,pairOperationId:pair,lyricsFormat:'LRC'},{providerTrackId:'103',title:'Test song three',artist:'Other artist',durationSeconds:8,pairOperationId:pair,lyricsFormat:'LRC'}];
 export async function mockApi(page:Page,telegram:'guest'|'accepted'|'rejected'='guest'){
  await page.route('https://telegram.org/js/telegram-web-app.js?65',r=>r.fulfill({body:'',contentType:'application/javascript'}));
  if(telegram!=='guest')await page.addInitScript(()=>{Object.defineProperty(window,'Telegram',{value:{WebApp:{initData:'user='+encodeURIComponent(JSON.stringify({id:42,first_name:'Test Telegram'}))+'&hash=test-only',ready:()=>{}}},configurable:true})});

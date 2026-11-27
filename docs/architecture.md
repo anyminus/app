@@ -67,3 +67,6 @@ The player share sheet captures the current source position as whole seconds whe
 
 ## Catalog creation label (0.5.12)
 For non-ready track rows with confirmed provider LRC, display «Создать караоке» instead of «Текст с таймкодами», using the existing accent/status styling. This is a label only; opening a track still leads to the explicit creation action. The detail preview keeps the actual lyrics format. Ready, plain, absent and unknown labels are unchanged. Search and popular regression assertions updated. No API changes.
+
+## Verified lyric status labels (0.5.13)
+Only explicit LRC gives the ready lyric label; TEXT and NONE retain orange/red; unknown format displays muted «Формат текста уточняется» while stems remain playable. The API now uses null for authoritative unknown; normalization and cache merging preserve explicit null rather than resurrecting stale prior labels. Legacy omitted fields are not a proof of synchronization. Existing non-ready provider hints remain distinct. Update fixture confirmed formats and add regressions for unknown and stale cache. Backend backfill and verification changes documented in Core. No audio or creation changes.

@@ -144,3 +144,6 @@ body.karaoke-open .tab-bar{display:none}
 .karaoke-transport{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:4px}.transport-side{display:flex;align-items:center;justify-content:space-between;min-width:0;gap:2px}.karaoke-transport .transport-side .icon-button{flex:1 1 0;min-width:0;max-width:44px;width:auto;padding:0}.transport-right{justify-content:space-between}@media(orientation:landscape) and (max-height:650px){.karaoke-transport{gap:2px}.karaoke-transport .transport-side .icon-button{max-width:38px}.transport-side{gap:0}}
 
 .karaoke-wait-note{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:var(--card);max-width:100%;color:var(--muted);font-size:12px;line-height:1.45}.karaoke-wait-note>svg{flex:none;color:var(--accent);margin-top:1px}.karaoke-wait-note strong{display:block;color:var(--accent);font-size:13px;font-weight:650;margin-bottom:3px}.karaoke-wait-note p{margin:0}
+
+/* Audio readiness alone is not proof that synchronized lyrics exist. */
+.track-ready-unverified{color:var(--muted);font-weight:500}
