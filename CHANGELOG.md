@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.58
+- Opt into opaque short-lived playback tickets for cold browser sessions, pass only in media request headers, renew on download retry; preserve cookie compatibility and cached bytes. Add cookie-independent regression.
+
 ## 0.5.57
 - Bound provider metadata and ready-status requests independently so stalled metadata cannot consume the entire shared-song lookup deadline; keep verified ready fallback and no automatic enqueue. Add a regression and targeted read-only production diagnostic.
 

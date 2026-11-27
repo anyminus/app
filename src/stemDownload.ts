@@ -23,6 +23,8 @@ function reset(s:Stem){s.parts=[];s.received=0;s.total=null;s.done=false;s.cache
 export class StemDownload {
  readonly urls:string[];
  private stems:Stem[];private restored=false;
+ private mediaTicket:string|undefined;
+ setMediaTicket(ticket:unknown){this.mediaTicket=typeof ticket==='string'&&ticket.length<=8192&&/^v1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]+$/.test(ticket)?ticket:undefined;}
  constructor(urls:string[]){this.urls=[...urls];this.stems=urls.map(()=>({parts:[],received:0,total:null,done:false,phase:'connecting',cached:0,saved:0,savedAt:0,writing:false,write:Promise.resolve()}));}
  matches(urls:string[]){return urls.length===this.urls.length&&urls.every((u,i)=>u===this.urls[i])}
  async clear(){await Promise.all(this.stems.map((s,i)=>this.discard(s,this.urls[i])));}
@@ -71,7 +73,7 @@ export class StemDownload {
    try{
     if(needsRenew){await renew();needsRenew=false;check(signal);if(attempt.signal.aborted)throw Error(trUi('Загрузка приостановлена'))}
     arm();const offset=s.received;s.phase=offset?'retrying':'loading';emit(true);
-    const res=await fetch(url,{credentials:'include',cache:'no-store',redirect:'error',signal:attempt.signal,...(offset?{headers:{Range:'bytes='+offset+'-'}}:{})});
+    const res=await fetch(url,{credentials:'include',cache:'no-store',redirect:'error',signal:attempt.signal,headers:{...(offset?{Range:'bytes='+offset+'-'}:{}),...(this.mediaTicket?{'X-AnyMinus-Media-Ticket':this.mediaTicket}:{})}});
     if(!res.ok||!res.body){await res.body?.cancel().catch(()=>{});if(res.status===416&&offset&&s.total===offset){await this.discard(s,url);throw Error(trUi('Проверяем полноту дорожки повторно'))}if(res.status>=400&&res.status<500&&![401,403,404,408,429].includes(res.status))throw new PermanentError(trUi('Дорожка недоступна (HTTP ')+res.status+')');throw Error(trUi('Сервер не отдал дорожку (HTTP ')+res.status+')')}
     reader=res.body.getReader();
     let expectedEnd:number|null=null;

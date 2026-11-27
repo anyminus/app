@@ -110,3 +110,27 @@ test('slow provider metadata cannot block a verified ready track',async({page})=
   expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
  }finally{release()}
 });
+
+test('cold shared link downloads both stems without relying on browser cookies',async({page})=>{
+ const api=await mockApi(page);
+ const ticket='v1.abcdefghijklmnop.testOpaqueTicket';
+ let playback=0;const requested:string[]=[];
+ const cors=(origin:string)=>({'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Credentials':'true','Access-Control-Allow-Headers':'content-type,authorization,x-anyminus-media-ticket,range','Access-Control-Allow-Methods':'GET,POST,OPTIONS'});
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/playback$/,async route=>{
+  const req=route.request(),headers=cors(req.headers().origin||'http://127.0.0.1:4173');
+  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers});
+  playback++;const body=req.postDataJSON();expect(body.mediaTicket).toBe(true);
+  const pair=body.pairOperationId;
+  await route.fulfill({headers,json:{pairOperationId:pair,durationSeconds:8,instrumental:'/demo/catalog/media/'+pair+'/instrumental',vocals:'/demo/catalog/media/'+pair+'/vocals',mediaTicket:ticket,mediaTicketExpiresIn:300}});
+ });
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/(instrumental|vocals)$/,async route=>{
+  const req=route.request(),headers=cors(req.headers().origin||'http://127.0.0.1:4173');
+  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers});
+  expect(req.headers()['x-anyminus-media-ticket']).toBe(ticket);
+  requested.push(req.url().split('/').at(-1)!);
+  return route.fallback();
+ });
+ await page.goto('/#/track/101');
+ await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:20000});
+ expect(playback).toBe(1);expect(requested.sort()).toEqual(['instrumental','vocals']);expect(api.media).toBe(2);expect(api.enqueued).toBe(0);
+});

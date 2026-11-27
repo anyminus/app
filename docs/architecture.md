@@ -249,3 +249,7 @@ CI 46050147159 compiled and passed 112/113 E2E. Live toggle test failed because 
 
 ## Shared track incident (0.5.57)
 Owner reports track 108591168 stopped working. Main 0.5.56 CI/deploy succeeded; iOS branch isolated. Direct live HTTP inaccessible from editing environment, root cause unconfirmed. Identified failure mode: provider metadata can hang until the 30s outer deadline and prevent verified ready-status fallback. Bound metadata and status reads to 6.5s each with local cancellation; keep single retry for quick transient failures, no retry of rate limits, and no job creation on route lookup. Add synthetic stalled-provider regression and non-blocking exact-ID read-only probe (anonymous session creation only; no enqueue, no token/body logging). Live acceptance still required.
+
+
+## Cookie-independent playback (0.5.58)
+New Telegram recipients cannot load any song while established users can. Production probe for 108591168 found both 4,154,140-byte objects accessible with the signed cookie. Hypothesis: third-party cookie denial plus existing clients' local stem cache. Frontend asks for optional opaque short-lived ticket, keeps it in memory only and sends X-AnyMinus-Media-Ticket on stem and lyrics fetches. Ticket is not persisted, never included in URL or cache key. Refresh replaces it when the verified pair and media URLs remain unchanged. Cookie fallback remains for older servers; actual iPhone acceptance and server deployment verification required.
