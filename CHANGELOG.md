@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.27
+- Increase all composited video text sizes by 20% except the watermark; animate sequential lyric changes with upward movement, size and color interpolation and fading. Explicit seeks snap immediately.
+- Avoid the unrelated Microsoft apt repository during Playwright dependency installation after runner HTTP 403.
+
 ## 0.5.26
 - Restore the mixer button in video mode. Adjust or mute both accompaniment stems during preview and active recording without restarting capture.
 

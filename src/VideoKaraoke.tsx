@@ -1,10 +1,10 @@
 import {useEffect,useImperativeHandle,useLayoutEffect,useRef,useState,type RefObject,type Ref} from 'react';
 import {Video,Square,Download,X,Share2} from 'lucide-react';
 import {RemoteAudio,playbackSession} from './RemoteAudio';
-import {drawKaraokeFrame,overlaySupported,type TimedLine} from './videoOverlay';
+import {drawKaraokeFrame,overlaySupported,resetVideoMotion,type TimedLine} from './videoOverlay';
 type Phase='idle'|'permission'|'preview'|'starting'|'recording'|'finishing'|'result';
 export type VideoTransport={toggle:()=>void};
-type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];playing:boolean;title:string;artist:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
+type Props={ref:Ref<VideoTransport>;onTransportReady:(ready:boolean)=>void;audio:RefObject<RemoteAudio|null>;lyrics:readonly TimedLine[];seekRevision:RefObject<number>;playing:boolean;title:string;artist:string;disabled:boolean;onMode:(active:boolean)=>void;onPrepare:()=>Promise<void>;onStart:()=>Promise<boolean|undefined>;onStop:()=>void};
 const mp4=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
 function appleMobile(){return /iPhone|iPad|iPod/i.test(navigator.platform)||(/Mac/i.test(navigator.platform)&&navigator.maxTouchPoints>1)||(/Apple/i.test(navigator.vendor)&&/iPhone|iPad|iPod/i.test(navigator.userAgent));}
 function mp4Available(){try{return typeof MediaRecorder==='function'&&(typeof MediaRecorder.isTypeSupported!=='function'||mp4.some(type=>MediaRecorder.isTypeSupported(type)));}catch{return false;}}
@@ -36,7 +36,7 @@ export function VideoKaraoke(props:Props){
  const showOverlay=phase==='preview'?includeLyrics&&canOverlay:recordOverlay;
  const latest=useRef(props);latest.current=props;
  const mounted=useRef(false),generation=useRef(0),camera=useRef<MediaStream|null>(null),preview=useRef<HTMLVideoElement|null>(null),recorder=useRef<MediaRecorder|null>(null),mix=useRef<Awaited<ReturnType<RemoteAudio['createRecordingMix']>>|null>(null),url=useRef(''),chunks=useRef<Blob[]>([]),bytes=useRef(0),stopReason=useRef(''),starting=useRef(false);
- function releaseCanvas(){canvasStream.current?.getTracks().forEach(t=>t.stop());canvasStream.current=null;}
+ function releaseCanvas(){resetVideoMotion(canvas.current);canvasStream.current?.getTracks().forEach(t=>t.stop());canvasStream.current=null;}
  function release(){releaseCanvas();mix.current?.close();mix.current=null;camera.current?.getTracks().forEach(t=>t.stop());camera.current=null;playbackSession();}
  function clearResult(){shareAttempt.current++;shareBusy.current=false;setSharing(false);setShareHint('');if(url.current)URL.revokeObjectURL(url.current);url.current='';setResult(null);}
  function finish(reason=''){if(reason)stopReason.current=reason;const r=recorder.current;if(r&&r.state!=='inactive'){setPhase('finishing');r.stop();latest.current.onStop();}}
@@ -47,9 +47,9 @@ export function VideoKaraoke(props:Props){
  useEffect(()=>{const video=preview.current,stream=camera.current;if(video&&stream&&video.srcObject!==stream){video.srcObject=stream;void video.play().catch(()=>{});}},[phase]);
  useEffect(()=>{if(phase==='recording'&&!props.playing)finish();},[phase,props.playing]);
  useEffect(()=>{
-  if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing'))return;
+  if(!showOverlay||!(phase==='preview'||phase==='starting'||phase==='recording'||phase==='finishing')){resetVideoMotion(canvas.current);return;}
   let raf=0,last=-Infinity;
-  function tick(now:number){if(now-last>=1000/24-2){last=now;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{drawKaraokeFrame(cv,vid,p.lyrics,p.audio.current?.position??0,{title:p.title,artist:p.artist});}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
+  function tick(now:number){if(now-last>=1000/24-2){last=now;const cv=canvas.current,vid=preview.current,p=latest.current;if(cv&&vid)try{drawKaraokeFrame(cv,vid,p.lyrics,p.audio.current?.position??0,{title:p.title,artist:p.artist},undefined,p.seekRevision.current,now,p.playing&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches);}catch{/* temporary missing camera frame */}}raf=requestAnimationFrame(tick);}
   raf=requestAnimationFrame(tick);return()=>cancelAnimationFrame(raf);
  },[showOverlay,phase]);
  useEffect(()=>{const hidden=()=>{if(!document.hidden)return;if(recorder.current?.state==='recording')finish('Запись остановлена: приложение свернули.');else if(camera.current){cancel();setError('Камера отключена: приложение свернули.');}};document.addEventListener('visibilitychange',hidden);return()=>document.removeEventListener('visibilitychange',hidden);},[]);
@@ -79,13 +79,13 @@ export function VideoKaraoke(props:Props){
     if(!cv||!vid)throw Error('Предпросмотр камеры недоступен.');
     // Permission resolution is not proof that a decoded camera frame exists.
     const deadline=performance.now()+2500;
-    while(!drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist})){
+    while(!drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false)){
      if(!mounted.current||generation.current!==id||camera.current!==source)return;
      if(performance.now()>=deadline)throw Error('Камера не передала первый кадр. Повторите запуск записи.');
      await new Promise<void>(resolve=>window.setTimeout(resolve,50));
     }
     if(!mounted.current||generation.current!==id||camera.current!==source)return;
-    try{canvasStream.current=cv.captureStream(24);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist});}
+    try{canvasStream.current=cv.captureStream(24);videoTracks=canvasStream.current.getVideoTracks();if(!videoTracks.some(t=>t.readyState==='live'))throw Error('Canvas track unavailable');drawKaraokeFrame(cv,vid,latest.current.lyrics,props.audio.current?.position??0,{title:latest.current.title,artist:latest.current.artist},undefined,latest.current.seekRevision.current,performance.now(),false);}
     catch{releaseCanvas();setOverlayFailed(true);setIncludeLyrics(false);throw Error('Наложение текста недоступно в этом браузере. Можно записать видео без текста.');}
     for(const track of videoTracks)track.addEventListener('ended',()=>{if(mounted.current&&recorder.current?.state==='recording')finish('Видеопоток с текстом прерван.');},{once:true});
    }

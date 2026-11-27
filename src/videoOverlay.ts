@@ -1,4 +1,5 @@
 import {classicVideoTemplate,type VideoTemplate} from './videoTemplate';
+import {lyricScrollEase} from './lyrics.mjs';
 export type VideoMetadata={title:string;artist:string};
 export type TimedLine={text:string;startMs:number;endMs:number|null};
 
@@ -20,15 +21,26 @@ function layout(ctx:CanvasRenderingContext2D,text:string,width:number,base:numbe
  if(rows.length>2){rows=rows.slice(0,2);while(rows[1]&&ctx.measureText(rows[1]+'…').width>width)rows[1]=rows[1].slice(0,-1);rows[1]+='…';}
  return {size:Math.max(size,Math.floor(base*.65)),rows,weight};
 }
-export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement,lines:readonly TimedLine[],seconds:number,metadata:VideoMetadata,template:VideoTemplate=classicVideoTemplate){
+type Motion={lines:readonly TimedLine[];index:number;previous:number;started:number;revision:number;seconds:number;now:number};
+const motionByCanvas=new WeakMap<HTMLCanvasElement,Motion>();
+export function resetVideoMotion(canvas:HTMLCanvasElement|null){if(canvas)motionByCanvas.delete(canvas);}
+function blendColor(a:string,b:string,t:number){if(!/^#[0-9a-f]{6}$/i.test(a)||!/^#[0-9a-f]{6}$/i.test(b))return t<.5?a:b;const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return 'rgb('+[16,8,0].map(shift=>Math.round(((x>>shift)&255)*(1-t)+((y>>shift)&255)*t)).join(',')+')';}
+export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement,lines:readonly TimedLine[],seconds:number,metadata:VideoMetadata,template:VideoTemplate=classicVideoTemplate,revision=0,now=performance.now(),animate=true){
  if(video.readyState<2||!video.videoWidth||!video.videoHeight)return false;
  const scale=Math.min(1,1280/Math.max(video.videoWidth,video.videoHeight));
  const w=Math.max(2,Math.round(video.videoWidth*scale/2)*2),h=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
- if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+ if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;resetVideoMotion(canvas);}
  const context=canvas.getContext('2d');if(!context)return false;const ctx:CanvasRenderingContext2D=context;
  ctx.drawImage(video,0,0,w,h);
  let index=-1;for(let i=0;i<lines.length&&lines[i].startMs<=seconds*1000;i++)index=i;
- const current=lines[index]?.text??'',next=lines[index+1]?.text??'';
+ let motion=motionByCanvas.get(canvas);
+ const duration=Math.max(0,template.lyrics.transitionMs);
+ if(!motion||motion.lines!==lines||motion.revision!==revision||seconds<motion.seconds-.05||seconds-motion.seconds>Math.max(.25,(now-motion.now)/1000*2.5+.15)||!animate||duration===0){
+  motion={lines,index,previous:index,started:now,revision,seconds,now};motionByCanvas.set(canvas,motion);
+ }else if(motion.index!==index){motion.previous=index===motion.index+1?motion.index:index;motion.index=index;motion.started=now;}
+ motion.seconds=seconds;motion.now=now;
+ const progress=motion.previous===index?1:lyricScrollEase(Math.min(1,Math.max(0,(now-motion.started)/duration)));
+ if(progress===1)motion.previous=index;
  const unit=Math.min(w,h),margin=Math.max(1,Math.round(unit*template.margin)),gap=Math.max(1,Math.round(unit*template.gap)),width=Math.max(1,w-margin*2);
  const font=(weight:number,size:number)=>weight+' '+size+'px '+template.fontFamily;
  const x=(align:CanvasTextAlign)=>align==='left'?margin:align==='right'?w-margin:w/2;
@@ -42,15 +54,34 @@ export function drawKaraokeFrame(canvas:HTMLCanvasElement,video:HTMLVideoElement
  const headerShade=ctx.createLinearGradient(0,0,0,headerEnd+margin);headerShade.addColorStop(0,'rgba(0,0,0,'+template.header.shadeOpacity+')');headerShade.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=headerShade;ctx.fillRect(0,0,w,headerEnd+margin);
  singleLine(metadata.title,titleSize,750,template.header.titleColor,template.header.align,margin);
  singleLine(metadata.artist,artistSize,500,template.header.artistColor,template.header.align,margin+titleSize*1.25+gap/2);
- const a=layout(ctx,current,width,Math.max(1,Math.round(unit*template.lyrics.currentSize)),750,template.fontFamily),b=layout(ctx,next,width,Math.max(1,Math.round(unit*template.lyrics.nextSize)),550,template.fontFamily);
- const aStep=a.size*1.23,bStep=b.size*1.24,total=a.rows.length*aStep+b.rows.length*bStep+(a.rows.length&&b.rows.length?gap:0);
- const markY=h-margin-markSize*1.2,bottom=markY-gap,top=bottom-total-margin;
- const shade=ctx.createLinearGradient(0,Math.max(0,top-margin*2),0,h);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.4,'rgba(0,0,0,.65)');shade.addColorStop(1,'rgba(0,0,0,'+template.lyrics.shadeOpacity+')');
- ctx.fillStyle=shade;ctx.fillRect(0,Math.max(0,top-margin*2),w,h);
+ const markY=h-margin-markSize*1.2,bottom=markY-gap;
+ const activeSize=Math.max(1,Math.round(unit*template.lyrics.currentSize)),nextSize=Math.max(1,Math.round(unit*template.lyrics.nextSize));
+ const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
+ const line=(i:number,size:number,weight:number)=>layout(ctx,lines[i]?.text??'',width,Math.max(1,Math.round(size)),Math.round(weight),template.fontFamily);
+ const height=(item:ReturnType<typeof layout>)=>item.rows.length*item.size*1.24;
+ const pairGap=(a:ReturnType<typeof layout>,b:ReturnType<typeof layout>)=>a.rows.length&&b.rows.length?gap:0;
+ const active=line(index,activeSize,750),next=line(index+1,nextSize,550);
+ const activeY=bottom-height(next)-pairGap(active,next)-height(active);
+ const nextY=bottom-height(next);
+ const prior=line(index-1,activeSize,750),small=line(index,nextSize,550);
+ const oldNextY=bottom-height(small);
+ const oldTop=oldNextY-pairGap(prior,small)-height(prior);
+ const moving=progress<1;
+ const current=moving?line(index,lerp(nextSize,activeSize,progress),lerp(550,750,progress)):active;
+ const outgoing=moving?line(index-1,lerp(activeSize,nextSize,progress),lerp(750,550,progress)):prior;
+ const currentY=moving?lerp(oldNextY,activeY,progress):activeY;
+ const outgoingY=currentY-height(outgoing)-pairGap(outgoing,current);
+ const incomingY=moving?Math.max(nextY,currentY+height(current)+pairGap(current,next)):nextY;
+ const clipTop=Math.max(headerEnd,Math.min(activeY,moving?Math.min(oldTop,outgoingY):activeY)-margin*2);
+ const shade=ctx.createLinearGradient(0,Math.max(0,clipTop-margin),0,h);shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.4,'rgba(0,0,0,.65)');shade.addColorStop(1,'rgba(0,0,0,'+template.lyrics.shadeOpacity+')');
+ ctx.fillStyle=shade;ctx.fillRect(0,Math.max(0,clipTop-margin),w,h);
+ ctx.save();ctx.beginPath();ctx.rect(0,clipTop,w,Math.max(0,bottom-clipTop));ctx.clip();
  ctx.textAlign=template.lyrics.align;ctx.textBaseline='top';ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=Math.max(1,unit*.006);
- let y=bottom-total;
- function paint(item:typeof a,color:string,step:number){ctx.font=font(item.weight,item.size);ctx.fillStyle=color;for(const row of item.rows){ctx.fillText(row,x(template.lyrics.align),y,width);y+=step;}}
- paint(a,template.lyrics.currentColor,aStep);if(a.rows.length&&b.rows.length)y+=gap;paint(b,template.lyrics.nextColor,bStep);ctx.shadowBlur=0;
+ function paint(item:ReturnType<typeof layout>,color:string,y:number,alpha:number){if(alpha<=0)return;ctx.globalAlpha=alpha;ctx.font=font(item.weight,item.size);ctx.fillStyle=color;for(const row of item.rows){ctx.fillText(row,x(template.lyrics.align),y,width);y+=item.size*1.24;}}
+ if(moving)paint(outgoing,blendColor(template.lyrics.currentColor,template.lyrics.nextColor,progress),outgoingY,1-progress);
+ paint(current,moving?blendColor(template.lyrics.nextColor,template.lyrics.currentColor,progress):template.lyrics.currentColor,currentY,1);
+ paint(next,template.lyrics.nextColor,incomingY,moving?progress:1);
+ ctx.restore();
  singleLine(template.watermark.text,markSize,650,template.watermark.color,template.watermark.align,markY);
  return true;
 }

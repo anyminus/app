@@ -206,3 +206,23 @@ test('video mixer changes live stem gain without restarting the recording',async
  await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
  expect(await page.evaluate(()=>[Reflect.get(window,'__mixerRecorderStarts'),Reflect.get(window,'__mixerRecorderStops')])).toEqual([1,1]);expect(api.media).toBe(2);
 });
+
+test('video canvas animates natural lyric transition and snaps on a seek',async({page})=>{
+ await page.addInitScript(()=>{
+ const draw=CanvasRenderingContext2D.prototype.fillText;Reflect.set(window,'__motionFrames',[]);
+ CanvasRenderingContext2D.prototype.fillText=function(...args:Parameters<CanvasRenderingContext2D['fillText']>){if(this.canvas.classList.contains('video-overlay')&&document.querySelector('.video-karaoke-rec')){const size=Number(this.font.match(/([0-9.]+)px/)?.[1]);const frames=Reflect.get(window,'__motionFrames') as {text:string;size:number;y:number;alpha:number}[];frames.push({text:args[0],size,y:args[2],alpha:this.globalAlpha});}return draw.apply(this,args)};
+ });
+ await mockApi(page);await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Alpha',startMs:0,endMs:2500,startOrigin:'source'},{text:'Bravo',startMs:2500,endMs:5500,startOrigin:'source'},{text:'Charlie',startMs:5500,endMs:7900,startOrigin:'source'}]},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
+ await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Alpha',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Записать видео/}).click();await page.getByRole('button',{name:'Alpha',exact:true}).click();await page.getByRole('button',{name:'Начать запись',exact:true}).click();await expect(page.getByText('● REC',{exact:true})).toBeVisible();
+ const frames=()=>page.evaluate(()=>Reflect.get(window,'__motionFrames') as {text:string;size:number;y:number;alpha:number}[]);
+ await expect.poll(async()=>new Set((await frames()).filter(f=>f.text==='Bravo').map(f=>f.size)).size,{timeout:5500}).toBeGreaterThan(2);
+ await expect.poll(async()=>(await frames()).some(f=>f.text==='Alpha'&&f.alpha>0&&f.alpha<1)).toBe(true);
+ const before=await page.getByRole('slider',{name:'Позиция песни'}).inputValue();expect(Number(before)).toBeGreaterThan(2);
+ await page.getByRole('button',{name:'Charlie',exact:true}).click();await expect(page.getByRole('button',{name:'Charlie',exact:true})).toHaveAttribute('aria-current','true');
+ await page.evaluate(()=>{(Reflect.get(window,'__motionFrames') as unknown[]).length=0;});
+ await expect.poll(async()=>(await frames()).some(f=>f.text==='Charlie'&&f.alpha===1)).toBe(true);
+ expect((await frames()).filter(f=>f.text==='Charlie').every(f=>f.alpha===1)).toBe(true);
+ await page.getByRole('button',{name:'Остановить',exact:true}).click();await expect(page.getByRole('link',{name:'Сохранить видео'})).toBeVisible();
+});
