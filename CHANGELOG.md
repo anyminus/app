@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.82
+- Make the player header recording trigger content-sized with a two-line localized label. Retain the camera, beta marker and existing click target height. Extend header regression for two-line Russian text and compact width.
+
 ## 0.5.81
 - Restore the localized visible Record video label in the player header alongside the camera icon and beta marker. Responsive button width and wrapping preserve the header layout; recording behavior is unchanged. Extend header regression assertions.
 

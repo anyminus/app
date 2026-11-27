@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Compact two-line recording trigger (0.5.82)
+Supersedes the 100–140px width from 0.5.81: the header recording button uses a content-sized three-column grid (camera / min-content label / beta). The localized two-word label wraps at the word boundary, without splitting words, leaving more room for the song heading at all viewport widths. The 40px minimum height and recording behavior are unchanged. Header tests check two lines and width below 100px in Russian.
+
 ## Recording trigger label (0.5.81)
 The idle recording trigger remains in the existing player-header portal. It displays the camera icon, localized Record video text and beta glyph. The button uses a responsive 100–140px width, a wrapping label and nonshrinking icons; the track heading keeps its existing ellipsis. Recording phases and handlers are unchanged. Header tests verify label and beta at existing viewport sizes.
 
