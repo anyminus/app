@@ -45,3 +45,11 @@ test('provider CDN cover uses stable server fallback if the image fails',async({
  let attempts=0;await page.route(direct,r=>{attempts++;return r.fulfill({status:404})});
  await page.goto('/');const row=page.locator('.track-row').first();await expect(row.locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');await expect(row.locator('img')).toHaveAttribute('src',/\/demo\/artwork\/101$/);expect(attempts).toBe(1);expect(api.covers).toContain('/demo/artwork/101');
 });
+
+test('artist page ready tab loads a portrait by canonical artist ID',async({page})=>{
+ await mockApi(page);
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFElEQVR4nGOcppHCgA0wYRUdtBIA54YBMulAnr4AAAAASUVORK5CYII=','base64');
+ await page.route(/^https:\/\/[^/]+\/demo\/artist-artwork\/42$/,r=>r.fulfill({body:png,contentType:'image/png'}));
+ await page.goto('/#/artist/Test?author_id=42');
+ const cover=page.locator('.artist-profile-art .cover-slot');await expect(cover).toHaveAttribute('data-cover-state','loaded');await expect(cover.locator('img')).toHaveAttribute('src',/\/demo\/artist-artwork\/42$/);await expect.poll(()=>cover.locator('img').evaluate((el:HTMLImageElement)=>el.naturalWidth)).toBe(8);
+});

@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 import {coverFor,type ArtistCredit} from './catalog';
 export type Track={providerLyricsFormat?:'TEXT'|'LRC'|'NONE';lyricsFormat?:'TEXT'|'LRC'|'NONE'|null;id:string;title:string;artist:string;artistId:string;artistCredits?:ArtistCredit[];durationSeconds:number;ready:boolean;genre:string;color:string;artworkUrl?:string|null};
 // Public artwork is embedded as an ordinary image (no canvas/pixel access needed). Observe each tile; reuse the browser HTTP cache.
-function LazyCover({src,title,fallback}:{src:string;title:string;fallback?:string|null}){
+export function LazyCover({src,title,fallback}:{src:string;title:string;fallback?:string|null}){
  const host=useRef<HTMLSpanElement>(null);
  const [visible,setVisible]=useState(false),[loaded,setLoaded]=useState(false),[failed,setFailed]=useState(false),[usingFallback,setUsingFallback]=useState(false);
  const actual=usingFallback&&fallback?fallback:src;

@@ -285,3 +285,7 @@ Owner requests louder voice and echo/reverb sliders. Existing recording music/vo
 
 ## Final local lyrics status (0.5.66)
 Owner requires three explicit user-facing labels for checked ready songs. Use existing localized TEXT/LRC/NONE labels in shared KaraokeReadyStatus. Keep explicit null neutral for truly unverified or pending records. Server maps terminal failed receipts to local absence and stops re-requesting the SDK. DB audit 1121/1121 published candidates labeled: 783 LRC, 89 TEXT, 249 NONE. UI tests update exact label expectations. Deployment pending.
+
+
+## Artist artwork and CDN compatibility (0.5.67)
+Dedicated /demo/artist-artwork/<canonical ID> route and independent cache; lazy photo in artist profile, ready tab does not need popular list. Use explicit route author ID, verified popular ID, or uniquely matching catalog artist credit; no guessing from ambiguous names and no album-as-portrait. Stable track API fallback continues to work without cookies. Provider alias normalization uses only existing fixed allowed CDN destinations; no new browser allowlist needed. Real SDK host and cache population pending production verification. Fixed contradictory missing lyrics E2E count. 

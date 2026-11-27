@@ -231,3 +231,5 @@ body.karaoke-open .tab-bar{display:none}
 }
 
 .video-sync-settings .video-voice-effects{border-top:1px solid var(--border);padding-top:5px;margin:7px 0 3px}.video-voice-effects legend{padding:0 5px 0 0;color:var(--accent)}.video-effects-reset{color:var(--accent);background:var(--raised);border-radius:8px;padding:5px 9px;min-height:30px;font-size:11px;margin:3px 0}.video-voice-effects .video-recording-level strong{white-space:nowrap}
+
+.artist-profile-art .cover-slot{position:absolute;inset:0;border-radius:18px;overflow:hidden}.artist-profile-art:has(.cover-slot[data-cover-state="loaded"]){opacity:.92;mask-image:linear-gradient(to left,black 58%,transparent);-webkit-mask-image:linear-gradient(to left,black 58%,transparent)}.artist-profile-art .cover-image{object-fit:cover}.artist-profile-art:has(.cover-slot[data-cover-state="loaded"]) svg{visibility:hidden}.artist-profile .eyebrow,.artist-profile h1,.artist-profile .artist-summary{position:relative;z-index:1;text-shadow:0 1px 8px #171020b3}

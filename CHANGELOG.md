@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.67
+- Render artist portraits on ready artist pages by canonical ID using independent public API route. Preserve track artwork fallback; server normalizes provider aliases to a pinned public CDN. Fix conflicting missing-lyrics assertion that blocked 0.5.66 deployment.
+
 ## 0.5.66
 - Display explicit timed/plain/missing text labels for ready tracks. Unknown is reserved for genuinely unresolved checks, not terminal failed receipts. Server policy uses one SDK LRC/TEXT cycle.
 

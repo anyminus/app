@@ -1,11 +1,12 @@
 import {t as trUi} from './i18n.mjs';
 import {useEffect,useRef,useState} from 'react';
 import {apiOrigin,createDemoApi,normalizeTracks,normalizeArtistCredits,normalizeJob,ApiError} from './api.mjs';
-import {trackArtworkUrl} from './artwork.mjs';
+import {trackArtworkUrl,artistArtworkUrl} from './artwork.mjs';
 import {matchesArtist} from './model.mjs';
 export const origin=apiOrigin(import.meta.env.VITE_DEMO_API_ORIGIN||'https://anyminus-demo-search-dev.demo-search.workers.dev')!;
 export const api=createDemoApi(origin);
 export const coverFor=(id:string,provided?:string|null)=>trackArtworkUrl(origin,id,provided);
+export const artistCoverFor=(id:string)=>artistArtworkUrl(origin,id);
 export type ArtistCredit={author_id:string;name:string};
 export type LiveTrack={providerLyricsFormat?:'TEXT'|'LRC'|'NONE';lyricsFormat?:'TEXT'|'LRC'|'NONE'|null;providerTrackId:string;title:string;artist:string;artistCredits?:ArtistCredit[];durationMs:number|null;pairOperationId:string|null;metadataUnavailable?:boolean;coverUrl?:string|null};
 export function isTrackId(id:unknown):id is string{return typeof id==='string'&&/^\d{1,20}$/.test(id)}
