@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.97
+- Omit the redundant positive karaoke-ready badge for confirmed timed tracks on home/live only. Keep exceptional lyrics warnings and all other list statuses unchanged.
+- Focus the search input on every entry to the search route, including direct links, reload and back navigation. The search tab and player search action use synchronous trusted-click focus as does the home button. Keep the existing query and place the caret at the end; do not steal focus while typing or using search results. Native keyboard on direct page load remains browser-controlled. Add regressions.
+
 ## 0.5.96
 - Focus the real search input synchronously within the home Find song click by committing the hash route with React flushSync before focus. Keep the existing query, place the caret at the end, and leave ordinary tab/deep-link navigation unchanged. Browser regression verifies focus inside the originating click and immediate typing. Physical iOS keyboard behavior requires device verification.
 

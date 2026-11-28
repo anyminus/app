@@ -22,3 +22,14 @@ test('home find song focuses the search field in the originating click',async({p
  await expect(page).toHaveURL(/#\/search$/);await expect(input).toBeFocused();await expect(page.locator('html')).toHaveAttribute('data-search-focused-in-click','true');await page.keyboard.type('Test song');await expect(input).toHaveValue('Test song');
  await expect(page.getByRole('button',{name:'Test song one',exact:true})).toBeVisible();
 });
+
+test('search focuses on direct entry, reload, bottom tab and returning from another page',async({page})=>{
+ await mockApi(page);await page.goto('/?utm_source=chatgpt.com#/search');const input=page.getByRole('textbox',{name:'Поиск песни'}),nav=page.getByRole('navigation');
+ await expect(input).toBeFocused();await page.reload();await expect(input).toBeFocused();
+ await nav.getByRole('button',{name:'Главная',exact:true}).click();await expect(page.getByRole('button',{name:'Найти песню',exact:true})).toBeVisible();
+ await page.evaluate(()=>{document.addEventListener('click',e=>{if(e.target instanceof Element&&e.target.closest('button')?.textContent?.trim()==='Поиск')document.documentElement.dataset.searchTabFocused=String(document.activeElement instanceof HTMLInputElement&&document.activeElement.getAttribute('aria-label')==='Поиск песни')},{once:true})});
+ await nav.getByRole('button',{name:'Поиск',exact:true}).click();await expect(input).toBeFocused();await expect(page.locator('html')).toHaveAttribute('data-search-tab-focused','true');
+ await input.fill('Test song');await expect(page.getByRole('button',{name:'Test song one',exact:true})).toBeVisible();await input.blur();
+ await nav.getByRole('button',{name:'Поиск',exact:true}).click();await expect(input).toBeFocused();await expect(input).toHaveValue('Test song');expect(await input.evaluate((el:HTMLInputElement)=>el.selectionStart)).toBe(9);
+ await nav.getByRole('button',{name:'Главная',exact:true}).click();await expect(input).toHaveCount(0);await page.goBack();await expect(input).toBeFocused();
+});

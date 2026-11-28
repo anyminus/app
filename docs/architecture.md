@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Search entry focus and home readiness label (0.5.97)
+Shared TrackRow receives hideReadyLabel on home/live. The LRC ready badge is omitted because the section already denotes ready karaoke. TEXT, NONE and unknown statuses remain visible; search, artist, favorites and other routes retain their badges. Search route entry uses a layout effect keyed by route.page, focusing the actual input with the caret at the end. Home Find song, search tab (including repeated taps) and player search action also use the synchronous findSong handler to preserve trusted user activation. Deep links/reloads cannot force the iOS virtual keyboard when the browser forbids automatic keyboard opening. No API, debounce, history or playback changes.
+
 ## Immediate search focus (0.5.96)
 The home Find song action calls the existing hash navigator and synchronously commits the parsed route using React DOM flushSync, then focuses the mounted input and places its caret at the end. This preserves the trusted click activation needed by mobile Safari for its keyboard; it does not use a delayed effect or hidden proxy input. The normal hashchange listener remains responsible for other navigation. Search history, prior query and the search debounce are unchanged. E2E checks focus within the bubbling click and direct keyboard input; native iOS keyboard visibility is a device-level check.
 
