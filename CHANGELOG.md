@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.98
+- Isolate karaoke playback settings by provider track ID. New songs start at 100/15, both tracks unmuted, pitch 0 and speed 1.0. Profile remember setting defaults on; manual changes persist locally, including successful pitch/speed changes. Disabling ignores saved values without deleting them. Shared-link parameters retain priority for that opening; merely opening a link does not write settings. Remove the obsolete global mixer controls. Add unit and browser regressions.
+
 ## 0.5.97
 - Omit the redundant positive karaoke-ready badge for confirmed timed tracks on home/live only. Keep exceptional lyrics warnings and all other list statuses unchanged.
 - Focus the search input on every entry to the search route, including direct links, reload and back navigation. The search tab and player search action use synchronous trusted-click focus as does the home button. Keep the existing query and place the caret at the end; do not steal focus while typing or using search results. Native keyboard on direct page load remains browser-controlled. Add regressions.

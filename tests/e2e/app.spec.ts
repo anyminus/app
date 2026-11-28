@@ -64,7 +64,7 @@ test('optional playback settings travel in the song link without overwriting rec
  await page.getByRole('button',{name:'Поделиться песней',exact:true}).click();const sheet=page.getByRole('dialog',{name:'Поделиться песней'}),checkbox=sheet.getByRole('checkbox',{name:/Передать настройки воспроизведения/}),link=sheet.getByRole('textbox',{name:'Ссылка для отправки'});
  await expect(checkbox).not.toBeChecked();await expect(link).toHaveValue(/#\/track\/101$/);await checkbox.check();await expect(link).toHaveValue(/music=85&vocals=23&musicMuted=0&vocalsMuted=1&pitch=-2&speed=1\.2$/);await checkbox.uncheck();await expect(link).toHaveValue(/#\/track\/101$/);await sheet.getByRole('button',{name:'Закрыть',exact:true}).click();
  expect(await page.evaluate(()=>localStorage.getItem('anyminus:music'))).toBe('70');expect(await page.evaluate(()=>localStorage.getItem('anyminus:vocals'))).toBe('15');
- await page.evaluate(()=>{location.hash='#/track/101'});await expect(page.getByRole('slider',{name:'Музыка',exact:true})).toHaveValue('70');await expect(page.getByRole('slider',{name:'Голос артиста',exact:true})).toHaveValue('15');await expect(page.getByLabel('Тональность в полутонах')).toHaveText('0');await expect(page.getByLabel('Скорость воспроизведения')).toHaveText('1.0×');
+ await page.evaluate(()=>{location.hash='#/track/101'});await expect(page.getByRole('slider',{name:'Музыка',exact:true})).toHaveValue('100');await expect(page.getByRole('slider',{name:'Голос артиста',exact:true})).toHaveValue('15');await expect(page.getByLabel('Тональность в полутонах')).toHaveText('0');await expect(page.getByLabel('Скорость воспроизведения')).toHaveText('1.0×');
 });
 
 

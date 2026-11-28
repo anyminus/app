@@ -102,3 +102,15 @@ test('Greek locale detection, manual selection and translations',()=>{assert.equ
 
 import {normalizeSearchHistory,rememberSearch} from '../src/searchHistory.mjs';
 test('search history trims, deduplicates case-insensitively, validates and caps at twenty',()=>{assert.deepEqual(normalizeSearchHistory(null),[]);assert.deepEqual(normalizeSearchHistory(['  Ленинград  ','ленинград','a',null,'Test','x'.repeat(201)]),['Ленинград','Test']);assert.deepEqual(rememberSearch(['Alpha','Beta'],' beta '),['beta','Alpha']);assert.equal(normalizeSearchHistory(Array.from({length:30},(_,i)=>'query '+i)).length,20);});
+
+import {defaultSongPlayback,readSongPlayback,saveSongPlayback,songPlaybackKey} from '../src/songPlayback.mjs';
+test('song playback settings are isolated, optional and validated; explicit links take precedence',()=>{
+ const data=new Map(),storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};
+ const defaults=defaultSongPlayback(),custom={music:82,vocals:37,musicMuted:false,vocalsMuted:true,pitch:-2,speed:1.2};
+ assert.deepEqual(readSongPlayback('101',true,null,storage),defaults);assert.equal(saveSongPlayback('101',true,custom,storage),true);
+ assert.deepEqual(readSongPlayback('101',true,null,storage),custom);assert.deepEqual(readSongPlayback('102',true,null,storage),defaults);
+ assert.deepEqual(readSongPlayback('101',false,null,storage),defaults);assert.equal(saveSongPlayback('101',false,defaults,storage),false);
+ assert.deepEqual(readSongPlayback('101',true,defaults,storage),defaults);assert.deepEqual(readSongPlayback('101',true,null,storage),custom);
+ assert.equal(saveSongPlayback('101',true,{...custom,speed:99},storage),false);data.set(songPlaybackKey('102'),'not-json');assert.deepEqual(readSongPlayback('102',true,null,storage),defaults);
+ const blocked={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};assert.deepEqual(readSongPlayback('101',true,null,blocked),defaults);assert.equal(saveSongPlayback('101',true,custom,blocked),false);
+});

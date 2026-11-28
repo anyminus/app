@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Per-song playback settings (0.5.98)
+`anyminus:remember-song-playback` defaults true. Each numeric provider track ID has a validated `anyminus:song-playback-v1:<id>` localStorage entry, independent of cache and other tracks. Initialization priority: validated explicit shared-link parameters, saved song settings when enabled, then 100% music/15% vocals/unmuted/pitch 0/speed 1.0. The keyed LiveCatalog owns its playback state and writes a complete snapshot only on manual mixer/mute edits or successful pitch/tempo edits; initialization/failure does not write. Opening a shared link alone never overwrites personal settings; manual edits can save the resulting settings. Disabling the preference skips reads/writes without deleting saved entries. Legacy global mixer keys are ignored and the obsolete settings mixer is replaced by a default explanation. Theme, lyric preferences, video recording preferences and position are not per-song playback settings. No API or audio format changes.
+
 ## Search entry focus and home readiness label (0.5.97)
 Shared TrackRow receives hideReadyLabel on home/live. The LRC ready badge is omitted because the section already denotes ready karaoke. TEXT, NONE and unknown statuses remain visible; search, artist, favorites and other routes retain their badges. Search route entry uses a layout effect keyed by route.page, focusing the actual input with the caret at the end. Home Find song, search tab (including repeated taps) and player search action also use the synchronous findSong handler to preserve trusted user activation. Deep links/reloads cannot force the iOS virtual keyboard when the browser forbids automatic keyboard opening. No API, debounce, history or playback changes.
 
