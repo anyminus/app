@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0 — 2026-11-28
+- Consolidates the 0.5.x development cycle and the following six previously unversioned improvements. See [bilingual release notes](docs/releases/v0.6.0.md).
+- Release publication follows successful CI and Pages deployment.
+
 - 2026-11-28: remember karaoke mixer visibility globally per device, expanded by default; video mixer retains its own temporary state.
 
 - 2026-11-28: add nonmodal karaoke player onboarding with per-device progress, skip and replay; automatic tips appear when paused, never during video mode. Existing cover and lyric hints remain. Optional steps follow current feature availability; translations for RU/EN/DE/ES/EL.

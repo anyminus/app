@@ -1,6 +1,8 @@
 export const languages=[{code:'ru',name:'Русский'},{code:'en',name:'English'},{code:'de',name:'Deutsch'},{code:'es',name:'Español'},{code:'el',name:'Ελληνικά'}];
 export const languageKey='anyminus:language';
 const dictionary={
+ "Видеокараоке: маска, эффекты голоса и настройки записи.": ["Video karaoke: face mask, vocal effects and recording settings.","Video-Karaoke: Gesichtsmaske, Stimmeffekte und Aufnahmeeinstellungen.","Videokaraoke: máscara, efectos de voz y ajustes de grabación.","Βιντεοκαραόκε: μάσκα, φωνητικά εφέ και ρυθμίσεις εγγραφής."],
+ "Новый онбординг, улучшенный плеер и запоминание состояния микшера.": ["New onboarding, improved player and remembered mixer visibility.","Neue Einführung, verbesserter Player und gespeicherte Mixer-Sichtbarkeit.","Nueva guía, reproductor mejorado y estado del mezclador guardado.","Νέος οδηγός, βελτιωμένη αναπαραγωγή και αποθήκευση κατάστασης μίκτη."],
  "Управление воспроизведением": ["Playback controls","Wiedergabesteuerung","Controles de reproducción","Έλεγχος αναπαραγωγής"],
  "Подсказки плеера": ["Player tips","Player-Tipps","Consejos del reproductor","Συμβουλές αναπαραγωγής"],
  "Пропустить обучение": ["Skip tutorial","Einführung überspringen","Omitir tutorial","Παράλειψη οδηγού"],
