@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.90
+- Sync shared song-list artist credit clamping with production; enforce a 34px two-line limit, preserve clickable credits and full title.
+
 ## 0.5.86
 - Reduce artwork blur from 35px to 12px, overscale from 1.2 to 1.08 and dark/light scrim opacity to .43/.58. Synchronize preview styling with main: 35% accent fill on pitch and tempo buttons, 50% pressed, theme text; remove beta from recording trigger and enlarge camera to 22px. Mask beta option and detector unchanged. Update layout and palette tests.
 

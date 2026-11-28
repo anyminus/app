@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Two-line artist credit limit (0.5.90)
+All shared TrackRow artist credits use a two-line clamp with a 17px line height and a hard 34px maximum height/block size, including the face-mask preview. Artist links and full hover title remain; no changes to the player header.
+
 ## Readable artwork ambience (0.5.86)
 Artwork-background mode uses 12px blur, 1.08 overscale, 0.9 image opacity and theme-aware contrast scrims (.43 dark/.58 light). Pitch and tempo buttons use 35% accent fill, 50% pressed, with theme text glyphs; play/pause and normal mode remain unchanged. Face-mask preview matches main recording trigger (22px camera, two-line label, no beta); the experimental mask option retains its own beta marker. Browser regression checks blur, button alpha and header layout.
 
