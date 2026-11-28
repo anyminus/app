@@ -18,3 +18,6 @@ export function artistArtworkUrl(origin,id){
  if(typeof id!=='string'||!/^\d{1,20}$/.test(id))return null;
  try{const base=new URL(origin);if(base.protocol!=='https:'||base.origin!==origin)return null;return new URL('/demo/artist-artwork/'+id,base).href}catch{return null}
 }
+
+/** @param {string} origin @param {string} id @param {boolean} [artist] */
+export function originalArtworkUrl(origin,id,artist=false){const src=artist?artistArtworkUrl(origin,id):trackArtworkUrl(origin,id);if(!src)return null;const u=new URL(src);u.searchParams.set('size','orig');return u.href;}

@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Original-resolution artwork (0.5.93)
+The full player backdrop and large track Artwork use `/demo/artwork/:id?size=orig`; the worker tries the provider original, then 1000px, 400px and its standard cover. Thumbnails in track lists remain lightweight. A failed large background uses the successfully loaded header thumbnail; large detail artwork also falls back. Background visibility still requires ready audio and a loaded image. Actual source resolution depends on the provider; deployment of the core worker is required for original bytes.
+
 ## Vivid player background and stem cache (0.5.92)
 The `anyminus:bright-player-background` localStorage preference defaults to true and is shared by the Profile checkbox and karaoke cover button. The successfully loaded thumbnail URL is forwarded from Artwork; the separate background layer remains mounted at opacity zero until its image and both audio stems are ready and audio loading finishes. CSS transitions opacity over 600ms for enable/disable and uses reduced-motion override. Background failure leaves the normal player and the saved preference intact. Track changes preserve the preference, not the previous image. Existing background blur/scrim and video/audio logic are unchanged. IndexedDB stem cache now caps at 300,000,000 bytes and 120 entries; the 19MB per-stem cap, seven-day idle expiry, LRU trimming and graceful storage failure behavior remain. Browser quota is independent of this cap. Regression covers delayed stem loading, profile/cover persistence, toggles and updated cache display.
 

@@ -2,7 +2,7 @@ import {t as trUi} from './i18n.mjs';
 import {Fragment,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {ArrowLeft,Bell,MousePointer2,Heart,Send,Share2,MicVocal,Pause,Play,RefreshCw,Search,SkipBack,SkipForward} from 'lucide-react';
 import {normalizeJob,mediaUrl,providerLyricsHint} from './api.mjs';
-import {api,origin,coverFor,type LiveTrack} from './catalog';
+import {api,origin,coverFor,originalCoverFor,type LiveTrack} from './catalog';
 import {RemoteAudio} from './RemoteAudio';
 import {StemDownload,waitForForeground,type DownloadProgress} from './stemDownload';
 import {VideoKaraoke,type VideoTransport} from './VideoKaraoke';
@@ -96,7 +96,9 @@ export function LiveCatalog({onOriginal,originalPlaying,originalActive,onKaraoke
  const [videoTriggerHost,setVideoTriggerHost]=useState<HTMLDivElement|null>(null);
  const [coverSource,setCoverSource]=useState<string|null>(null);
  const [loadedBackground,setLoadedBackground]=useState<string|null>(null);
- const backgroundVisible=brightBackground&&playerReady&&!loadingAudio&&!!coverSource&&loadedBackground===coverSource;
+ const [originalFailed,setOriginalFailed]=useState(false);
+ const backgroundSource=coverSource?(originalFailed?coverSource:originalCoverFor(selected.providerTrackId)??coverSource):null;
+ const backgroundVisible=brightBackground&&playerReady&&!loadingAudio&&!!backgroundSource&&loadedBackground===backgroundSource;
  // Lock the page itself. Only the independent lyrics viewport may scroll.
  const playerVisible=playerReady||loadingAudio||job?.state==='ready';useLayoutEffect(()=>{if(!playerVisible)return;document.body.classList.add('karaoke-open');window.scrollTo(0,0);return()=>document.body.classList.remove('karaoke-open')},[playerVisible]);
  const lyricFrame=useRef<number|null>(null);
@@ -150,7 +152,7 @@ export function LiveCatalog({onOriginal,originalPlaying,originalActive,onKaraoke
  function seek(n:number){const a=audio.current;if(!a||!playerReady||pitchLock.current||(videoLock.current&&!videoSeekReady.current)||!Number.isFinite(n))return Promise.resolve();const version=selectionVersion.current,epoch=seekEpoch.current;const target=Math.max(0,Math.min(a.length,n));const valid=()=>audio.current===a&&version===selectionVersion.current&&epoch===seekEpoch.current&&(!videoLock.current||videoSeekReady.current);seekPending.current++;const task=async()=>{try{if(!valid())return;videoSeekRevision.current++;await a.seek(target);if(!valid())return;setPosition(a.position);setPlaying(a.playing);if('mediaSession' in navigator)try{navigator.mediaSession.playbackState=a.playing?'playing':'paused';navigator.mediaSession.setPositionState({duration:a.length,playbackRate:a.speed,position:a.position})}catch{}}catch(e){if(valid()){setPosition(a.position);setPlaying(a.playing);showError(e)}}finally{seekPending.current--}};seekQueue.current=seekQueue.current.then(task,task);return seekQueue.current}
  useSystemMedia({ready:playerReady&&!loadingAudio,title:selected.title,artist:selected.artist,artwork:coverFor(selected.providerTrackId,selected.coverUrl),playing,length,position,speed,play:()=>{if(!videoLock.current)void startPlayback()},pause:pausePlayback,seek:n=>void seek(n),currentTime:()=>audio.current?.position??0,isPlaying:()=>!!audio.current?.playing});
  if(playerVisible)return <section className={'karaoke-screen'+(focus?' karaoke-focus':'')+(backgroundVisible?' karaoke-cover-background-on':'')} aria-label={trUi("Плеер караоке")}>
- <div className="karaoke-cover-background" aria-hidden="true">{coverSource&&<img key={coverSource} src={coverSource} alt="" draggable={false} decoding="async" referrerPolicy="no-referrer" onLoad={()=>setLoadedBackground(coverSource)} onError={()=>setLoadedBackground(null)}/>}</div>
+ <div className="karaoke-cover-background" aria-hidden="true">{backgroundSource&&<img key={backgroundSource} src={backgroundSource} alt="" draggable={false} decoding="async" referrerPolicy="no-referrer" onLoad={()=>setLoadedBackground(backgroundSource)} onError={()=>{setLoadedBackground(null);if(backgroundSource!==coverSource)setOriginalFailed(true)}}/>}</div>
  <div className="karaoke-top"><header className="karaoke-header">
  <IconButton label={trUi("Назад")} onClick={onBack}><ArrowLeft/></IconButton>
  <button type="button" className="karaoke-cover" aria-label={trUi("Фон из обложки")} title={trUi("Фон из обложки")} aria-pressed={brightBackground} onClick={onToggleBrightBackground}><Artwork title={selected.title} color="#7961bd" src={coverFor(selected.providerTrackId,selected.coverUrl)} trackId={selected.providerTrackId} onImageLoaded={setCoverSource}/></button>

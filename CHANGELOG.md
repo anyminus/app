@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.93
+- Request original-size artwork for karaoke backdrops and large track artwork via the size-specific public proxy, with thumbnail fallback. Preserve lazy thumbnails in lists, the fade transition and shared profile preference. Update artwork browser tests for the default-on background.
+
 ## 0.5.92
 - Increase the origin-local audio stem cache cap to 300 MB and 120 entries (previously 100 MB / 40); retain per-stem cap, seven-day expiry and best-effort storage fallback.
 - Persist a default-on vivid artwork background preference in the profile. The cover toggles that same preference. Use the successfully loaded thumbnail source; only reveal the backdrop after the two stems are loaded and ready, with a 600ms fade both ways. Keep the previous blur and contrast, respect reduced motion and do not reset the preference on track changes or failed artwork. Add loading/persistence regressions.
