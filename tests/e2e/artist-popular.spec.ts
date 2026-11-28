@@ -41,3 +41,13 @@ test('independent SDK artist suggestion shows portrait for surname and reordered
  await input.fill('Коган');await expect(artist).toBeVisible();await expect(artist.locator('.cover-slot')).toHaveAttribute('data-cover-state','loaded');
  await input.fill('Коган Юля');await expect(artist).toBeVisible();await artist.click();await expect(page).toHaveURL(/author_id=42$/);
 });
+
+test('search song rows are compact without clipping two artist lines or shrinking action targets',async({page})=>{
+ await mockApi(page);await page.setViewportSize({width:390,height:844});
+ const items=[{providerTrackId:'501',title:'Sleepless',artist:'Anathema',durationMs:251000,providerLyricsFormat:'NONE'},{providerTrackId:'502',title:'Sleepless',artist:'Relaxing With Sounds of Nature and Spa Music Natural White Noise Extended Artist Name',durationMs:251000,providerLyricsFormat:'NONE'}];
+ await page.route(/^https:\/\/[^/]+\/demo\/search\?/,r=>r.fulfill({json:{items,nextCursor:null},headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.goto('/#/search');await page.getByRole('textbox',{name:'Поиск песни'}).fill('Sleepless');
+ const rows=page.locator('.search-track-list .track-row');await expect(rows).toHaveCount(2);
+ const sizes=await rows.evaluateAll(els=>els.map(el=>({height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,actionHeight:el.querySelector('.icon-button')!.getBoundingClientRect().height,artistHeight:el.querySelector('.track-artist-lines')!.getBoundingClientRect().height})));
+ expect(sizes[0].height).toBeLessThanOrEqual(64);expect(sizes[1].height).toBeLessThanOrEqual(76);expect(sizes[1].artistHeight).toBeGreaterThan(15);expect(sizes[1].artistHeight).toBeLessThanOrEqual(30);expect(sizes[1].top-sizes[0].bottom).toBeLessThanOrEqual(1);expect(sizes.every(x=>x.actionHeight>=44)).toBe(true);
+});
