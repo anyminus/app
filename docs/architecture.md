@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Server-owned lyrics format (0.5.102)
+Search and artist responses carry server-resolved LRC/TEXT/NONE for uncreated songs and stored receipt format for ready songs. The client no longer renders manual check/recheck controls or pending-format labels. A detail reached without capability performs one ordinary metadata read; a genuine failure leaves a service-unavailable notice, not a fabricated missing-text result. Unknown ready rows say only karaoke ready (omitted on home), while positive same-pair receipts remain preserved by the 0.5.101 merge. No changes to the audio queue or text storage. Requires the corresponding core worker deployment.
+
 ## Stored lyrics label reconciliation (0.5.101)
 `mergedStoredLyricsFormat` merges catalog/artist/search metadata and cached receipts by provider track ID and pair identity. An unknown format cannot erase known TEXT/LRC for the same pair; an explicit NONE or a different/deleted pair remains authoritative, and unknown clears a stale negative. The actual stored lyric read reports the playback pair and updates the shared track cache and current row snapshot. This does not infer a lyric format from provider hints or alter lyrics storage. Verified DEV DB query for DDT track 1695521 returned synced for the existing pair; the observed screen discrepancy is consistent with incomplete list metadata overwriting verified state.
 

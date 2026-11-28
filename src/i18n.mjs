@@ -155,6 +155,7 @@ const dictionary={
  "Текст отсутствует": ["No lyrics","Kein Liedtext","Sin letra","Δεν υπάρχουν στίχοι"],
  "Формат текста уточняется": ["Checking lyrics format","Textformat wird geprüft","Comprobando formato de letra","Έλεγχος μορφής στίχων"],
  "Формат текста уточняется…": ["Checking lyrics format…","Textformat wird geprüft…","Comprobando formato de letra…","Έλεγχος μορφής στίχων…"],
+ "Караоке готово": ["Karaoke ready","Karaoke bereit","Karaoke listo","Το καραόκε είναι έτοιμο"],
  "Проверить текст": ["Check lyrics","Liedtext prüfen","Comprobar letra","Έλεγχος στίχων"],
  "Сервис текстов временно недоступен": ["Lyrics service temporarily unavailable","Liedtextdienst vorübergehend nicht verfügbar","Servicio de letras temporalmente no disponible","Η υπηρεσία στίχων δεν είναι προσωρινά διαθέσιμη"],
  "Повторить проверку текста": ["Retry lyrics check","Liedtext erneut prüfen","Volver a comprobar la letra","Επανάληψη ελέγχου στίχων"],

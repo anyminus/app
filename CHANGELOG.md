@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.102
+- Remove manual lyric availability checks and ambiguous lyric labels. Search and artist APIs resolve provider capability server-side; the detail page uses a single ordinary metadata read only if needed, without a retry button. Confirmed statuses remain; actual unavailability is reported on detail only. Unknown ready metadata indicates ready audio without asserting a lyric format. Home suppresses redundant ready labels. Update regressions.
+
 ## 0.5.101
 - Reconcile ready-song lyric labels across catalog, artist results and actual playback. A missing/unknown format never replaces confirmed positive lyrics for the same verified audio pair; explicit formats and changes of pair remain authoritative. Playback reports the exact pair that supplied lyrics. Add artist-list regression for returning from playback and reloading with incomplete metadata.
 
