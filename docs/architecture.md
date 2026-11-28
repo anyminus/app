@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Stored lyrics label reconciliation (0.5.101)
+`mergedStoredLyricsFormat` merges catalog/artist/search metadata and cached receipts by provider track ID and pair identity. An unknown format cannot erase known TEXT/LRC for the same pair; an explicit NONE or a different/deleted pair remains authoritative, and unknown clears a stale negative. The actual stored lyric read reports the playback pair and updates the shared track cache and current row snapshot. This does not infer a lyric format from provider hints or alter lyrics storage. Verified DEV DB query for DDT track 1695521 returned synced for the existing pair; the observed screen discrepancy is consistent with incomplete list metadata overwriting verified state.
+
 ## Lyrics verification failure handling (0.5.100)
 For tracks without a ready audio pair or confirmed capability, on-demand verified metadata resolves LRC/TEXT/NONE. The provider adapter distinguishes authenticated explicit absence from transport or malformed responses. The client makes at most two verification attempts under a shared 45-second abort deadline, skips automatic retries for 401/403/429, and shows service unavailability only if no confirmed result returns. Manual retry remains available. Existing stored lyrics receipts are separate; a network error is never labeled NONE.
 

@@ -225,3 +225,15 @@ test('unknown lyrics can be verified on track open and the verified capability i
  await expect(page.locator('.song-lyrics-preview').getByText('Текст без таймкодов',{exact:true})).toBeVisible();expect(checked).toBe(1);
  await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.locator('.track-row').getByText('Текст без таймкодов',{exact:true})).toBeVisible();
 });
+
+test('ready artist row retains confirmed timed lyrics after a partial catalog response and after playback',async({page})=>{
+ await mockApi(page);const pair='00000000-0000-4000-8000-000000000001',headers={'Access-Control-Allow-Origin':'*'};
+ const song={providerTrackId:'101',title:'Verified song',artist:'Test',durationMs:8000,karaokeStatus:{state:'ready',pairOperationId:pair},lyricsFormat:null};
+ await page.route(/^https:\/\/[^/]+\/demo\/catalog(?:\?|$)/,r=>r.fulfill({json:{items:[{providerTrackId:'101',title:'Verified song',artist:'Test',durationSeconds:8,pairOperationId:pair,lyricsFormat:null}],nextCursor:null},headers}));
+ await page.route(/^https:\/\/[^/]+\/demo\/artists\/popular(?:\?|$)/,r=>r.fulfill({json:{artistId:'42',name:'Test',items:[song],nextCursor:null},headers}));
+ await page.route(/\/demo\/catalog\/media\/[^/]+\/lyrics$/,r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:[{text:'Synthetic test line',startMs:100,endMs:900,startOrigin:'source'}]},headers}));
+ await page.goto('/#/artist/Test?author_id=42');const row=page.locator('.track-row').filter({has:page.getByRole('button',{name:'Verified song',exact:true})});
+ await expect(row.getByText('Караоке · текст не подтверждён',{exact:true})).toBeVisible();
+ await row.getByRole('button',{name:'Verified song',exact:true}).click();await expect(page.getByText('Synthetic test line',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(row.getByText('Караоке в базе',{exact:true})).toBeVisible();await page.reload();await expect(row.getByText('Караоке в базе',{exact:true})).toBeVisible();
+});

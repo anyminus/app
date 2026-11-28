@@ -164,3 +164,13 @@ export async function lookupTrack(id:string,signal:AbortSignal):Promise<LiveTrac
   function retry(){if(!name||busy.current||current.loading)return;const c=new AbortController();active.current=c;void load(c,name,current)}
   return {...current,more,retry};
  }
+
+// Unknown metadata is not a negative receipt. Keep a confirmed positive format
+// for the same ready pair; never carry it to a different or deleted pair.
+export function mergedStoredLyricsFormat(track:LiveTrack,prior?:LiveTrack):LiveTrack['lyricsFormat']{
+ if(track.readyObserved&&!track.pairOperationId)return undefined;
+ const same=!!prior?.pairOperationId&&(!track.pairOperationId||track.pairOperationId===prior.pairOperationId);
+ if(track.lyricsFormat==='LRC'||track.lyricsFormat==='TEXT'||track.lyricsFormat==='NONE')return track.lyricsFormat;
+ if(same&&(prior?.lyricsFormat==='LRC'||prior?.lyricsFormat==='TEXT'))return prior.lyricsFormat;
+ return track.lyricsFormat===null?null:same?prior?.lyricsFormat:undefined;
+}

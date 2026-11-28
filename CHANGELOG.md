@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.101
+- Reconcile ready-song lyric labels across catalog, artist results and actual playback. A missing/unknown format never replaces confirmed positive lyrics for the same verified audio pair; explicit formats and changes of pair remain authoritative. Playback reports the exact pair that supplied lyrics. Add artist-list regression for returning from playback and reloading with incomplete metadata.
+
 ## 0.5.100
 - Automatically retry unresolved lyrics capability once, except authentication and rate-limit failures. Report temporary service unavailability separately from confirmed missing lyrics. Extend the client deadline for the server's sequential LRC/TEXT lookups. Update legacy global mixer regression to the per-song player.
 
