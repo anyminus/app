@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Lyrics verification failure handling (0.5.100)
+For tracks without a ready audio pair or confirmed capability, on-demand verified metadata resolves LRC/TEXT/NONE. The provider adapter distinguishes authenticated explicit absence from transport or malformed responses. The client makes at most two verification attempts under a shared 45-second abort deadline, skips automatic retries for 401/403/429, and shows service unavailability only if no confirmed result returns. Manual retry remains available. Existing stored lyrics receipts are separate; a network error is never labeled NONE.
+
 ## Combined karaoke search (0.5.99)
 The browser sends one search request with limit 15. The server independently finds ready catalog matches by title/artist and requests the Yandex provider (now up to 15 tracks), merges exact IDs and prioritizes ready tracks with verified timed lyrics, then plain lyrics, then other ready, then provider-only matches. The client uses the same normalized readiness response and does not download the whole catalog. Distinct versions with different provider IDs stay separate. Actual result count depends on matches and backend deployments.
 

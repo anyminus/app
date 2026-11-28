@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.100
+- Automatically retry unresolved lyrics capability once, except authentication and rate-limit failures. Report temporary service unavailability separately from confirmed missing lyrics. Extend the client deadline for the server's sequential LRC/TEXT lookups. Update legacy global mixer regression to the per-song player.
+
 ## 0.5.99
 - Request up to 15 combined search results. The DEV worker searches the ready catalog and Yandex independently, deduplicates by exact provider track ID and prioritizes confirmed ready karaoke. No client-side catalog scan or new request from the browser. Deployment of both core workers is required for full behavior.
 

@@ -156,6 +156,7 @@ const dictionary={
  "Формат текста уточняется": ["Checking lyrics format","Textformat wird geprüft","Comprobando formato de letra","Έλεγχος μορφής στίχων"],
  "Формат текста уточняется…": ["Checking lyrics format…","Textformat wird geprüft…","Comprobando formato de letra…","Έλεγχος μορφής στίχων…"],
  "Проверить текст": ["Check lyrics","Liedtext prüfen","Comprobar letra","Έλεγχος στίχων"],
+ "Сервис текстов временно недоступен": ["Lyrics service temporarily unavailable","Liedtextdienst vorübergehend nicht verfügbar","Servicio de letras temporalmente no disponible","Η υπηρεσία στίχων δεν είναι προσωρινά διαθέσιμη"],
  "Повторить проверку текста": ["Retry lyrics check","Liedtext erneut prüfen","Volver a comprobar la letra","Επανάληψη ελέγχου στίχων"],
  "Наличие текста не подтверждено": ["Lyrics availability unconfirmed","Liedtext nicht bestätigt","Disponibilidad de letra sin confirmar","Η διαθεσιμότητα στίχων δεν έχει επιβεβαιωθεί"],
  "Проверяем наличие текста…": ["Checking for lyrics…","Liedtext wird gesucht…","Buscando letra…","Έλεγχος διαθεσιμότητας στίχων…"],
