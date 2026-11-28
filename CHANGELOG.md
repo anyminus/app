@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.96
+- Focus the real search input synchronously within the home Find song click by committing the hash route with React flushSync before focus. Keep the existing query, place the caret at the end, and leave ordinary tab/deep-link navigation unchanged. Browser regression verifies focus inside the originating click and immediate typing. Physical iOS keyboard behavior requires device verification.
+
 ## 0.5.95
 - Add a one-time, non-modal cover background coach after audio and header artwork are ready. Highlight the cover and anchor a localized tip beneath it. Dismiss on cover tap, Got it, recording start or a ten-second timeout; persist the first impression locally. Preserve the background preference and transport; respect reduced motion. Add browser regression for dismissal and reload.
 

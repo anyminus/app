@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Immediate search focus (0.5.96)
+The home Find song action calls the existing hash navigator and synchronously commits the parsed route using React DOM flushSync, then focuses the mounted input and places its caret at the end. This preserves the trusted click activation needed by mobile Safari for its keyboard; it does not use a delayed effect or hidden proxy input. The normal hashchange listener remains responsible for other navigation. Search history, prior query and the search debounce are unchanged. E2E checks focus within the bubbling click and direct keyboard input; native iOS keyboard visibility is a device-level check.
+
 ## One-time cover onboarding (0.5.95)
 `useCoverCoach` stores the first eligible impression in `anyminus:cover-background-coach-v1` and retains a session fallback when storage is unavailable. The non-modal anchored tip appears after stems and header artwork are ready, outside recording mode and before the song ends. It has a ten-second timeout, a localized Got it action and a cover highlight. Cover activation dismisses the tip and continues toggling the existing shared background preference; Got it does not change that preference. The tip does not resize the lyric viewport or block transport, and reduced-motion preferences disable the entrance animation. No API or account storage changes.
 

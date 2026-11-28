@@ -14,3 +14,11 @@ test('recent submitted searches replay, persist, deduplicate and can be removed'
  await history.getByRole('button',{name:'Удалить запрос: Test song',exact:true}).click();await expect(history.locator('.search-history-query')).toHaveText(['Other artist']);
  await history.getByRole('button',{name:'Очистить историю поиска'}).click();await expect(history).toHaveCount(0);await expect(page.getByText('Введите минимум 2 символа')).toBeVisible();await page.reload();await expect(history).toHaveCount(0);
 });
+
+test('home find song focuses the search field in the originating click',async({page})=>{
+ await mockApi(page);await page.goto('/');
+ await page.evaluate(()=>{document.addEventListener('click',event=>{if(event.target instanceof Element&&event.target.closest('button')?.textContent?.trim()==='Найти песню'){document.documentElement.dataset.searchFocusedInClick=String(document.activeElement instanceof HTMLInputElement&&document.activeElement.getAttribute('aria-label')==='Поиск песни')}}, {once:true})});
+ await page.getByRole('button',{name:'Найти песню',exact:true}).click();const input=page.getByRole('textbox',{name:'Поиск песни'});
+ await expect(page).toHaveURL(/#\/search$/);await expect(input).toBeFocused();await expect(page.locator('html')).toHaveAttribute('data-search-focused-in-click','true');await page.keyboard.type('Test song');await expect(input).toHaveValue('Test song');
+ await expect(page.getByRole('button',{name:'Test song one',exact:true})).toBeVisible();
+});
