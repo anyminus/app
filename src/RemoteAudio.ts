@@ -1,13 +1,16 @@
 import {t as trUi} from './i18n.mjs';
-import {readAudioOutputMode} from './audioOutputMode';
+import {readAudioOutputMode,audioSessionAvailable} from './audioOutputMode';
+import {nextAudioProfile} from './adaptiveAudio.mjs';
 import type {StretchNode} from 'signalsmith-stretch';
 import {StemDownload,type DownloadProgress} from './stemDownload';
 import {defaultSync,readAudioDiagnostics,resolveDelay,recordingGains,defaultRecordingLevels,monitorBoostGain,defaultVoiceEffects,boundedVoiceEffects,type VoiceEffects,type RecordingLevels,type SyncSettings} from './recordingSync';
 type MediaSessionNavigator=Navigator&{audioSession?:{type:string}};
 export function playbackSession(type='playback'){try{const session=(navigator as MediaSessionNavigator).audioSession;if(session&&session.type!==type)session.type=type}catch{/* Optional Safari API; ordinary playback still works. */}}
+class OutputClockError extends Error {}
 export class RemoteAudio {
- private readonly outputMode=readAudioOutputMode();private latencyHint:AudioContextLatencyCategory='playback';private tryAlternativeLatency=false;
- private get sessionType(){return this.outputMode==='carplay'?'play-and-record':'playback';}
+ private readonly outputMode=readAudioOutputMode();private profile:'normal'|'alternate'|'compatibility'='normal';
+ private get latencyHint():AudioContextLatencyCategory{return this.profile==='alternate'?'interactive':'playback'}
+ private get sessionType(){return this.outputMode==='carplay'||(this.outputMode==='auto'&&this.profile==='compatibility')?'play-and-record':'playback';}
  restorePlaybackSession(){playbackSession(this.sessionType);}
  private context:AudioContext|null=null;private capturing=false;private playEpoch=0;private buffers:AudioBuffer[]=[];private gains:GainNode[]=[];private output:GainNode|null=null;private sources:AudioBufferSourceNode[]=[];private offset=0;private start=0;private running=false;private levels=[100,15];private duration=0;private starting:Promise<void>|null=null;private needsRecovery=false;private semitones=0;private rate=1;private pitchNode:StretchNode|null=null;private pitchGate:GainNode|null=null;private pitchLatency=0;
  get position(){return Math.max(0,Math.min(this.duration,this.running&&this.context?this.offset+Math.max(0,this.context.currentTime-this.start)*this.rate:this.offset));}
@@ -93,7 +96,7 @@ export class RemoteAudio {
   if(prepared)this.attachPitch(ctx,prepared.node,prepared.latency);
   else{
    try{await this.pitchNode!.schedule({active:true,rate:1,semitones:this.compensatedPitch(this.semitones,value),output:ctx.currentTime+this.pitchLatency})}
-   catch(e){if(this.context===ctx)this.markOutputStalled();throw e}
+   catch(e){if(this.context===ctx)this.markOutputStalled(true,e instanceof OutputClockError&&!document.hidden);throw e}
   }
   if(this.context!==ctx)throw Error(trUi('Аудиовыход изменился'));
   this.rate=value;
@@ -101,12 +104,12 @@ export class RemoteAudio {
  }
  private connectGains(ctx:AudioContext){const output=ctx.createGain();output.connect(ctx.destination);this.output=output;this.gains=this.buffers.map((_,i)=>{const gain=ctx.createGain();gain.gain.value=this.levels[i]/100;gain.connect(output);return gain;});}
  // A running state alone is not proof that WebKit's render clock is advancing.
- // Keep decoded stems and position; rebuild the audio output only on explicit Play.
- markOutputStalled(allowLatencyChange=true){this.pause();this.needsRecovery=true;if(allowLatencyChange&&!this.capturing&&this.outputMode==='auto')this.tryAlternativeLatency=true;}
+ // Keep decoded stems and position. Only a confirmed clock stall advances the adaptive profile.
+ markOutputStalled(allowLatencyChange=true,confirmedStall=false){this.pause();this.needsRecovery=true;const previous=this.profile;if(allowLatencyChange&&!this.capturing){this.profile=nextAudioProfile(this.outputMode,this.profile,confirmedStall,audioSessionAvailable()) as typeof this.profile;}return previous!==this.profile;}
  private rebuildOutput(sessionType=this.sessionType){this.pause();this.starting=null;const old=this.context;for(const gain of this.gains)try{gain.disconnect()}catch{}this.gains=[];this.clearPitch();this.output?.disconnect();this.output=null;this.context=null;if(old&&old.state!=='closed')void old.close().catch(()=>{});this.prepare(sessionType);this.connectGains(this.context!);this.needsRecovery=false;}
- private async waitForClock(ctx:AudioContext){const deadline=performance.now()+1800;while(this.context===ctx&&this.running){if(ctx.state==='running'&&ctx.currentTime>this.start+.02)return;if(performance.now()>=deadline)break;await new Promise<void>(resolve=>window.setTimeout(resolve,60))}if(this.context!==ctx||!this.running)return;throw Error(trUi('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.'));}
- async play(userInitiated=false){if(this.starting)return this.starting;if(!this.context||this.buffers.length!==2)throw Error(trUi('Аудио не загружено'));playbackSession(this.capturing?'play-and-record':this.sessionType);
- if(userInitiated&&(this.needsRecovery||this.interrupted||String(this.context.state)==='interrupted')){if(this.capturing)throw Error(trUi('Аудиовыход прерван. Повторите запись.'));if(this.outputMode==='auto'&&(this.tryAlternativeLatency||this.interrupted||String(this.context.state)==='interrupted'))this.latencyHint='interactive';this.tryAlternativeLatency=false;this.rebuildOutput();}
+ private async waitForClock(ctx:AudioContext){const deadline=performance.now()+1800;while(this.context===ctx&&this.running){if(ctx.state==='running'&&ctx.currentTime>this.start+.02)return;if(performance.now()>=deadline)break;await new Promise<void>(resolve=>window.setTimeout(resolve,60))}if(this.context!==ctx||!this.running)return;throw new OutputClockError(trUi('Аудиовыход не запустился. Нажмите воспроизведение ещё раз.'));}
+ async play(userInitiated=false,automaticRecovery=false){if(this.starting)return this.starting;if(!this.context||this.buffers.length!==2)throw Error(trUi('Аудио не загружено'));playbackSession(this.capturing?'play-and-record':this.sessionType);
+ if((userInitiated||automaticRecovery)&&(this.needsRecovery||this.interrupted||String(this.context.state)==='interrupted')){if(this.capturing)throw Error(trUi('Аудиовыход прерван. Повторите запись.'));this.rebuildOutput();}
  const ctx=this.context!,epoch=this.playEpoch;
  const start=async()=>{let timeout:number|undefined;try{await Promise.race([ctx.resume(),new Promise<never>((_,reject)=>{timeout=window.setTimeout(()=>reject(Error(trUi('Браузер заблокировал звук. Нажмите воспроизведение ещё раз.'))),4000)})]);}finally{clearTimeout(timeout)}
  if(epoch!==this.playEpoch)return;
