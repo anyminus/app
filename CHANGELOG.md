@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.95
+- Add a one-time, non-modal cover background coach after audio and header artwork are ready. Highlight the cover and anchor a localized tip beneath it. Dismiss on cover tap, Got it, recording start or a ten-second timeout; persist the first impression locally. Preserve the background preference and transport; respect reduced motion. Add browser regression for dismissal and reload.
+
 ## 0.5.94
 - Extend the artwork to the document canvas behind the karaoke screen and set a matching browser chrome tint from a tiny CORS-enabled thumbnail sample. Preserve safe-area padding and existing player fade. Restore original document theme on exit; never require canvas access for artwork or playback. Safari controls the actual browser/status-bar composition; physical iPhone verification is required.
 

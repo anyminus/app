@@ -73,3 +73,16 @@ test('high resolution background failure falls back to the successfully loaded t
  await mockApi(page);await page.route(/\/demo\/artwork\/101\?size=orig$/,r=>r.fulfill({status:404}));
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();const background=page.locator('.karaoke-cover-background');await expect(background.locator('img')).toHaveAttribute('src',/\/demo\/artwork\/101$/);await expect(background).toHaveCSS('opacity','1');
 });
+
+test('cover onboarding is shown once and acknowledging it preserves the background preference',async({page})=>{
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();
+ const tip=page.getByRole('complementary',{name:'Подсказка о фоне'}),cover=page.getByRole('button',{name:'Фон из обложки',exact:true});
+ await expect(tip).toBeVisible({timeout:15000});await expect(tip).toContainText('Нажмите на обложку, чтобы изменить фон плеера.');await expect(cover).toHaveClass(/cover-coach-target/);await expect(cover).toHaveAttribute('aria-pressed','true');
+ await tip.getByRole('button',{name:'Понятно',exact:true}).click();await expect(tip).toHaveCount(0);await expect(cover).toHaveAttribute('aria-pressed','true');await expect.poll(()=>page.evaluate(()=>localStorage.getItem('anyminus:cover-background-coach-v1'))).toBe('true');
+ await page.reload();await expect(page.locator('.karaoke-cover-background')).toHaveCSS('opacity','1',{timeout:15000});await expect(tip).toHaveCount(0);await expect(cover).not.toHaveClass(/cover-coach-target/);
+});
+test('tapping highlighted cover dismisses onboarding and toggles the background',async({page})=>{
+ await mockApi(page);await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();
+ const tip=page.getByRole('complementary',{name:'Подсказка о фоне'}),cover=page.getByRole('button',{name:'Фон из обложки',exact:true});
+ await expect(tip).toBeVisible({timeout:15000});await cover.click();await expect(tip).toHaveCount(0);await expect(cover).toHaveAttribute('aria-pressed','false');await expect(page.locator('.karaoke-cover-background')).toHaveCSS('opacity','0');await cover.click();await expect(tip).toHaveCount(0);await expect(cover).toHaveAttribute('aria-pressed','true');
+});

@@ -315,3 +315,13 @@ html.karaoke-edge-open #root{position:relative;z-index:1}
 html.karaoke-edge-open.karaoke-edge-active{background-color:var(--karaoke-edge-tint,#101019)}
 html.karaoke-edge-active body::before{opacity:.9}
 @media(prefers-reduced-motion:reduce){html.karaoke-edge-open,html.karaoke-edge-open body::before{transition:none}}
+
+/* One-time, non-modal cover coach: no layout shift or blocked transport. */
+.karaoke-header{position:relative;z-index:2}
+.karaoke-cover.cover-coach-target{outline:2px solid var(--accent);outline-offset:3px}
+.cover-coach{position:absolute;z-index:3;top:calc(100% + 9px);left:42px;width:min(270px,calc(100% - 48px));padding:10px 12px 7px;border:1px solid var(--border);border-radius:13px;background:var(--raised);color:var(--text);box-shadow:0 6px 24px #0004;pointer-events:none;animation:cover-coach-in 220ms ease-out}
+.cover-coach::before{content:"";position:absolute;top:-6px;left:15px;width:10px;height:10px;transform:rotate(45deg);border-top:1px solid var(--border);border-left:1px solid var(--border);background:var(--raised)}
+.cover-coach p{font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.cover-coach button{display:block;margin:3px 0 0 auto;min-height:36px;padding:3px 8px;color:var(--accent);font-size:12px;font-weight:700;pointer-events:auto;touch-action:manipulation}
+@keyframes cover-coach-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.cover-coach{animation:none}}

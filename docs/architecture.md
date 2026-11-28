@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## One-time cover onboarding (0.5.95)
+`useCoverCoach` stores the first eligible impression in `anyminus:cover-background-coach-v1` and retains a session fallback when storage is unavailable. The non-modal anchored tip appears after stems and header artwork are ready, outside recording mode and before the song ends. It has a ten-second timeout, a localized Got it action and a cover highlight. Cover activation dismisses the tip and continues toggling the existing shared background preference; Got it does not change that preference. The tip does not resize the lyric viewport or block transport, and reduced-motion preferences disable the entrance animation. No API or account storage changes.
+
 ## Player edge background (0.5.94)
 `usePlayerEdgeBackground` manages the document canvas only while the karaoke player is open. The root background and theme-color follow a blended artwork tint; a fixed noninteractive body backdrop reuses the already loaded artwork URL. The foreground retains the existing safe-area padding, dimensions and 600ms fade; no address-bar or Dynamic Island overlays are added. A tiny CORS-enabled thumbnail is sampled without reading protected media; CORS failure falls back to the ordinary theme color. Root classes, custom properties and theme-color are restored on exit. Safari 26 may render a solid sampled tint rather than actual image beneath its native chrome; mobile acceptance requires physical Safari testing.
 
