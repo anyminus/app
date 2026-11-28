@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Row creation with unknown lyrics capability (0.5.103)
+TrackRow and queueFromRow accept LRC or unknown provider capability for explicit creation. Unknown does not assert presence or absence of lyrics; it is not a reason to hide the action. Existing ready/queued states, track validation, status lookup, deduplication locks and missing-duration metadata handling remain intact. Confirmed TEXT and NONE retain their previous row warnings and detail behavior. No server-side policy or authorization changes.
+
 ## Server-owned lyrics format (0.5.102)
 Search and artist responses carry server-resolved LRC/TEXT/NONE for uncreated songs and stored receipt format for ready songs. The client no longer renders manual check/recheck controls or pending-format labels. A detail reached without capability performs one ordinary metadata read; a genuine failure leaves a service-unavailable notice, not a fabricated missing-text result. Unknown ready rows say only karaoke ready (omitted on home), while positive same-pair receipts remain preserved by the 0.5.101 merge. No changes to the audio queue or text storage. Requires the corresponding core worker deployment.
 

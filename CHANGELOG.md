@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.103
+- Show the explicit row create action for non-ready tracks with unknown provider lyrics capability, matching the detail page's eligibility after an unavailable lyrics response. Allow the same guarded row enqueue flow for LRC or unknown, with no automatic enqueue and no change to confirmed TEXT/NONE warnings. Add regression for unknown capability and one-tap queueing.
+
 ## 0.5.102
 - Remove manual lyric availability checks and ambiguous lyric labels. Search and artist APIs resolve provider capability server-side; the detail page uses a single ordinary metadata read only if needed, without a retry button. Confirmed statuses remain; actual unavailability is reported on detail only. Unknown ready metadata indicates ready audio without asserting a lyric format. Home suppresses redundant ready labels. Update regressions.
 

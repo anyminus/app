@@ -126,7 +126,7 @@ export function App(){
  }
  async function queueFromRow(t:LiveTrack){
   const id=t.providerTrackId;
-  if(!api||!isTrackId(id)||t.pairOperationId||t.providerLyricsFormat!=='LRC'||queueLocks.current.has(id)||karaokeNotices[id]?.state==='waiting')return;
+  if(!api||!isTrackId(id)||t.pairOperationId||(!!t.providerLyricsFormat&&t.providerLyricsFormat!=='LRC')||queueLocks.current.has(id)||karaokeNotices[id]?.state==='waiting')return;
   queueLocks.current.add(id);setQueueBusy(old=>({...old,[id]:true}));setQueueErrors(old=>({...old,[id]:''}));
   const signal=AbortSignal.timeout(25000);
   try{
