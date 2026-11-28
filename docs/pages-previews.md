@@ -1,7 +1,8 @@
 # GitHub Pages: production + branch previews
 
 Production: https://anyminus.github.io/app/ — always built from main.
-Preview: https://anyminus.github.io/app/prototype/face-masks/ — built from prototype/face-masks.
+Active previews: none. The face-mask prototype graduated to main in 0.5.87 and its preview URL is retired. Historical branch tip before retirement: `8536769b68da4e878570a48200c9ef01a8f462fd`.
+The empty allowlist is supported by the existing preview builder; future experiments may use the same branch-preview mechanism.
 
 Pages publishes a single combined artifact. Main's normal build and Storybook occupy the root. Each branch in pages-previews.json is built independently with read-only permissions and copied under its exact branch path (prototype/<name>). The final assembly rejects a collision with the production prototype directory. Only the main workflow can deploy. Preview branch pushes run CI but do not deploy. After successful preview CI, manually run the workflow from main to rebuild the combined site. Main pushes also rebuild it. A failed build does not replace the last successful deployment. Adding another preview: create prototype/<slug> from main, then add that branch to pages-previews.json in main; remove the entry to unpublish it on next deployment. Deleting a listed branch without removing it first will fail the combined build.
 
