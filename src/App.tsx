@@ -6,6 +6,7 @@ import {useReleaseNotice} from './useReleaseNotice';
 import {ArrowLeft,AudioLines,Bell,RefreshCw,Send,LogOut,Check,ChevronRight,Copy,Heart,History,House,ListMusic,Moon,Search,Settings,Share2,Sun,UserRound,X} from 'lucide-react';
 import {parseRoute,matchesArtist,artistPath,formatTime,exactSearchArtists} from './model.mjs';
 import {sharedTrackPath,validateSharedPlayback,validateSharedTime,type PlaybackSettings} from './sharedPlayback.mjs';
+import {readSongPlayback} from './songPlayback.mjs';
 import {LazyCover,Artwork,IconButton,TrackRow,type Track} from './components';
 import {LiveCatalog} from './LiveCatalog';
 import {normalizeJob,validPairId,providerLyricsHint} from './api.mjs';
@@ -104,7 +105,7 @@ export function App(){
  function hidePlaylists(){setPlaylistMode(false);profileTaps.current={count:0,startedAt:0};try{sessionStorage.removeItem('anyminus:playlist-mode')}catch{}navigate('profile')}
  function notify(message:string){setToast(message);clearTimeout(toastTimer.current);toastTimer.current=window.setTimeout(()=>setToast(''),2300)}
  function like(id:string){setFavorites(old=>old.includes(id)?old.filter(x=>x!==id):[id,...old])}
- function shareTrack(t:Track,settings?:PlaybackSettings,time?:number){setIncludePlayback(false);setIncludeTime(false);const playback=validateSharedPlayback(settings??{music,vocals,musicMuted,vocalsMuted,pitch:0,speed:1});setShare({type:'track',id:t.id,title:t.title,subtitle:t.artist,color:t.color,artworkUrl:t.artworkUrl,playback:playback??undefined,time:validateSharedTime(time)??undefined})}
+ function shareTrack(t:Track,settings?:PlaybackSettings,time?:number){setIncludePlayback(false);setIncludeTime(false);const playback=validateSharedPlayback(settings??readSongPlayback(t.id,rememberSongPlayback,null));setShare({type:'track',id:t.id,title:t.title,subtitle:t.artist,color:t.color,artworkUrl:t.artworkUrl,playback:playback??undefined,time:validateSharedTime(time)??undefined})}
  function shareArtist(artist:string){setIncludePlayback(false);setIncludeTime(false);setShare({type:'artist',id:artist,authorId:route.author_id??artistPopular.artistId??undefined,title:artist,subtitle:trUi('Артист'),color:'#7961bd'})}
  function linkFor(e:Entity){const url=new URL(location.href);url.hash=e.type==='artist'?artistPath(e.id,e.authorId):sharedTrackPath(e.id,includePlayback?e.playback:null,includeTime?e.time:null);return url.toString()}
  async function copyLink(){if(!share)return;try{await navigator.clipboard.writeText(linkFor(share));setShare(null);notify(trUi('Ссылка скопирована'))}catch{notify(trUi('Не удалось скопировать. Выделите ссылку вручную.'))}}
