@@ -453,3 +453,5 @@
 - Mobile-first prototype with search, home, favorites, artist and track pages, history, profile, settings, sharing and mock preparation.
 - Bottom karaoke dock, synchronized synthetic test signals and independent volume controls.
 - Storybook and automated checks; GitHub Pages workflow.
+
+- 0.5.93: offer an explicit lyrics check instead of the ambiguous unconfirmed label in discovery rows; resolve on open through verified metadata and retain confirmed result in the local track cache. Temporary provider failures offer retry rather than falsely reporting absence.

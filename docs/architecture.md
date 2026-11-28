@@ -380,3 +380,6 @@ Owner requested only «Караоке в базе» for stored tracks instead of
 
 ## Local musical face mask (0.5.87)
 Promoted from `prototype/face-masks` after owner iPhone verification. Default enabled on component mount; the user may uncheck it in video preview, with the selection retained while the component remains mounted. Frames are never uploaded. Worker only starts in active video capture; disabling or leaving capture disposes it. Worker performs classic decision-tree detection on downsampled frames; local throttled fallback if needed. Notes are rendered into the existing recording canvas, independent of lyrics. Audio graph and backend unchanged. See [face mask design and acceptance](face-mask-prototype.md).
+
+### On-demand lyrics capability verification (0.5.93)
+For discovery rows with no provider capability, the check action opens the track and requests metadata with `verifyLyrics=1`; the worker verifies the actual lyric if capability flags are absent. The returned LRC/TEXT/NONE is retained in the local track cache. A failed or ambiguous provider response permits explicit retry, not false absence. This is not a bulk verification of all search results or a new server-side lyrics cache.

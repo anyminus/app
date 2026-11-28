@@ -155,6 +155,8 @@ const dictionary={
  "Текст отсутствует": ["No lyrics","Kein Liedtext","Sin letra","Δεν υπάρχουν στίχοι"],
  "Формат текста уточняется": ["Checking lyrics format","Textformat wird geprüft","Comprobando formato de letra","Έλεγχος μορφής στίχων"],
  "Формат текста уточняется…": ["Checking lyrics format…","Textformat wird geprüft…","Comprobando formato de letra…","Έλεγχος μορφής στίχων…"],
+ "Проверить текст": ["Check lyrics","Liedtext prüfen","Comprobar letra","Έλεγχος στίχων"],
+ "Повторить проверку текста": ["Retry lyrics check","Liedtext erneut prüfen","Volver a comprobar la letra","Επανάληψη ελέγχου στίχων"],
  "Наличие текста не подтверждено": ["Lyrics availability unconfirmed","Liedtext nicht bestätigt","Disponibilidad de letra sin confirmar","Η διαθεσιμότητα στίχων δεν έχει επιβεβαιωθεί"],
  "Проверяем наличие текста…": ["Checking for lyrics…","Liedtext wird gesucht…","Buscando letra…","Έλεγχος διαθεσιμότητας στίχων…"],
  "Проверяем наличие караоке…": ["Checking for karaoke…","Karaoke wird gesucht…","Buscando karaoke…","Έλεγχος διαθεσιμότητας καραόκε…"],

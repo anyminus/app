@@ -31,7 +31,7 @@ export function createDemoApi(origin,fetcher=fetch){
  telegram:(initData,signal)=>call('/v1/auth/telegram',{method:'POST',body:{initData},signal}),
  telegramStart:(challenge,signal)=>call('/v1/auth/telegram/start',{method:'POST',body:{challenge},signal}),
  telegramExchange:(code,state,verifier,signal)=>call('/v1/auth/telegram/exchange',{method:'POST',body:{code,state,verifier},signal}),
- metadata:(id,token,signal)=>call('/demo/track-metadata/'+encodeURIComponent(id),{token,signal}),
+ metadata:(id,token,signal,verifyLyrics=false)=>call('/demo/track-metadata/'+encodeURIComponent(id)+(verifyLyrics?'?verifyLyrics=1':''),{token,signal}),
  lyrics:(id,durationMs,signal,telegramToken)=>call('/demo/lyrics',{query:{id,format:'LRC',durationMs},signal,token:telegramToken}),
  /** @param {string[]} trackIds @param {string} token @param {AbortSignal} [signal] */
  readyTicket:(trackIds,token,signal)=>call('/demo/notifications/ticket',{method:'POST',body:{trackIds},token,signal}),
