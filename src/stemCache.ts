@@ -1,6 +1,6 @@
 // Origin-local, bounded application cache. Never stores credentials or signed URLs.
-export const CACHE_LIMIT=100_000_000, STEM_LIMIT=19_000_000, CACHE_TTL=7*24*60*60*1000;
-const MAX_ENTRIES=40, DB='anyminus-stems-v1', STORE='stems';
+export const CACHE_LIMIT=300_000_000, STEM_LIMIT=19_000_000, CACHE_TTL=7*24*60*60*1000;
+const MAX_ENTRIES=120, DB='anyminus-stems-v1', STORE='stems';
 type Entry={key:string;data:Blob;total:number|null;done:boolean;used:number};
 const validKey=(key:string)=>{try{const u=new URL(key);return u.protocol==='https:'&&!u.search&&!u.hash&&!u.username&&!u.password&&/^\/demo\/catalog\/media\/[0-9a-f-]{36}\/(?:instrumental|vocals)$/i.test(u.pathname)}catch{return false}};
 const valid=(e:Entry,now:number)=>!!e&&validKey(e.key)&&e.data instanceof Blob&&e.data.size>0&&e.data.size<=STEM_LIMIT&&Number.isFinite(e.used)&&e.used<=now+60_000&&now-e.used<CACHE_TTL&&(e.total===null||Number.isSafeInteger(e.total)&&e.total>=e.data.size&&e.total<=STEM_LIMIT)&&(!e.done||e.total===e.data.size);

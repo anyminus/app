@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.92
+- Increase the origin-local audio stem cache cap to 300 MB and 120 entries (previously 100 MB / 40); retain per-stem cap, seven-day expiry and best-effort storage fallback.
+- Persist a default-on vivid artwork background preference in the profile. The cover toggles that same preference. Use the successfully loaded thumbnail source; only reveal the backdrop after the two stems are loaded and ready, with a 600ms fade both ways. Keep the previous blur and contrast, respect reduced motion and do not reset the preference on track changes or failed artwork. Add loading/persistence regressions.
+
 ## 0.5.91
 - Replace native artist buttons in song rows with genuine inline text links, allowing the whole comma-separated credit list to flow and clamp together across two lines instead of independently truncating names in Safari. Explicitly constrain the track-info grid to its available width. Preserve canonical artist navigation, full hover title and unchanged player heading. Extend regression to check full text, two occupied lines and full available width.
 

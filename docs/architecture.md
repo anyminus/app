@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Vivid player background and stem cache (0.5.92)
+The `anyminus:bright-player-background` localStorage preference defaults to true and is shared by the Profile checkbox and karaoke cover button. The successfully loaded thumbnail URL is forwarded from Artwork; the separate background layer remains mounted at opacity zero until its image and both audio stems are ready and audio loading finishes. CSS transitions opacity over 600ms for enable/disable and uses reduced-motion override. Background failure leaves the normal player and the saved preference intact. Track changes preserve the preference, not the previous image. Existing background blur/scrim and video/audio logic are unchanged. IndexedDB stem cache now caps at 300,000,000 bytes and 120 entries; the 19MB per-stem cap, seven-day idle expiry, LRU trimming and graceful storage failure behavior remain. Browser quota is independent of this cap. Regression covers delayed stem loading, profile/cover persistence, toggles and updated cache display.
+
 ## Inline artist credit flow (0.5.91)
 TrackRow uses dedicated TrackArtistLinks with native inline anchors and ordinary comma-space separators; no individual button boxes or per-name ellipsis. The track-info grid has one minmax(0,1fr) column. The existing two-line clamp and 34px fallback apply once to the whole credit list. Normal link activation uses the established artist navigation callback (including ID resolution); modified clicks retain href behavior. Other ArtistLinks uses, including the player header, are unchanged. All changes are made on main; the retired preview is not maintained.
 

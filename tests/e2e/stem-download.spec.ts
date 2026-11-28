@@ -25,11 +25,11 @@ test('stem progress survives background interruption and resumes the byte range'
  });
  await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();
  const panel=page.getByRole('region',{name:'Загрузка аудиодорожек'}),voice=panel.getByRole('progressbar',{name:'Загрузка голоса'});
- await expect(voice).toHaveAttribute('value','100000');await expect(panel).toContainText('0,10 МБ / 0,38 МБ');
+ await expect(voice).toHaveAttribute('value','100000');await expect(panel).toContainText('0,10 МБ / 0,38 МБ');await expect(page.locator('.karaoke-cover-background')).toHaveCSS('opacity','0');await expect(page.locator('.karaoke-screen')).not.toHaveClass(/karaoke-cover-background-on/);
  await page.evaluate(()=>Reflect.get(window,'__breakStem')());await expect(page.getByText('Загрузка приостановлена',{exact:true})).toBeVisible();
  await expect(voice).toHaveAttribute('value','100000');expect(await page.evaluate(()=>Reflect.get(window,'__stemRanges'))).toEqual([null]);
  await page.evaluate(()=>{Reflect.set(window,'__stemHidden',false);document.dispatchEvent(new Event('visibilitychange'))});
- await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible({timeout:15000});await expect(panel).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible({timeout:15000});await expect(panel).toHaveCount(0);await expect(page.locator('.karaoke-cover-background')).toHaveCSS('opacity','1');
  expect(await page.evaluate(()=>Reflect.get(window,'__stemRanges'))).toEqual([null,'bytes=100000-']);
 });
 
@@ -38,7 +38,7 @@ test('completed stems survive reload, still require playback grant, and profile 
  const grants=api.requests.filter(p=>p==='/demo/catalog/playback').length;
  await page.reload();await expect(slider).toBeEnabled({timeout:15000});expect(api.media).toBe(2);expect(api.requests.filter(p=>p==='/demo/catalog/playback').length).toBeGreaterThan(grants);
  await page.getByRole('button',{name:'Назад',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'Профиль',exact:true}).click();
- const clear=page.getByRole('button',{name:'Очистить кеш',exact:true});await expect(clear).toBeEnabled();await clear.click();await expect(clear).toBeDisabled();
+ await expect(page.getByRole('region',{name:'Кеш аудиодорожек'})).toContainText('/ 300 МБ');const clear=page.getByRole('button',{name:'Очистить кеш',exact:true});await expect(clear).toBeEnabled();await clear.click();await expect(clear).toBeDisabled();
  await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(slider).toBeEnabled({timeout:15000});expect(api.media).toBe(4);
 });
 

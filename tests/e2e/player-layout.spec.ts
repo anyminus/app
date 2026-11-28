@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {mockApi} from './fixture';
 test('karaoke fits the viewport, follows lyrics without page scroll, keeps controls in focus and landscape',async({page})=>{
- const api=await mockApi(page);
+ await page.addInitScript(()=>localStorage.setItem('anyminus:bright-player-background','false'));const api=await mockApi(page);
  await page.route(/^https:\/\/[^/]+\/demo\/catalog\/media\/[^/]+\/lyrics$/,async r=>r.fulfill({json:{state:'available',format:'LRC',timing:'line',lines:Array.from({length:20},(_,i)=>({text:'Test lyric '+i+' with a long line to wrap',startMs:i*45,endMs:(i+1)*45,startOrigin:'source'}))},headers:{'Access-Control-Allow-Origin':r.request().headers().origin||'http://127.0.0.1:4173','Access-Control-Allow-Credentials':'true'}}));
  await page.setViewportSize({width:390,height:664});await page.goto('/');await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(page.getByRole('button',{name:'Пауза',exact:true})).toBeVisible();await page.getByRole('button',{name:'Пауза',exact:true}).click();
  const screen=page.getByRole('region',{name:'Плеер караоке'}), lyrics=page.getByLabel('Текст песни',{exact:true}),play=page.getByRole('button',{name:'Воспроизвести',exact:true}),slider=page.getByRole('slider',{name:'Позиция песни'}),mixer=page.getByRole('region',{name:'Микшер'});await expect(screen).toBeVisible();await expect(lyrics.getByRole('button')).toHaveCount(20);const hint=page.getByText('Нажмите на любую строку, чтобы перейти к ней',{exact:true});await expect(hint).toBeVisible();await expect(lyrics).toHaveAttribute('aria-describedby','lyric-seek-hint');
@@ -15,7 +15,7 @@ test('karaoke fits the viewport, follows lyrics without page scroll, keeps contr
  const defaultPalette=await adjustments.first().evaluate(palette);
  const playPalette=await play.evaluate(palette);
  expect(defaultPalette).not.toEqual(playPalette);
- await cover.click();await expect(screen).toHaveClass(/karaoke-cover-background-on/);await expect(screen.locator('.karaoke-cover-background img')).toHaveCSS('filter','blur(12px)');
+ await cover.click();await expect(screen).toHaveClass(/karaoke-cover-background-on/);await expect(screen.locator('.karaoke-cover-background img')).toHaveCSS('filter','blur(12px)');await expect(screen.locator('.karaoke-cover-background')).toHaveCSS('opacity','1');
  for(const button of await adjustments.all()){
   const appearance=await button.evaluate(el=>{
    const s=getComputedStyle(el),canvas=document.createElement('canvas');canvas.width=canvas.height=1;
@@ -25,7 +25,7 @@ test('karaoke fits the viewport, follows lyrics without page scroll, keeps contr
   });
   expect(appearance.alpha).toBeCloseTo(.35,2);expect(appearance.color).toBe(appearance.textColor);
  }
- await cover.click();await expect(screen).not.toHaveClass(/karaoke-cover-background-on/);
+ await cover.click();await expect(screen).not.toHaveClass(/karaoke-cover-background-on/);await expect(screen.locator('.karaoke-cover-background')).toHaveCSS('opacity','0');
  for(const button of await adjustments.all())expect(await button.evaluate(palette)).toEqual(defaultPalette);
  await slider.fill('0.8');await expect.poll(()=>lyrics.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);expect(await page.evaluate(()=>window.scrollY)).toBe(0);await fits(play);
  await page.getByRole('button',{name:'Свернуть микшер',exact:true}).click();await expect(mixer).toHaveCount(0);await expect(page.getByRole('button',{name:'Показать микшер',exact:true})).toHaveAttribute('aria-expanded','false');await fits(play);await fits(slider);await fits(screen);await fits(hint);await fits(favorite);await checkHeader();
@@ -187,4 +187,16 @@ test('pitch and speed stepper buttons stay inside their own panels across viewpo
    }
   }
  }
+});
+
+test('bright background is on by default and cover and profile share a persistent setting',async({page})=>{
+ await mockApi(page);await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/');
+ const nav=page.getByRole('navigation'),setting=page.getByRole('checkbox',{name:'Яркий фон в плеере'}),screen=page.getByRole('region',{name:'Плеер караоке'}),cover=page.getByRole('button',{name:'Фон из обложки',exact:true}),background=screen.locator('.karaoke-cover-background');
+ await nav.getByRole('button',{name:'Профиль',exact:true}).click();await expect(setting).toBeChecked();
+ await nav.getByRole('button',{name:'Главная',exact:true}).click();await page.getByRole('button',{name:'Test song one',exact:true}).click();
+ await expect(page.getByRole('slider',{name:'Позиция песни'})).toBeEnabled({timeout:15000});await expect(cover).toHaveAttribute('aria-pressed','true');await expect(background).toHaveCSS('opacity','1');await expect(background).toHaveCSS('transition-duration','0.6s');
+ await cover.click();await expect(cover).toHaveAttribute('aria-pressed','false');await expect(background).toHaveCSS('opacity','0');await expect(background.locator('img')).toHaveCount(1);
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await nav.getByRole('button',{name:'Профиль',exact:true}).click();await expect(setting).not.toBeChecked();await page.reload();await expect(setting).not.toBeChecked();
+ await setting.check();await nav.getByRole('button',{name:'Главная',exact:true}).click();await page.getByRole('button',{name:'Test song one',exact:true}).click();await expect(background).toHaveCSS('opacity','1',{timeout:15000});
+ await cover.click();await expect(background).toHaveCSS('opacity','0');await cover.click();await expect(background).toHaveCSS('opacity','1');await page.getByRole('button',{name:'Назад',exact:true}).click();await nav.getByRole('button',{name:'Профиль',exact:true}).click();await expect(setting).toBeChecked();
 });
