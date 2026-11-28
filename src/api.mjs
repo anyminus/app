@@ -19,7 +19,7 @@ export function createDemoApi(origin,fetcher=fetch){
  function auth(signal){if(signal?.aborted)return Promise.reject(signal.reason);if(session&&session.expires>Date.now()+30000)return Promise.resolve(session.value);if(!inflight){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);inflight=call('/demo/auth',{method:'POST',body:{},signal:controller.signal}).then(value=>{if(typeof value?.accessToken!=='string'||!Number.isFinite(value.expiresIn)||value.expiresIn<=0)throw Error(trUi('Некорректный ответ авторизации'));session={value,expires:Date.now()+value.expiresIn*1000};return value}).finally(()=>{clearTimeout(timer);inflight=null})}return abortable(inflight,signal)}
 
  return {
- search:(q,signal,telegramToken=undefined)=>{const text=q.trim();if(text.length<2||text.length>200)throw Error(trUi('Поиск: 2–200 символов'));return call('/demo/search',{query:{q:text,limit:20},token:telegramToken,signal})},
+ search:(q,signal,telegramToken=undefined)=>{const text=q.trim();if(text.length<2||text.length>200)throw Error(trUi('Поиск: 2–200 символов'));return call('/demo/search',{query:{q:text,limit:15},token:telegramToken,signal})},
  /** @param {string} name @param {AbortSignal} signal @param {string} [artistId] @param {string} [cursor] */
  artistPopular:(name,signal,artistId=undefined,cursor=undefined)=>{const text=name.trim();if(!text||text.length>200)throw Error(trUi('Некорректное имя артиста'));if((artistId!==undefined&&!/^\d{1,20}$/.test(artistId))||(cursor!==undefined&&(!/^(20|40|60|80)$/.test(cursor)||!artistId)))throw Error(trUi('Некорректная страница артиста'));return call('/demo/artists/popular',{query:artistId===undefined?{name:text}:{artistId,cursor},signal})},
  /** @param {string[]} ids @param {AbortSignal} [signal] */
@@ -50,7 +50,7 @@ export function createControlApi(origin,fetcher=fetch){
  telegram:(initData,key,signal)=>call('/v1/auth/telegram',{method:'POST',body:{initData,bootstrapIdempotencyKey:key},credentials:'include',signal}),
  refresh:(csrf,signal)=>call('/v1/auth/refresh',{method:'POST',headers:{'X-CSRF-Token':csrf},credentials:'include',signal}),
  logout:(csrf,signal)=>call('/v1/auth/logout',{method:'POST',headers:{'X-CSRF-Token':csrf},credentials:'include',signal}),
- search:(q,token,cursor,signal)=>call('/v1/search',{query:{q,cursor,limit:20},token,signal}),
+ search:(q,token,cursor,signal)=>call('/v1/search',{query:{q,cursor,limit:15},token,signal}),
  library:(token,cursor,signal)=>call('/v1/library',{query:{cursor,limit:20},token,signal}),
  add:(track,token,key,signal)=>call('/v1/library',{method:'POST',body:{providerTrackId:track.providerTrackId,...(track.albumId?{albumId:track.albumId}:{})},token,headers:{'Idempotency-Key':key},signal}),
  remove:(id,token,signal)=>call('/v1/library/'+encodeURIComponent(id),{method:'DELETE',token,signal}),

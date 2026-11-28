@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.99
+- Request up to 15 combined search results. The DEV worker searches the ready catalog and Yandex independently, deduplicates by exact provider track ID and prioritizes confirmed ready karaoke. No client-side catalog scan or new request from the browser. Deployment of both core workers is required for full behavior.
+
 ## 0.5.98
 - Isolate karaoke playback settings by provider track ID. New songs start at 100/15, both tracks unmuted, pitch 0 and speed 1.0. Profile remember setting defaults on; manual changes persist locally, including successful pitch/speed changes. Disabling ignores saved values without deleting them. Shared-link parameters retain priority for that opening; merely opening a link does not write settings. Remove the obsolete global mixer controls. Add unit and browser regressions.
 

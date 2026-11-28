@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Combined karaoke search (0.5.99)
+The browser sends one search request with limit 15. The server independently finds ready catalog matches by title/artist and requests the Yandex provider (now up to 15 tracks), merges exact IDs and prioritizes ready tracks with verified timed lyrics, then plain lyrics, then other ready, then provider-only matches. The client uses the same normalized readiness response and does not download the whole catalog. Distinct versions with different provider IDs stay separate. Actual result count depends on matches and backend deployments.
+
 ## Per-song playback settings (0.5.98)
 `anyminus:remember-song-playback` defaults true. Each numeric provider track ID has a validated `anyminus:song-playback-v1:<id>` localStorage entry, independent of cache and other tracks. Initialization priority: validated explicit shared-link parameters, saved song settings when enabled, then 100% music/15% vocals/unmuted/pitch 0/speed 1.0. The keyed LiveCatalog owns its playback state and writes a complete snapshot only on manual mixer/mute edits or successful pitch/tempo edits; initialization/failure does not write. Opening a shared link alone never overwrites personal settings; manual edits can save the resulting settings. Disabling the preference skips reads/writes without deleting saved entries. Legacy global mixer keys are ignored and the obsolete settings mixer is replaced by a default explanation. Theme, lyric preferences, video recording preferences and position are not per-song playback settings. No API or audio format changes.
 

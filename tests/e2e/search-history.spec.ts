@@ -33,3 +33,9 @@ test('search focuses on direct entry, reload, bottom tab and returning from anot
  await nav.getByRole('button',{name:'Поиск',exact:true}).click();await expect(input).toBeFocused();await expect(input).toHaveValue('Test song');expect(await input.evaluate((el:HTMLInputElement)=>el.selectionStart)).toBe(9);
  await nav.getByRole('button',{name:'Главная',exact:true}).click();await expect(input).toHaveCount(0);await page.goBack();await expect(input).toBeFocused();
 });
+
+test('search requests up to fifteen songs in a single combined response',async({page})=>{
+ await mockApi(page);await page.goto('/#/search');const input=page.getByRole('textbox',{name:'Поиск песни'});
+ const response=page.waitForResponse(r=>{const u=new URL(r.url());return u.pathname==='/demo/search'&&u.searchParams.get('q')==='Test song'});
+ await input.fill('Test song');const result=await response;expect(new URL(result.url()).searchParams.get('limit')).toBe('15');await expect(page.getByRole('button',{name:'Test song one',exact:true})).toBeVisible();
+});
