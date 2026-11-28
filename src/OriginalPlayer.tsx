@@ -6,23 +6,29 @@ import {origin,isTrackId,coverFor,type LiveTrack} from './catalog';
 import {formatTime} from './model.mjs';
 import {playbackSession} from './RemoteAudio';
 import {useSystemMedia} from './useSystemMedia';
+import {createPlaybackOccurrence} from './playbackAnalytics.mjs';
+import {enqueuePlaybackEvent} from './analytics';
 
 export function useOriginalPlayer(){
  const audio=useRef<HTMLAudioElement>(null),active=useRef<LiveTrack|null>(null),operation=useRef(0);
+ const analytics=useRef<ReturnType<typeof createPlaybackOccurrence>|null>(null);
+ const analyticsResume=()=>{const el=audio.current;if(el&&active.current&&!el.paused){analytics.current?.resume(el.currentTime)}};
+ const analyticsBreak=()=>analytics.current?.discontinuity();
+ const analyticsEnd=()=>{const el=audio.current;if(el)analytics.current?.sample(el.currentTime,el.duration,el.playbackRate);analytics.current?.reset()};
  const [track,setTrack]=useState<LiveTrack|null>(null),[playing,setPlaying]=useState(false),[waiting,setWaiting]=useState(false),[position,setPosition]=useState(0),[duration,setDuration]=useState(0),[error,setError]=useState('');
- const pause=useCallback(()=>{operation.current++;audio.current?.pause();setPlaying(false);setWaiting(false)},[]);
- const close=useCallback(()=>{operation.current++;active.current=null;const el=audio.current;if(el){el.pause();el.removeAttribute('src');el.load()}setTrack(null);setPlaying(false);setWaiting(false);setPosition(0);setDuration(0);setError('')},[]);
- const play=useCallback(async()=>{const el=audio.current;if(!el||!active.current)return;const id=++operation.current;setError('');setWaiting(true);playbackSession();try{if(el.error){el.load()}if(el.ended)el.currentTime=0;await el.play();if(id===operation.current&&active.current)setPlaying(!el.paused)}catch{if(id===operation.current&&active.current){setPlaying(false);setWaiting(false);setError(trUi('Оригинал недоступен. Нажмите Play для повторной попытки.'))}}},[]);
- function toggle(t:LiveTrack){const el=audio.current;if(!el||!isTrackId(t.providerTrackId))return;if(active.current?.providerTrackId===t.providerTrackId){if(!el.paused||waiting)pause();else void play();return}operation.current++;el.pause();active.current=t;setTrack(t);setPlaying(false);setPosition(0);setDuration((t.durationMs??0)/1000);setError('');el.src=new URL('/demo/audio/'+encodeURIComponent(t.providerTrackId),origin).href;void play();}
- function seek(value:number){const el=audio.current;if(!el||!active.current||!Number.isFinite(value))return;const length=Number.isFinite(el.duration)&&el.duration>0?el.duration:duration;try{el.currentTime=Math.max(0,Math.min(length,value));setPosition(el.currentTime)}catch{}}
- const update=()=>{const el=audio.current;if(!el||!active.current)return;setPosition(el.currentTime||0);if(Number.isFinite(el.duration)&&el.duration>0)setDuration(el.duration)};
+ const pause=useCallback(()=>{operation.current++;analytics.current?.discontinuity();audio.current?.pause();setPlaying(false);setWaiting(false)},[]);
+ const close=useCallback(()=>{operation.current++;analytics.current=null;active.current=null;const el=audio.current;if(el){el.pause();el.removeAttribute('src');el.load()}setTrack(null);setPlaying(false);setWaiting(false);setPosition(0);setDuration(0);setError('')},[]);
+ const play=useCallback(async()=>{const el=audio.current;if(!el||!active.current)return;const id=++operation.current;setError('');setWaiting(true);playbackSession();try{if(el.error){el.load()}if(el.ended){analytics.current?.reset();el.currentTime=0;}await el.play();if(id===operation.current&&active.current)setPlaying(!el.paused)}catch{if(id===operation.current&&active.current){setPlaying(false);setWaiting(false);setError(trUi('Оригинал недоступен. Нажмите Play для повторной попытки.'))}}},[]);
+ function toggle(t:LiveTrack){const el=audio.current;if(!el||!isTrackId(t.providerTrackId))return;if(active.current?.providerTrackId===t.providerTrackId){if(!el.paused||waiting)pause();else void play();return}operation.current++;el.pause();active.current=t;analytics.current=createPlaybackOccurrence('original',t.providerTrackId,enqueuePlaybackEvent);setTrack(t);setPlaying(false);setPosition(0);setDuration((t.durationMs??0)/1000);setError('');el.src=new URL('/demo/audio/'+encodeURIComponent(t.providerTrackId),origin).href;void play();}
+ function seek(value:number){const el=audio.current;if(!el||!active.current||!Number.isFinite(value))return;const length=Number.isFinite(el.duration)&&el.duration>0?el.duration:duration;try{analytics.current?.discontinuity();el.currentTime=Math.max(0,Math.min(length,value));setPosition(el.currentTime)}catch{}}
+ const update=()=>{const el=audio.current;if(!el||!active.current)return;if(!el.paused&&!el.seeking&&el.readyState>=3)analytics.current?.sample(el.currentTime,el.duration,el.playbackRate);setPosition(el.currentTime||0);if(Number.isFinite(el.duration)&&el.duration>0)setDuration(el.duration)};
  useEffect(()=>()=>{operation.current++;audio.current?.pause()},[]);
  useSystemMedia({ready:!!track,title:track?.title??'',artist:track?.artist??'',artwork:track?coverFor(track.providerTrackId,track.coverUrl):null,playing,length:duration,position,speed:1,play:()=>void play(),pause,seek,currentTime:()=>audio.current?.currentTime??0,isPlaying:()=>!!audio.current&&!audio.current.paused});
- return {track,playing,waiting,position,duration,error,toggle,close,pause,play,seek,audio,update,setPlaying,setWaiting,setError,active};
+ return {track,playing,waiting,position,duration,error,toggle,close,pause,play,seek,audio,update,setPlaying,setWaiting,setError,active,analyticsResume,analyticsBreak,analyticsEnd};
 }
 export type OriginalPlayer=ReturnType<typeof useOriginalPlayer>;
 export function OriginalAudio({player:p}:{player:OriginalPlayer}){
- return <audio ref={p.audio} crossOrigin="anonymous" preload="none" onTimeUpdate={p.update} onLoadedMetadata={p.update} onDurationChange={p.update} onPlaying={()=>{if(p.active.current){p.setPlaying(true);p.setWaiting(false)}}} onPause={()=>{if(p.audio.current?.paused)p.setPlaying(false)}} onWaiting={()=>{if(p.active.current&&!p.audio.current?.paused)p.setWaiting(true)}} onCanPlay={()=>p.setWaiting(false)} onEnded={()=>{p.setPlaying(false);p.setWaiting(false);p.update()}} onError={()=>{if(p.active.current&&p.audio.current?.error){p.setPlaying(false);p.setWaiting(false);p.setError(trUi('Оригинальная дорожка недоступна. Повторите воспроизведение.'))}}}/>;
+ return <audio ref={p.audio} crossOrigin="anonymous" preload="none" onTimeUpdate={p.update} onLoadedMetadata={p.update} onDurationChange={p.update} onPlaying={()=>{if(p.active.current){p.analyticsResume();p.setPlaying(true);p.setWaiting(false)}}} onPause={()=>{p.analyticsBreak();if(p.audio.current?.paused)p.setPlaying(false)}} onSeeking={p.analyticsBreak} onWaiting={()=>{p.analyticsBreak();if(p.active.current&&!p.audio.current?.paused)p.setWaiting(true)}} onCanPlay={()=>p.setWaiting(false)} onEnded={()=>{p.analyticsEnd();p.setPlaying(false);p.setWaiting(false);p.update()}} onError={()=>{if(p.active.current&&p.audio.current?.error){p.setPlaying(false);p.setWaiting(false);p.setError(trUi('Оригинальная дорожка недоступна. Повторите воспроизведение.'))}}}/>;
 }
 export function OriginalMiniPlayer({player:p,onOpen}:{player:OriginalPlayer;onOpen:(track:LiveTrack)=>void}){
  const t=p.track;if(!t)return null;

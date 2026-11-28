@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-11-28: privacy-minimized analytics reports actual original/karaoke starts and 70% distinct media coverage; batched, idempotent, non-blocking. Offline retry is bounded in memory; no persistent visitor identity.
+
 - 2026-11-28: prioritize explicit SDK sync/plain lyrics capability flags over the legacy aggregate and stale provider format; both false means NONE. Unknown remains distinct from absent.
 
 ## 0.5.104

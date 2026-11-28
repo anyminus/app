@@ -114,3 +114,7 @@ test('song playback settings are isolated, optional and validated; explicit link
  assert.equal(saveSongPlayback('101',true,{...custom,speed:99},storage),false);data.set(songPlaybackKey('102'),'not-json');assert.deepEqual(readSongPlayback('102',true,null,storage),defaults);
  const blocked={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};assert.deepEqual(readSongPlayback('101',true,null,blocked),defaults);assert.equal(saveSongPlayback('101',true,custom,blocked),false);
 });
+
+import {createPlaybackOccurrence} from '../src/playbackAnalytics.mjs';
+test('analytics counts unique played coverage, not seeks or repeated pauses',()=>{const events=[];let id=0;const p=createPlaybackOccurrence('karaoke','123',e=>events.push(e),()=>String(++id));p.resume(0,0);for(let i=1;i<=4;i++)p.sample(i,10,1,i*1000);p.discontinuity();p.resume(0,5000);for(let i=1;i<=4;i++)p.sample(i,10,1,(5+i)*1000);assert.deepEqual(events.map(e=>e.kind),['start']);p.discontinuity();p.resume(7,10000);p.sample(8,10,1,11000);p.sample(9,10,1,12000);p.sample(10,10,1,13000);assert.deepEqual(events.map(e=>e.kind),['start','complete']);p.resume(10,14000);assert.equal(events.length,2);p.reset();p.resume(0,15000);assert.equal(events[2].playbackId,'2')});
+test('analytics skips jumps and long scheduling gaps',()=>{const events=[];const p=createPlaybackOccurrence('original','123',e=>events.push(e),()=> 'id');p.resume(0,0);p.sample(80,100,1,1000);p.sample(99,100,1,20000);assert.deepEqual(events.map(e=>e.kind),['start'])});

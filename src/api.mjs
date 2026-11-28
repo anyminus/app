@@ -27,6 +27,8 @@ export function createDemoApi(origin,fetcher=fetch){
  /** @param {string|null} cursor @param {AbortSignal} [signal] @param {string} [seed] */
  catalog:(cursor,signal,seed=undefined)=>call('/demo/catalog',{query:{limit:100,cursor,seed},signal}),
  auth,
+ /** @param {Array<{playbackId:string,trackId:string,mode:string,kind:string}>} events @param {string} token @param {AbortSignal} [signal] */
+ analytics:(events,token,signal)=>call('/v1/analytics/events',{method:'POST',body:{events},token,signal}),
  invalidateAuth:()=>{session=null},
  telegram:(initData,signal)=>call('/v1/auth/telegram',{method:'POST',body:{initData},signal}),
  telegramStart:(challenge,signal)=>call('/v1/auth/telegram/start',{method:'POST',body:{challenge},signal}),

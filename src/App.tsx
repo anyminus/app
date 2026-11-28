@@ -20,6 +20,7 @@ import {normalizeSearchHistory,rememberSearch} from './searchHistory.mjs';
 import {useLyricsWatch,type LyricsSubscriptions} from './lyricsSubscriptions';
 import {useKaraokeWatch,type KaraokeNotices} from './karaokeNotifications';
 import {useTelegramAuth} from './telegramAuth';
+import {setAnalyticsTokenProvider} from './analytics';
 import {SortableTrackList} from './SortableTrackList';
 import {PlaylistManager,type Playlist} from './PlaylistManager';
 import {registerProfileTap,toggleFavoritePlaylist,pruneFavoritePlaylists} from './playlists.mjs';
@@ -33,6 +34,7 @@ export function App(){
  function chooseLanguage(value:string){setLanguagePreference(value);setLanguageChoice(value);setLanguage(getLanguage());}
  useEffect(()=>{const change=()=>{if(languagePreference==='auto')setLanguage(applyLanguage('auto'));};window.addEventListener('languagechange',change);return()=>window.removeEventListener('languagechange',change);},[languagePreference]);
  const telegram=useTelegramAuth();
+ useEffect(()=>setAnalyticsTokenProvider(telegram.getToken),[telegram.getToken]);
  const original=useOriginalPlayer();
  const release=useReleaseNotice(appVersion);
  useEffect(()=>{try{for(const k of ['favorites','history','ready','playlists','favorite-playlists'])localStorage.removeItem('anyminus:'+k);sessionStorage.removeItem('anyminus:api-origin')}catch{}},[]);
