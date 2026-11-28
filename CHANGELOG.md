@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-11-28: add nonmodal karaoke player onboarding with per-device progress, skip and replay; automatic tips appear when paused, never during video mode. Existing cover and lyric hints remain. Optional steps follow current feature availability; translations for RU/EN/DE/ES/EL.
+
 - 2026-11-28: compact search-only track rows, 60px minimum, 46px artwork, no inter-row flex gap; preserve two artist lines and 44px action height.
 
 - 2026-11-28: adaptive audio output detects repeated short render-clock stalls or a prolonged stall; automatic mode tries alternate buffering and then compatibility audio session when supported, with at most two automatic profile transitions per player. Manual modes, recording and background/seek gaps do not trigger automatic changes. Audible glitches with an advancing clock cannot be detected reliably; this is not CarPlay identification.

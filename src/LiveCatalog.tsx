@@ -2,6 +2,7 @@ import {t as trUi} from './i18n.mjs';
 import {Fragment,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {usePlayerEdgeBackground} from './playerEdgeBackground';
 import {useCoverCoach} from './useCoverCoach';
+import {PlayerCoach} from './PlayerCoach';
 import {ArrowLeft,Bell,MousePointer2,Heart,Send,Share2,MicVocal,Pause,Play,RefreshCw,Search,SkipBack,SkipForward} from 'lucide-react';
 import {normalizeJob,mediaUrl,providerLyricsHint} from './api.mjs';
 import {api,origin,coverFor,originalCoverFor,type LiveTrack} from './catalog';
@@ -191,6 +192,7 @@ export function LiveCatalog({onOriginal,originalPlaying,originalActive,onKaraoke
  {effectiveVolume(mixer.music,mixer.musicMuted)===0&&effectiveVolume(mixer.vocals,mixer.vocalsMuted)===0&&<button type="button" className="karaoke-sound-warning" onClick={()=>{mixer.onMusic(100);if(mixer.musicMuted)mixer.onToggleMusic()}}>{trUi("Звук выключен · Включить музыку")}</button>}
  {error&&<p role="alert" className="karaoke-error">{trUi(error)}</p>}
  </div>
+ <PlayerCoach ready={playerReady&&!loadingAudio} playing={playing} recording={videoMode} coverCoachVisible={coverCoach.visible} hasCover={!!coverSource} timed={lyrics.length>0} plain={!!plainLyrics} pitchAvailable={pitchAvailable} focus={focus} ended={songEnded}/>
  </section>;
  return <>
  <header className="screen-header"><IconButton label={trUi("Назад")} onClick={onBack}><ArrowLeft/></IconButton><strong>{trUi("Песня")}</strong><IconButton label={trUi("Поделиться песней")} onClick={shareCurrent}><Share2/></IconButton></header>
