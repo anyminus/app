@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.90
+- Harden the two-line artist credit limit with explicit 17px line height and 34px max height/block size. Synchronize the face-mask preview; keep clickable artist links and full hover title. Extend mobile geometry assertions.
+
 ## 0.5.89
 - Fade and collapse the lyric seek hint over 400ms once media position reaches the first lyric timestamp plus five seconds. Keep it during intros and paused positions within that window; restore on rewind, respect reduced-motion settings, remove accessibility description when hidden. Add long-intro boundary regression.
 

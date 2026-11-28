@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Two-line artist credit limit (0.5.90)
+All shared TrackRow artist credits use a two-line clamp with a 17px line height and a hard 34px maximum height/block size, including the face-mask preview. Artist links and full hover title remain; no changes to the player header. The hard limit is a fallback when CSS line-clamping of inline controls differs across browser engines.
+
 ## Timed lyric seek hint (0.5.89)
 The hint is available only for timed lyrics when seeking is permitted and the song has not ended. Its visible state is derived from the same media position as the active lyric: position in milliseconds less than first startMs + 5000. Pauses do not advance the threshold; seeking earlier restores the hint. CSS fades and collapses the grid wrapper over 400ms, returning vertical space to lyrics; reduced-motion preferences disable the transition. Hidden hints are excluded from aria-describedby. No changes to seek or audio behavior.
 
