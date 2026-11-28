@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Inline artist credit flow (0.5.91)
+TrackRow uses dedicated TrackArtistLinks with native inline anchors and ordinary comma-space separators; no individual button boxes or per-name ellipsis. The track-info grid has one minmax(0,1fr) column. The existing two-line clamp and 34px fallback apply once to the whole credit list. Normal link activation uses the established artist navigation callback (including ID resolution); modified clicks retain href behavior. Other ArtistLinks uses, including the player header, are unchanged. All changes are made on main; the retired preview is not maintained.
+
 ## Two-line artist credit limit (0.5.90)
 All shared TrackRow artist credits use a two-line clamp with a 17px line height and a hard 34px maximum height/block size, including the face-mask preview. Artist links and full hover title remain; no changes to the player header. The hard limit is a fallback when CSS line-clamping of inline controls differs across browser engines.
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.91
+- Replace native artist buttons in song rows with genuine inline text links, allowing the whole comma-separated credit list to flow and clamp together across two lines instead of independently truncating names in Safari. Explicitly constrain the track-info grid to its available width. Preserve canonical artist navigation, full hover title and unchanged player heading. Extend regression to check full text, two occupied lines and full available width.
+
 ## 0.5.90
 - Harden the two-line artist credit limit with explicit 17px line height and 34px max height/block size. Synchronize the face-mask preview; keep clickable artist links and full hover title. Extend mobile geometry assertions.
 
