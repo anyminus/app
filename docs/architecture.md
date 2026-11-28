@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Performance history (0.5.104)
+The local real-history array is an ordered log rather than a unique track set. Each actual playback start in a new player session or replay after reaching the end prepends the track ID; pause/resume does not append. Opening without successful playback does not append. Reload that actually autoplays starts a new session. History rows have occurrence-specific React keys. The profile count reflects history entries, not unique tracks. No backend changes.
+
 ## Row creation with unknown lyrics capability (0.5.103)
 TrackRow and queueFromRow accept LRC or unknown provider capability for explicit creation. Unknown does not assert presence or absence of lyrics; it is not a reason to hide the action. Existing ready/queued states, track validation, status lookup, deduplication locks and missing-duration metadata handling remain intact. Confirmed TEXT and NONE retain their previous row warnings and detail behavior. No server-side policy or authorization changes.
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.104
+- Append a new chronological history entry on actual karaoke playback start in a new player session or replay after the end. Preserve repeat track IDs and stable occurrence keys; pausing and resuming the same session does not add entries. Existing local history remains readable.
+
 ## 0.5.103
 - Show the explicit row create action for non-ready tracks with unknown provider lyrics capability, matching the detail page's eligibility after an unavailable lyrics response. Allow the same guarded row enqueue flow for LRC or unknown, with no automatic enqueue and no change to confirmed TEXT/NONE warnings. Add regression for unknown capability and one-tap queueing.
 
