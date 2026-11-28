@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-11-28: remember karaoke mixer visibility globally per device, expanded by default; video mixer retains its own temporary state.
+
 - 2026-11-28: add nonmodal karaoke player onboarding with per-device progress, skip and replay; automatic tips appear when paused, never during video mode. Existing cover and lyric hints remain. Optional steps follow current feature availability; translations for RU/EN/DE/ES/EL.
 
 - 2026-11-28: compact search-only track rows, 60px minimum, 46px artwork, no inter-row flex gap; preserve two artist lines and 44px action height.
