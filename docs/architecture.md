@@ -1,5 +1,8 @@
 # Frontend architecture
 
+## Player edge background (0.5.94)
+`usePlayerEdgeBackground` manages the document canvas only while the karaoke player is open. The root background and theme-color follow a blended artwork tint; a fixed noninteractive body backdrop reuses the already loaded artwork URL. The foreground retains the existing safe-area padding, dimensions and 600ms fade; no address-bar or Dynamic Island overlays are added. A tiny CORS-enabled thumbnail is sampled without reading protected media; CORS failure falls back to the ordinary theme color. Root classes, custom properties and theme-color are restored on exit. Safari 26 may render a solid sampled tint rather than actual image beneath its native chrome; mobile acceptance requires physical Safari testing.
+
 ## Original-resolution artwork (0.5.93)
 The full player backdrop and large track Artwork use `/demo/artwork/:id?size=orig`; the worker tries the provider original, then 1000px, 400px and its standard cover. Thumbnails in track lists remain lightweight. A failed large background uses the successfully loaded header thumbnail; large detail artwork also falls back. Background visibility still requires ready audio and a loaded image. Actual source resolution depends on the provider; deployment of the core worker is required for original bytes.
 

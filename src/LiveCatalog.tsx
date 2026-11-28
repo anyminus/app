@@ -1,5 +1,6 @@
 import {t as trUi} from './i18n.mjs';
 import {Fragment,useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {usePlayerEdgeBackground} from './playerEdgeBackground';
 import {ArrowLeft,Bell,MousePointer2,Heart,Send,Share2,MicVocal,Pause,Play,RefreshCw,Search,SkipBack,SkipForward} from 'lucide-react';
 import {normalizeJob,mediaUrl,providerLyricsHint} from './api.mjs';
 import {api,origin,coverFor,originalCoverFor,type LiveTrack} from './catalog';
@@ -101,6 +102,7 @@ export function LiveCatalog({onOriginal,originalPlaying,originalActive,onKaraoke
  const backgroundVisible=brightBackground&&playerReady&&!loadingAudio&&!!backgroundSource&&loadedBackground===backgroundSource;
  // Lock the page itself. Only the independent lyrics viewport may scroll.
  const playerVisible=playerReady||loadingAudio||job?.state==='ready';useLayoutEffect(()=>{if(!playerVisible)return;document.body.classList.add('karaoke-open');window.scrollTo(0,0);return()=>document.body.classList.remove('karaoke-open')},[playerVisible]);
+ usePlayerEdgeBackground(playerVisible,backgroundVisible,backgroundSource,coverFor(selected.providerTrackId));
  const lyricFrame=useRef<number|null>(null);
  function stopLyricMotion(){if(lyricFrame.current!==null){cancelAnimationFrame(lyricFrame.current);lyricFrame.current=null}}
  function centerLine(smooth:boolean){

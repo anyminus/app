@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.94
+- Extend the artwork to the document canvas behind the karaoke screen and set a matching browser chrome tint from a tiny CORS-enabled thumbnail sample. Preserve safe-area padding and existing player fade. Restore original document theme on exit; never require canvas access for artwork or playback. Safari controls the actual browser/status-bar composition; physical iPhone verification is required.
+
 ## 0.5.93
 - Request original-size artwork for karaoke backdrops and large track artwork via the size-specific public proxy, with thumbnail fallback. Preserve lazy thumbnails in lists, the fade transition and shared profile preference. Update artwork browser tests for the default-on background.
 

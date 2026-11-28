@@ -22,7 +22,7 @@ body.karaoke-open #root{height:100vh;height:100dvh;overflow:hidden}
 body.karaoke-open .app{height:100vh;height:100dvh;min-height:0;max-width:none;overflow:hidden}
 body.karaoke-open .content{height:100%;padding:0;gap:0}
 body.karaoke-open .tab-bar{display:none}
-.karaoke-screen{position:fixed;top:0;left:50%;transform:translateX(-50%);width:min(540px,100%);height:100vh;height:100dvh;z-index:10;background:var(--base);display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:0;overflow:hidden;padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.karaoke-screen{position:fixed;top:0;left:0;right:0;margin-inline:auto;width:min(540px,100%);height:100vh;height:100dvh;z-index:10;background:var(--base);display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:0;overflow:hidden;padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .karaoke-header{min-width:0;display:flex;align-items:center;gap:2px;padding:4px 0 8px;border-bottom:1px solid var(--border)}
 .karaoke-header .icon-button{width:40px;height:44px}
 .karaoke-heading{min-width:0;flex:1;display:grid;gap:3px;grid-template-rows:19.52px 14.4px}.karaoke-heading>.metadata{font-size:12px;line-height:14.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -303,3 +303,15 @@ body.karaoke-open .tab-bar{display:none}
 /* Keep the backdrop mounted so disabling it fades rather than unmounts it. */
 .karaoke-dock,.karaoke-pitch>.pitch-buttons>button{transition:background-color 600ms ease-in-out,color 600ms ease-in-out}
 @media(prefers-reduced-motion:reduce){.karaoke-cover-background,.karaoke-dock,.karaoke-pitch>.pitch-buttons>button{transition:none}}
+
+/* The document canvas reaches any safe areas exposed by the browser. The
+   content layout keeps its original safe-area padding. Browser chrome may
+   choose a solid tint rather than composite the artwork itself. */
+html.karaoke-edge-open{background-color:#101019;transition:background-color 600ms ease-in-out}
+html.karaoke-edge-open:has(.app.light){background-color:#f8f7fc}
+html.karaoke-edge-open body{background-color:transparent}
+html.karaoke-edge-open body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(var(--karaoke-edge-scrim,transparent),var(--karaoke-edge-scrim,transparent)),var(--karaoke-edge-art,none);background-position:center;background-size:cover;filter:blur(12px);transform:scale(1.08);opacity:0;transition:opacity 600ms ease-in-out}
+html.karaoke-edge-open #root{position:relative;z-index:1}
+html.karaoke-edge-open.karaoke-edge-active{background-color:var(--karaoke-edge-tint,#101019)}
+html.karaoke-edge-active body::before{opacity:.9}
+@media(prefers-reduced-motion:reduce){html.karaoke-edge-open,html.karaoke-edge-open body::before{transition:none}}
